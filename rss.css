@@ -1,0 +1,228 @@
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <meta http-equiv="refresh" content="$t">
+</head>
+
+<style type='text/css'>
+:root {
+  --bg-color: #fec150;
+  --font-color: #222;
+  --title-color: #0067e6;
+  --title-background: #fff;
+  --main-border: 1px solid rgba(255, 255, 255, 0.4);
+  --main-bg: rgba(255, 255, 255, 0.4);
+  --a-color: rgba(255, 240, 180, 0.4);
+}
+
+[data-theme="dark"] {
+  --bg-color: #111;
+  --font-color: #efefef;
+  --title-color: #fec150;
+  --title-background: #222;
+  --main-border: 1px solid rgba(255, 255, 255, 0.2);
+  --main-bg: rgba(25, 25, 25, 0.4);
+  --a-color: rgba(255, 240, 180, 0.4);
+}
+body {
+  color: var(--font-color);
+  background-color: var(--bg-color);/* OTHER STYLING */
+  a:active: var(--a-color);
+}
+.image::after {
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-size: 100% 100%;
+  opacity: 0.05;
+}
+main {
+  border: var(--main-border);
+  background: var(--main-bg);/* OTHER STYLING */
+}
+h1 {
+  color: var(--title-color);/* OTHER STYLING */
+}
+a {
+  color: var(--a-color);
+  color: #ff8;
+}
+a:link {
+  text-decoration: none;
+}
+a:visited {
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+a:active {
+  text-decoration: underline;
+}
+
+.theme-switch-wrapper {
+  display: flex;
+  align-items: center;
+}
+.theme-switch-wrapper em {
+  margin-left: 10px;
+  font-size: 1rem;
+}
+.theme-switch {
+  display: inline-block;
+  height: 34px;
+  position: relative;
+  width: 60px;
+}
+.theme-switch input {
+  display: none;
+}
+.slider {
+  background-color: #ccc;
+  bottom: 0;
+  cursor: pointer;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  transition: 0.4s;
+  border-radius: 34px;
+}
+.slider:before {
+  background-color: #fff;
+  bottom: 4px;
+  content: "";
+  height: 26px;
+  left: 4px;
+  position: absolute;
+  transition: 0.4s;
+  width: 26px;
+  border-radius: 50%;
+}
+input:checked + .slider {
+  background-color: #fec150;
+}
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
+.slider svg {
+  color: #222;
+  position: absolute;
+  transition: opacity 0.2s ease 0s, transform 0.35s ease 0s;
+  pointer-events: none;
+}
+.feather-moon {
+  opacity: 0;
+  left: 9px;
+  bottom: 9px;
+  transform: translateX(4px);
+}
+.feather-sun {
+  opacity: 1;
+  right: 10px;
+  bottom: 9px;
+  transform: translateX(0px);
+}
+input:checked + .slider .feather-moon {
+  opacity: 1;
+  transform: translateX(0);
+}
+input:checked + .slider .feather-sun {
+  opacity: 0;
+  transform: translateX(-4px);
+}
+
+[data-label] {
+    background: #FFEBEB;
+    color: #A30000;
+    border: 1px solid #ff0000;
+}
+
+[data-label], [data-label="promo"], [data-label="updated"] {
+    display: inline-block;
+    vertical-align: top;
+    position: relative;
+    padding: 0.2em 0.5em;
+    text-transform: uppercase;
+    font-size: 0.7em;
+    font-weight: bold;
+    letter-spacing: 1px;
+    overflow: visible;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+}
+
+</style>
+
+<script type="text/javascript">
+
+var imlocation = "images/";
+ var currentdate = 0;
+ var image_number = 0;
+ function ImageArray (n) {
+   this.length = n;
+   for (var i =1; i <= n; i++) {
+     this[i] = ' '
+   }
+ }
+ image = new ImageArray(3)
+ image[0] = 'img_1.png'
+ image[1] = 'img_2.png'
+ image[2] = 'img_3.jpg'
+ image[3] = 'img_4.jpg'
+ function randomimage() {
+ 	currentdate = new Date()
+	var r = currentdate.getSeconds() % image.length
+ 	return(image[r])
+ }
+// document.write("<div class=\"image\" style=\"background-image: url('" + 
+// 	imlocation + randomimage()+ "');\">");
+
+function switchTheme(e) {
+  if (e.target.checked) {
+    document.documentElement.setAttribute("data-theme", "dark");
+    
+    // Set the user's theme preference to dark
+    localStorage.setItem("theme", "dark");
+  } else {
+    document.documentElement.setAttribute("data-theme", "light");
+    
+    // Set the user's theme preference to light
+    localStorage.setItem("theme", "light");
+  }
+}
+
+function main()
+{
+// Get the theme toggle input
+const themeToggle = document.querySelector(
+  '.theme-switch input[type="checkbox"]'
+);
+
+// Get the current theme from local storage
+const currentTheme = localStorage.getItem("theme");// If the current local storage item can be found
+if (currentTheme) {
+  // Set the body data-theme attribute to match the local storage item
+  document.documentElement.setAttribute("data-theme", currentTheme);// If the current theme is dark, check the theme toggle
+  if (currentTheme === "dark") {
+    themeToggle.checked = true;
+  }
+}
+
+// Add an event listener to the theme toggle, which will switch the theme
+themeToggle.addEventListener("change", switchTheme, false);
+}
+
+</script>
+
+<body onload="main()">
+<div class="theme-switch-wrapper">
+  <label class="theme-switch" for="checkbox">
+    <input type="checkbox" id="checkbox" />
+    <div class="slider">
+      <svgOfSun />
+      <svgOfMoon />
+    </div>
+  </label>
+</div>
+<p>
+
