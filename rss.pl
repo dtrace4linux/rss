@@ -60,6 +60,7 @@ my %opts = (
 	num => 2000,
 	art_history => 10000,
 	sleep => 60,
+	stock_time => 1000,
 	);
 
 my $a_id = 0;
@@ -675,6 +676,26 @@ sub do_parse
 	save_art_hash();
 }
 
+my $stock_time = 0;
+sub do_stocks
+{
+	if ($opts{stocks} &&
+	    time() > $stock_time + $opts{stock_time}) {
+		$stock_time = time();
+		system("$FindBin::RealBin/stock.pl -update -random " .
+			join(" ", @{$opts{stocks}}));
+	}
+}
+
+my $wtime = 0;
+sub do_weather
+{
+	if ($opts{weather} && $opts{weather_location} &&
+	    time() > $wtime + 1800 && -x "/usr/bin/ansiweather") {
+		$wtime = time();
+		system("ansiweather -l $opts{weather_location} -p false");
+	}
+}
 
 ######################################################################
 #   Generate periodic/random headline.				     #
@@ -686,7 +707,6 @@ sub do_ticker
 
 	my $ticks = 0;
 	my $t_copy = 0;
-	my %tty_seen;
 
 	my $css_fn = "$FindBin::RealBin/rss.css";
 
@@ -694,8 +714,7 @@ sub do_ticker
 	chomp($stty);
 	$stty =~ m/columns (\d+)/;
 	my $cols = $1 - 10;
-	my $wtime = 0;
-
+	my %seen_title;
 
 	while (1) {
 		my $t = 60;
@@ -710,7 +729,6 @@ sub do_ticker
 		$rss1 =~ s/\$t/60/;
 
 		my @history;
-		my %seen_title;
 		@files = (reverse(glob("$ENV{HOME}/.rss/articles/*")))[0..100];
 		for (my $i = 0; $i < 100; $i++) {
 
@@ -739,21 +757,16 @@ sub do_ticker
 				"$title <a target='_blank' href='$info->{link}'><span data-label='$lnk'>$lnk</span></a>" .
 				$div2;
 
-			if (!defined($tty_seen{$title})) {
-				$tty_seen{$title} = 1;
 			if (length($title) > $cols) {
 				$title = substr($title, 0, $cols - 1);
 				}
 
-			if ($opts{weather} && $opts{weather_location} &&
-			    time() > $wtime + 1800) {
-				$wtime = time();
-				system("ansiweather -l $opts{weather_location} -p false");
-			}
 			my $str = strftime("%H:%M ", localtime()) .  $title . "\n";
 			print $str;
-			}
 		}
+
+		do_weather();
+		do_stocks();
 
 		my $str = '';
 		for (my $i = 0; $i < @history; ) {
@@ -1406,7 +1419,9 @@ sub main
 
 	if ($opts{ticker}) {
 		if ($opts{rss}) {
+			sleep(1);
 			if (fork()) {
+				exit(0) if fork();
 				do_ticker();
 				exit(0);
 			}
@@ -1948,7 +1963,11 @@ sub read_rss_config
 		$_ =~ s/#.*$//;
 		next if $_ eq '';
 		my ($lh, $rh) = split(/=/);
-		$opts{$lh} = $rh;
+		if ($lh eq 'stocks') {
+			push @{$opts{stocks}}, $rh;
+		} else {
+			$opts{$lh} = $rh;
+		}
 	}
 }
 
