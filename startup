@@ -1,0 +1,8 @@
+#! /bin/sh
+
+root=/home/$USER/bin/root
+dir=$(dirname $0)
+
+$root chvt 1
+$root chmod 666 /dev/tty1
+$dir/rss.pl </dev/tty1 >/dev/tty1

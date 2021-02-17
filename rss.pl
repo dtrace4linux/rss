@@ -682,8 +682,11 @@ sub do_stocks
 	if ($opts{stocks} &&
 	    time() > $stock_time + $opts{stock_time}) {
 		$stock_time = time();
-		system("$FindBin::RealBin/stock.pl -update -random " .
-			join(" ", @{$opts{stocks}}));
+		print strftime("%H:%M ", localtime());
+		my $cmd = "$FindBin::RealBin/stock.pl -update -random " .
+			join(" ", @{$opts{stocks}});
+		#print "$cmd\n";
+		system($cmd);
 	}
 }
 
@@ -693,6 +696,7 @@ sub do_weather
 	if ($opts{weather} && $opts{weather_location} &&
 	    time() > $wtime + 1800 && -x "/usr/bin/ansiweather") {
 		$wtime = time();
+		print strftime("%H:%M ", localtime());
 		system("ansiweather -l $opts{weather_location} -p false");
 	}
 }
@@ -1419,7 +1423,7 @@ sub main
 
 	if ($opts{ticker}) {
 		if ($opts{rss}) {
-			sleep(1);
+			sleep(2);
 			if (fork()) {
 				exit(0) if fork();
 				do_ticker();
@@ -1434,6 +1438,7 @@ sub main
 	###############################################
 	#   Check if rss.pl is already running.	      #
 	###############################################
+	$opts{quiet} = 1;
 	kill_old("rss", \%opts);
 
 	###############################################

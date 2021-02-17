@@ -1,0 +1,48 @@
+#! /bin/sh
+
+RSS_USERID=fox
+pidfile=/tmp/rss.log
+
+export PATH=/bin:/usr/bin:/usr/sbin:/home/$RSS_USERID/bin
+
+. /lib/lsb/init-functions
+
+do_start ()
+{
+	sleep 15
+	chvt 1
+	log_daemon_msg "Starting RSS newsfeed" "rss"
+  	sudo -u $RSS_USERID /home/$RSS_USERID/src/rss/startup >>/tmp/rss_startup.log
+}
+
+do_stop ()
+{
+  	if [ -f $pidfile ]; then
+		log_daemon_msg "Stopping RSS newsfeed" "rss"
+		pid=$(awk '{print $1}' <$pidfile)
+		echo "kill $pid"
+		kill $pid
+		rm $pidfile
+
+		sleep 1
+	fi
+}
+
+case "$1" in
+  restart)
+  	do_stop
+	do_start &
+	;;
+  start)
+  	do_start
+  	;;
+  stop)
+  	do_stop
+  	;;
+  *)
+  	echo "Usage: /etc/init.d/rss [start|stop|restart]"
+	exit 1
+	;;
+esac
+
+exit 0

@@ -20,6 +20,7 @@ my %opts = (
 	);
 
 my $ofh;
+my $cols;
 
 my @lst = (
 	".DJI:INDEXDJX",
@@ -38,6 +39,7 @@ sub main
 	Getopt::Long::Configure('require_order');
 	Getopt::Long::Configure('no_ignore_case');
 	usage() unless GetOptions(\%opts,
+		'force',
 		'help',
 		'loop',
 		'o=s',
@@ -48,6 +50,11 @@ sub main
 		);
 
 	mkdir("/tmp/$ENV{USER}", 0700);
+
+	my $stty = `stty -a | grep columns`;
+	chomp($stty);
+	$stty =~ m/columns (\d+)/;
+	$cols = $1 - 10;
 
 	@lst = @ARGV if @ARGV;
 	@lst = sort(@lst);
@@ -65,7 +72,6 @@ sub main
 		exit(0);
 	}
 
-	$ofh = new FileHandle(">>$opts{o}");
 
 	print "\033[37;40m";
 
@@ -89,7 +95,10 @@ sub main
 sub do_random
 {
 	my $fh = new FileHandle($opts{o});
-	return if !$fh;
+	if (!$fh) {
+		print "Cannot open $opts{o} - $!\n";
+		return;
+	}
 
 	my %info;
 	while (<$fh>) {
@@ -114,17 +123,26 @@ sub do_random
 		my $k1 = $k[$i];
 		$k1 =~ s/:.*//;
 		my $s1 = "$k1:$info{$k}{price} $info{$k}{delta}  ";
-		last if $len + length($s1) > 70;
+		last if $len + length($s1) > $cols;
 
 		$len += length($s1);
 		my $green = "\033[32m";
+		my $yellow = "\033[33m";
 		my $red = "\033[31m";
 		my $white = "\033[37m";
-		my $c1 = $info{$k}{delta} =~ /-/ ? $red : $green;
-		$s1 = "$k1:$c1$info{$k}{price}$white $info{$k}{delta}  ";
+		my $black = "\033[30m";
+		my $blue = "\033[34m";
+		my $blue2 = "\033[1;34m";
+		my $magenta = "\033[1;35m";
+		my $cyan = "\033[1;36m";
+		if ($info{$k}{delta} !~ /-/) {
+			$s1 = "\033[42;30m$k1:$info{$k}{price} $info{$k}{delta}  ";
+		} else {
+			$s1 = "\033[41;37m$k1:$info{$k}{price} $info{$k}{delta}  ";
+		}
 		$s .= $s1;
 	}
-	print "\033[40;37m$s\033[37;40m\n";
+	print "\033[46;30m$s\033[37;40m\n";
 }
 
 sub do_update
@@ -142,10 +160,11 @@ sub get
 	my $mtime = (stat($fn))[9];
 
 	my $do_store = 0;
-	if (!defined($mtime) || $mtime + 15 * 60 < time()) {
+	if ($opts{force} || !defined($mtime) || $mtime + 15 * 60 < time()) {
 		my $cmd = "wget -q -O $fn http://www.google.com/finance/quote/$stock";
 		system($cmd);
 		$do_store = 1;
+		$ofh = new FileHandle(">>$opts{o}");
 	}
 
 	my $fh = new FileHandle($fn);
