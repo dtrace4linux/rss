@@ -51,6 +51,7 @@ my %history = (
 	googlebot => 0,
 	);
 my $columns;
+my $rows;
 
 #######################################################################
 #   Command line switches.					      #
@@ -689,6 +690,7 @@ sub do_status_line
 		print "\033[32m";
 	}
 	print strftime(" Time: %H:%M:%S ", localtime());
+	printf "\033[%dH", $rows;
 }
 
 my $stock_time = 0;
@@ -734,7 +736,7 @@ sub do_ticker
 
 	my $css_fn = "$FindBin::RealBin/rss.css";
 
-	my $cols = $1 - 10;
+	my $cols = $columns - 10;
 	my %seen_title;
 
 	while (1) {
@@ -821,7 +823,6 @@ sub do_ticker
 			do_status_line();
 			sleep(1);
 		}
-		print "\033[0G\033[K";
 	}
 	exit(0);
 }
@@ -1437,10 +1438,10 @@ sub main
 
 	usage() if $opts{help};
 
-	$columns = `stty -a | grep columns`;
-	chomp($columns);
-	$columns =~ m/columns (\d+)/;
-	$columns = $1;
+	my $s = `stty -a | grep columns`;
+	chomp($s);
+	$s =~ m/rows (\d+); columns (\d+)/;
+	($rows, $columns) = ($1, $2);
 
 	print time_string() . "RSS starting - pid $$\n";
 	print "\033[37m";
