@@ -739,6 +739,8 @@ sub do_ticker
 		while (<$fh>) {
 			$rss .= $_;
 		}
+		$fh->close();
+
 		my $rss1 = $rss;
 		$rss1 =~ s/\$t/60/;
 
@@ -1433,7 +1435,7 @@ sub main
 
 	usage() if $opts{help};
 
-	print STDERR time_string() . "RSS starting - pid $$\n";
+	print time_string() . "RSS starting - pid $$\n";
 
 	read_rss_config();
 
@@ -1455,26 +1457,32 @@ sub main
 
 	$| = 1;
 
-	if ($opts{ticker}) {
-		my $pid = $$;
-		if ($opts{rss}) {
-			sleep(2);
-			if (fork() == 0) {
-				do_ticker($pid);
-				exit(0);
-			}
-		} else {
-			do_ticker();
-			exit(0);
-		}
-	}
+	open(my $orig_stdout, '>&', \*STDOUT);
+	open(my $orig_stdin, '<&', \*STDIN);
 
 	###############################################
 	#   Run in server mode.			      #
 	###############################################
-#	if (!$opts{f} && !$opts{init} && !$opts{clean} && !$opts{parse} && !$opts{output}) {
-#		background("rss", \*STDOUT, \%opts);
-#	}
+	if (!$opts{f} && !$opts{init} && !$opts{clean} && !$opts{parse} && !$opts{output}) {
+		background("rss", \*STDOUT, \%opts);
+	}
+
+	if ($opts{ticker}) {
+		my $pid = $$;
+		if ($opts{rss}) {
+			if (fork() == 0) {
+     				open(STDOUT, ">&", $orig_stdout);
+     				open(STDIN, "<&", $orig_stdin);
+				do_ticker($pid);
+				exit(0);
+			}
+		} else {
+     			open(STDOUT, ">&", $orig_stdout);
+     			open(STDIN, "<&", $orig_stdin);
+			do_ticker();
+			exit(0);
+		}
+	}
 
 	my $dir = $opts{dir};
 	$rss_cfg = shift @ARGV || "rss.cfg";
