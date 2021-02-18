@@ -801,10 +801,11 @@ sub do_ticker
 		}
 
 		for (my $i = 0; $i < $t; $i++) {
-			print $i & 1 ? "\010-" : ".";
+			print "\033[0G";
+			print $i & 1 ? "---" : "...", "\033[K";
 			sleep(1);
 		}
-		print "\n";
+		print "\033[0G\033[K";
 	}
 	exit(0);
 }
