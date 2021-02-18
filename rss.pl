@@ -50,6 +50,7 @@ my %history = (
 	req => 0,
 	googlebot => 0,
 	);
+my $columns;
 
 #######################################################################
 #   Command line switches.					      #
@@ -676,18 +677,18 @@ sub do_parse
 	save_art_hash();
 }
 
-my $wtime = 0;
-sub do_weather
+sub do_status_line
 {
-	if ($opts{weather} && $opts{weather_location} &&
-	    time() > $wtime + $opts{weather_time} && -x $opts{weather_app}) {
-		$wtime = time();
-		print strftime("%H:%M ", localtime());
-		my $w = `$opts{weather_app} -l $opts{weather_location} -p false`;
-		my $fh = new FileHandle(">>/tmp/weather.log");
-		print $fh time_string() . $w if $fh;
-		print $w;
+	my $fh = new FileHandle("/proc/loadavg");
+	my $avg = <$fh>;
+	$avg =~ s/ .*//;
+	printf "\033[1;%dH", $columns - 20;
+	if ($avg >= 1) {
+		print "\033[33m";
+	} else {
+		print "\033[32m";
 	}
+	print strftime(" Time: %H:%M:%S ", localtime());
 }
 
 my $stock_time = 0;
@@ -705,6 +706,20 @@ sub do_stocks
 }
 
 
+my $wtime = 0;
+sub do_weather
+{
+	if ($opts{weather} && $opts{weather_location} &&
+	    time() > $wtime + $opts{weather_time} && -x $opts{weather_app}) {
+		$wtime = time();
+		print strftime("%H:%M ", localtime());
+		my $w = `$opts{weather_app} -l $opts{weather_location} -p false`;
+		my $fh = new FileHandle(">>/tmp/weather.log");
+		print $fh time_string() . $w if $fh;
+		print $w;
+	}
+}
+
 ######################################################################
 #   Generate periodic/random headline.				     #
 ######################################################################
@@ -719,9 +734,6 @@ sub do_ticker
 
 	my $css_fn = "$FindBin::RealBin/rss.css";
 
-	my $stty = `stty -a | grep columns`;
-	chomp($stty);
-	$stty =~ m/columns (\d+)/;
 	my $cols = $1 - 10;
 	my %seen_title;
 
@@ -806,17 +818,7 @@ sub do_ticker
 		}
 
 		for (my $i = 0; $i < $t; $i++) {
-			my $fh = new FileHandle("/proc/loadavg");
-			my $avg = <$fh>;
-			$avg =~ s/ .*//;
-			print "\033[0G";
-			if ($avg >= 1) {
-				print "\033[33m";
-			} else {
-				print "\033[32m";
-			}
-			print strftime("Time: %H:%M:%S", localtime());
-#			print $i & 1 ? "---" : "...", "\033[K";
+			do_status_line();
 			sleep(1);
 		}
 		print "\033[0G\033[K";
@@ -1435,7 +1437,13 @@ sub main
 
 	usage() if $opts{help};
 
+	$columns = `stty -a | grep columns`;
+	chomp($columns);
+	$columns =~ m/columns (\d+)/;
+	$columns = $1;
+
 	print time_string() . "RSS starting - pid $$\n";
+	print "\033[37m";
 
 	read_rss_config();
 
