@@ -676,6 +676,17 @@ sub do_parse
 	save_art_hash();
 }
 
+my $wtime = 0;
+sub do_weather
+{
+	if ($opts{weather} && $opts{weather_location} &&
+	    time() > $wtime + $opts{weather_time} && -x $opts{weather_app}) {
+		$wtime = time();
+		print strftime("%H:%M ", localtime());
+		system("$opts{weather_app} -l $opts{weather_location} -p false");
+	}
+}
+
 my $stock_time = 0;
 sub do_stocks
 {
@@ -690,22 +701,13 @@ sub do_stocks
 	}
 }
 
-my $wtime = 0;
-sub do_weather
-{
-	if ($opts{weather} && $opts{weather_location} &&
-	    time() > $wtime + 1800 && -x "/usr/bin/ansiweather") {
-		$wtime = time();
-		print strftime("%H:%M ", localtime());
-		system("ansiweather -l $opts{weather_location} -p false");
-	}
-}
 
 ######################################################################
 #   Generate periodic/random headline.				     #
 ######################################################################
 sub do_ticker
-{
+{	my $ppid = shift;
+
 	my @files;
 	my $f = 0;
 
@@ -721,6 +723,10 @@ sub do_ticker
 	my %seen_title;
 
 	while (1) {
+		if (defined($ppid) && ! -d "/proc/$ppid") {
+			exit(0);
+		}
+
 		my $t = 60;
 
 		my $fh = new FileHandle($css_fn);
@@ -1422,11 +1428,12 @@ sub main
 	}
 
 	if ($opts{ticker}) {
+		my $pid = $$;
 		if ($opts{rss}) {
 			sleep(2);
 			if (fork()) {
 				exit(0) if fork();
-				do_ticker();
+				do_ticker($pid);
 				exit(0);
 			}
 		} else {
