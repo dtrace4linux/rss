@@ -800,7 +800,11 @@ sub do_ticker
 			$t_copy = time();
 		}
 
-		sleep($t);
+		for (my $i = 0; $i < $t; $i++) {
+			print $i & 1 ? "\010-" : ".";
+			sleep(1);
+		}
+		print "\n";
 	}
 	exit(0);
 }
@@ -1436,12 +1440,6 @@ sub main
 	$opts{quiet} = 1;
 	kill_old("rss", \%opts);
 
-	###############################################
-	#   Run in server mode.			      #
-	###############################################
-	if (!$opts{f} && !$opts{init} && !$opts{clean} && !$opts{parse} && !$opts{output}) {
-		background("rss", \*STDOUT, \%opts);
-	}
 	$| = 1;
 
 	if ($opts{ticker}) {
@@ -1458,6 +1456,12 @@ sub main
 		}
 	}
 
+	###############################################
+	#   Run in server mode.			      #
+	###############################################
+#	if (!$opts{f} && !$opts{init} && !$opts{clean} && !$opts{parse} && !$opts{output}) {
+#		background("rss", \*STDOUT, \%opts);
+#	}
 
 	my $dir = $opts{dir};
 	$rss_cfg = shift @ARGV || "rss.cfg";
