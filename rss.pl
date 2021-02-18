@@ -724,6 +724,7 @@ sub do_ticker
 
 	while (1) {
 		if (defined($ppid) && ! -d "/proc/$ppid") {
+			print "parent $ppid terminated\n";
 			exit(0);
 		}
 
@@ -1431,7 +1432,7 @@ sub main
 		my $pid = $$;
 		if ($opts{rss}) {
 			sleep(2);
-			if (fork()) {
+			if (fork() == 0) {
 				exit(0) if fork();
 				do_ticker($pid);
 				exit(0);
