@@ -1,6 +1,12 @@
 #! /bin/sh
 
+# You want to use sudo.
+
 root=/home/$USER/bin/root
+if [ ! -f $root ]; then
+	root=sudo
+fi
+
 dir=$(dirname $0)
 
 $root chvt 1
