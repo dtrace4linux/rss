@@ -42,7 +42,7 @@ use FindBin;
 use IO::Socket;
 use Compress::Zlib;
 
-#use lib "$FindBin::RealBin/../lib";
+use lib "$FindBin::RealBin/";
 use Utils;
 
 my %sites;
