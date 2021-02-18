@@ -1436,6 +1436,14 @@ sub main
 	$opts{quiet} = 1;
 	kill_old("rss", \%opts);
 
+	###############################################
+	#   Run in server mode.			      #
+	###############################################
+	if (!$opts{f} && !$opts{init} && !$opts{clean} && !$opts{parse} && !$opts{output}) {
+		background("rss", \*STDOUT, \%opts);
+	}
+	$| = 1;
+
 	if ($opts{ticker}) {
 		my $pid = $$;
 		if ($opts{rss}) {
@@ -1450,13 +1458,6 @@ sub main
 		}
 	}
 
-	###############################################
-	#   Run in server mode.			      #
-	###############################################
-	if (!$opts{f} && !$opts{init} && !$opts{clean} && !$opts{parse} && !$opts{output}) {
-		background("rss", \*STDOUT, \%opts);
-	}
-	$| = 1;
 
 	my $dir = $opts{dir};
 	$rss_cfg = shift @ARGV || "rss.cfg";
