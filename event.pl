@@ -116,6 +116,8 @@ sub usage
 event.pl - perl interface to the kernel /dev/input for touchscreens
 Usage:
 
+  This is a test script to monitor touchpad controls.
+
 Switches:
 
 EOF
