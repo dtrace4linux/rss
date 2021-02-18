@@ -683,7 +683,10 @@ sub do_weather
 	    time() > $wtime + $opts{weather_time} && -x $opts{weather_app}) {
 		$wtime = time();
 		print strftime("%H:%M ", localtime());
-		system("$opts{weather_app} -l $opts{weather_location} -p false");
+		my $w = `$opts{weather_app} -l $opts{weather_location} -p false`;
+		my $fh = new FileHandle(">>/tmp/weather.log");
+		print $fh time_string() . $w if $fh;
+		print $w;
 	}
 }
 
@@ -801,8 +804,17 @@ sub do_ticker
 		}
 
 		for (my $i = 0; $i < $t; $i++) {
+			my $fh = new FileHandle("/proc/loadavg");
+			my $avg = <$fh>;
+			$avg =~ s/ .*//;
 			print "\033[0G";
-			print $i & 1 ? "---" : "...", "\033[K";
+			if ($avg >= 1) {
+				print "\033[33m";
+			} else {
+				print "\033[32m";
+			}
+			print strftime("Time: %H:%M:%S", localtime());
+#			print $i & 1 ? "---" : "...", "\033[K";
 			sleep(1);
 		}
 		print "\033[0G\033[K";
