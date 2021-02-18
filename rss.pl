@@ -1416,6 +1416,8 @@ sub main
 
 	usage() if $opts{help};
 
+	print STDERR time_string() . "RSS starting - pid $$\n";
+
 	read_rss_config();
 
 	$opts{dir} = "$ENV{HOME}/.rss";
@@ -1428,12 +1430,17 @@ sub main
 		$curl_msg = "<h2>NOTE! curl is missing so some sites may fail to work</h2>\n";
 	}
 
+	###############################################
+	#   Check if rss.pl is already running.	      #
+	###############################################
+	$opts{quiet} = 1;
+	kill_old("rss", \%opts);
+
 	if ($opts{ticker}) {
 		my $pid = $$;
 		if ($opts{rss}) {
 			sleep(2);
 			if (fork() == 0) {
-				exit(0) if fork();
 				do_ticker($pid);
 				exit(0);
 			}
@@ -1442,12 +1449,6 @@ sub main
 			exit(0);
 		}
 	}
-
-	###############################################
-	#   Check if rss.pl is already running.	      #
-	###############################################
-	$opts{quiet} = 1;
-	kill_old("rss", \%opts);
 
 	###############################################
 	#   Run in server mode.			      #
