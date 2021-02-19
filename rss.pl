@@ -194,6 +194,18 @@ If you like this feed, feel free to donate:
 </form> 
 
 EOF
+
+sub clean_text
+{	my $txt = shift;
+
+	$txt =~ s/\xe2\x80/'/g;
+	$txt =~ s/&#039;/'/g;
+	$txt =~ s/&#x27;/'/g;
+	$txt =~ s/&quot;/"/g;
+
+	return $txt;
+}
+
 sub convert_chars
 {	my $str = shift;
 
@@ -744,6 +756,21 @@ sub do_ticker
 	my $cols = $columns - 10;
 	my %seen_title;
 
+	###############################################
+	#   We  display  other pages, other than raw  #
+	#   headlines,  such  as a specific article,  #
+	#   or  a  summary  or weather history. This  #
+	#   selects which page we are doing.	      #
+	###############################################
+	my $page = 0;
+
+	###############################################
+	#   Save the console output to a file, so we  #
+	#   can replay/debug			      #
+	###############################################
+	my $con_fh = new FileHandle(">>/tmp/rss_console.log");
+	$con_fh->autoflush();
+
 	my @history;
 
 	while (1) {
@@ -754,6 +781,11 @@ sub do_ticker
 
 		my $t = 60;
 
+		###############################################
+		#   Get  the  CSS file, dynamically, in case  #
+		#   we  are  editing  it while the script is  #
+		#   running.				      #
+		###############################################
 		my $fh = new FileHandle($css_fn);
 		die "Cannot locate rss.css\n" if !$fh;
 		my $rss = '';
@@ -769,6 +801,7 @@ sub do_ticker
 		#   Look  at  about  100 recent articles for  #
 		#   display.				      #
 		###############################################
+		my $con_txt = '';
 		@files = (reverse(glob("$ENV{HOME}/.rss/articles/*")))[0..100];
 		for (my $i = 0; $i < 100; $i++) {
 
@@ -789,9 +822,7 @@ sub do_ticker
 			#   Some  cleanups for common glyph usage in  #
 			#   headlines				      #
 			###############################################
-			$title =~ s/\xe2\x80/'/g;
-			$title =~ s/&#039;/'/g;
-			$title =~ s/&quot;/"/g;
+			$title = clean_text($title);
 
 			my $lnk = $info->{link};
 			$lnk =~ s/^https*:\/\///;
@@ -809,9 +840,18 @@ sub do_ticker
 				$title = substr($title, 0, $cols - 1);
 				}
 
-			my $str = strftime("%H:%M ", localtime()) .  $title . "\n";
-			print $str;
+			$con_txt .= strftime("%H:%M ", localtime()) .  $title . "\n";
 		}
+
+		print $con_fh $con_txt;
+		if ($page == 0) {
+			print $con_txt;
+		} elsif ($page == 1) {
+			my $fn = $files[rand(@files)];
+
+			do_ticker2($fn);
+		}
+		$page = ($page + 1) % 2;
 
 		do_weather();
 		do_stocks();
@@ -847,6 +887,29 @@ sub do_ticker
 		}
 	}
 	exit(0);
+}
+
+sub do_ticker2
+{	my $fn = shift;
+
+	my $info = read_article($fn);
+	my $title = clean_text($info->{title});
+	my $url = $info->{link};
+	#$url =~ s/^https*:\/\///;
+	#$url =~ s/\/.*$//;
+
+	my $txt = $info->{body};
+	$txt =~ s/<[^>]*>//g;
+	$txt = clean_text($txt);
+	print "\n";
+	print $title, "\n";
+	print $url, "\n";
+
+	foreach my $ln (split("\n", $txt)) {
+		$ln =~ s/^\s+//;
+		print $ln, "\n";
+	}
+	print "[End]\n";
 }
 
 sub gen_status
