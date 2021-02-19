@@ -845,6 +845,7 @@ sub do_ticker
 		}
 
 		print $con_fh $con_txt;
+		$page = 1 if $opts{page2};
 		if ($page == 0) {
 			print $con_txt;
 		} elsif ($page == 1) {
@@ -907,13 +908,28 @@ sub do_ticker2
 	print $url, "\n";
 
 	my $last_ln = 'xxx';
+	my $col = 0;
 	foreach my $ln (split("\n", $txt)) {
 		$ln =~ s/^\s+//;
 		next if $last_ln eq '' && $ln eq '';
-		print $ln, "\n";
+		###############################################
+		#   Print out the line, but word wrap it.     #
+		###############################################
+		foreach my $wd (split(" ", $ln)) {
+			if ($col + 1 + length($wd) >= $columns) {
+				print "\n";
+				$col = 0;
+			}
+			if ($col) {
+				print " ";
+				$col++;
+			}
+			print $wd;
+			$col += length($wd);
+		}
 		$last_ln = $ln;
 	}
-	print "[End]\n";
+	print "\n" if $col;
 }
 
 sub gen_status
@@ -1517,6 +1533,7 @@ sub main
 		'nokill',
 		'notime',
 		'output',
+		'page2',
 		'parse',
 		'size=s',
 		'sleep=s',
