@@ -744,6 +744,8 @@ sub do_ticker
 	my $cols = $columns - 10;
 	my %seen_title;
 
+	my @history;
+
 	while (1) {
 		if (defined($ppid) && ! -d "/proc/$ppid") {
 			print "parent $ppid terminated\n";
@@ -767,7 +769,6 @@ sub do_ticker
 		#   Look  at  about  100 recent articles for  #
 		#   display.				      #
 		###############################################
-		my @history;
 		@files = (reverse(glob("$ENV{HOME}/.rss/articles/*")))[0..100];
 		for (my $i = 0; $i < 100; $i++) {
 
@@ -815,6 +816,10 @@ sub do_ticker
 		do_weather();
 		do_stocks();
 
+		if (@history > 100) {
+			@history = @history[0..99];
+		}
+
 		my $str = '';
 		for (my $i = 0; $i < @history; ) {
 			for (my $j = 0; $j < 5 && $i < @history; $j++) {
@@ -831,8 +836,8 @@ sub do_ticker
 		$ofh->close();
 		rename("$fn.tmp", $fn);
 
-		if (time() > $t_copy + 180 && $opts{copy}) {
-			system("scp $fn berry:release/websaaite/site >/dev/null");
+		if (time() > $t_copy + 180 && $opts{copy_script}) {
+			system("$opts{copy_script} $fn");
 			$t_copy = time();
 		}
 
@@ -1433,7 +1438,7 @@ sub main
 	Getopt::Long::Configure('no_ignore_case');
 	usage() unless GetOptions(\%opts,
 		'clean',
-		'copy',
+		'copy_script=s',
 		'dir=s',
 		'f',
 		'fetch',
@@ -2160,7 +2165,9 @@ Description:
 Switches:
 
   -clean       Just clean and exit.
-  -copy        When in ticker mode, copy to a remote webserver
+  -copy_script <script>
+               Copy ticker.html script, e.g. archive copies and remote
+               copy to another machine (web server)
   -dir <dir>   Override default \$HOME/.rss
   -f           Dont fork into the background.
   -fetch       Refetch data from sites.
