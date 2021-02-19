@@ -200,8 +200,9 @@ sub clean_text
 
 	$txt =~ s/\xe2\x80/'/g;
 	$txt =~ s/&#039;/'/g;
-	$txt =~ s/&#x27;/'/g;
+	$txt =~ s/&amp;#x27;/'/g;
 	$txt =~ s/&quot;/"/g;
+	$txt =~ s/&amp;/\&/g;
 
 	return $txt;
 }
@@ -902,12 +903,15 @@ sub do_ticker2
 	$txt =~ s/<[^>]*>//g;
 	$txt = clean_text($txt);
 	print "\n";
-	print $title, "\n";
+	print "\033[37mTitle: \033[36m$title\033[32m\n";
 	print $url, "\n";
 
+	my $last_ln = 'xxx';
 	foreach my $ln (split("\n", $txt)) {
 		$ln =~ s/^\s+//;
+		next if $last_ln eq '' && $ln eq '';
 		print $ln, "\n";
+		$last_ln = $ln;
 	}
 	print "[End]\n";
 }
