@@ -680,6 +680,8 @@ sub do_parse
 
 sub do_status_line
 {
+	return if $opts{notime};
+
 	my $fh = new FileHandle("/proc/loadavg");
 	my $avg = <$fh>;
 	$avg =~ s/ .*//;
@@ -723,7 +725,10 @@ sub do_weather
 }
 
 ######################################################################
-#   Generate periodic/random headline.				     #
+#   Generate  periodic/random  headline.  We  want a console output  #
+#   (plain  text)  and  HTML,  which  can  offer  more features. In  #
+#   addition,  for  console, we may support touch based input. (Not  #
+#   currently implemented).					     #
 ######################################################################
 sub do_ticker
 {	my $ppid = shift;
@@ -758,6 +763,10 @@ sub do_ticker
 		my $rss1 = $rss;
 		$rss1 =~ s/\$t/60/;
 
+		###############################################
+		#   Look  at  about  100 recent articles for  #
+		#   display.				      #
+		###############################################
 		my @history;
 		@files = (reverse(glob("$ENV{HOME}/.rss/articles/*")))[0..100];
 		for (my $i = 0; $i < 100; $i++) {
@@ -774,6 +783,14 @@ sub do_ticker
 			my $title = $info->{title};
 			next if $seen_title{$title};
 			$seen_title{$title} = 1;
+
+			###############################################
+			#   Some  cleanups for common glyph usage in  #
+			#   headlines				      #
+			###############################################
+			$title =~ s/\xe2\x80/'/g;
+			$title =~ s/&#039;/'/g;
+			$title =~ s/&quot;/"/g;
 
 			my $lnk = $info->{link};
 			$lnk =~ s/^https*:\/\///;
@@ -1426,6 +1443,7 @@ sub main
 		'init',
 		'n',
 		'nokill',
+		'notime',
 		'output',
 		'parse',
 		'size=s',
