@@ -113,3 +113,7 @@ Dependencies:
 
   * ansiweather
   * caca-utils
+
+Examples:
+
+  [Demo](video/video1.svg)
