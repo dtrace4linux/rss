@@ -701,12 +701,14 @@ sub do_status_line
 	my $avg = <$fh>;
 	$avg =~ s/ .*//;
 	printf "\033[1;%dH", $columns - 20;
+
+	my $c;
 	if ($avg >= 1) {
-		print "\033[33m";
+		$c = "\033[33m";
 	} else {
-		print "\033[43;30m";
+		$c = "\033[43;30m";
 	}
-	print strftime(" Time: %H:%M:%S ", localtime());
+	print strftime("$c Time: %H:%M:%S ", localtime());
 	printf "\033[%dH\033[37;40m", $rows;
 }
 
