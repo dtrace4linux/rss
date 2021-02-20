@@ -912,11 +912,17 @@ sub do_ticker
 
 		for (my $i = 0; $i < $t; $i++) {
 			do_status_line();
-			if (ev_check()) {
+
+			my $ev = ev_check();
+			if ($ev < 0) {
+				sleep(1);
+				next;
+			}
+
+			if ($ev > 0) {
 				$ticks++;
 				last;
 			}
-			sleep(1);
 		}
 	}
 	exit(0);
@@ -982,31 +988,40 @@ sub do_ticker2
 my $EV_ABS = 0x03;
 my $ABS_MT_TRACKING_ID = 0x39;
 
+my $ev_fh;
 sub ev_check
 {
-	my $fh = new FileHandle("/dev/input/event0");
-	return if !$fh;
+	if (!$ev_fh) {
+		$ev_fh = new FileHandle("/dev/input/event0");
+	}
+	return -1 if !$ev_fh;
 
 	my $bits = '';
-	vec($bits, $fh->fileno(), 1) = 1;
+	vec($bits, $ev_fh->fileno(), 1) = 1;
 
+	my $t = 1;
 	while (1) {
 		my $rbits;
-		my $n = select($rbits = $bits, undef, undef, 0.1);
+		my $n = select($rbits = $bits, undef, undef, $t);
 		return if !$n;
 
+		$t = 0.1;
+
 		my $s;
-		last if !sysread($fh, $s, 16);
+		last if !sysread($ev_fh, $s, 16);
 
 		my ($secs, $usecs, $type, $code, $value) = unpack("LLSSS", $s);
+#printf "type=0x%x code=0x%x value=0x%x\n", $type, $code, $value if $type == $EV_ABS;
 
 		if ($type == $EV_ABS && 
 		    $code == $ABS_MT_TRACKING_ID &&
-		    $value == 0) {
+		    $value != 0xffff) {
+#printf "touchscreen: ret=1\n";
 		    	return 1;
 		}
 	}
 
+	return 0;
 }
 
 sub gen_status

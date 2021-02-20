@@ -91,6 +91,12 @@ Startup
   rss.pl - and it will take care of killing the existing background
   processes.
 
+images/ directory
+
+  If you place a series of images in this folder, then periodically
+  they are rendered to the screen, via the img2txt tool (caca-utils
+  package)
+
 TODO
 
   There are many things to do for future work. The current UI for
@@ -98,7 +104,6 @@ TODO
   good to add touch support to drill into a news item or show
   alternate views (such as weather/stocks)
 
-  * Periodically show the text of a headline
   * Cycle a weather history / prediction
   * Stock chart
 
