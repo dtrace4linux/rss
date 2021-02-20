@@ -761,7 +761,8 @@ sub do_weather
 #   (per tick == minute)					     #
 ######################################################################
 my @tick_to_page = (
-	0, 1, 1, 1, 2, 1, 0, 0, 1, 3,
+	4, 0, 1, 1, 1, 2, 1, 0, 0, 1, 3,
+	4, # rss-hello
 	);
 
 sub do_ticker
@@ -887,6 +888,11 @@ sub do_ticker
 			my $fn = $img[rand(@img)];
 			if (-x "/usr/bin/img2txt" && $fn) {
 				system("/usr/bin/img2txt $fn");
+			}
+		} elsif ($page == 4) {
+			my $fh = new FileHandle("$FindBin::RealBin/rss-hello.txt");
+			while (<$fh>) {
+				print;
 			}
 		}
 
