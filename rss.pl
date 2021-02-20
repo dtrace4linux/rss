@@ -1003,7 +1003,7 @@ sub ev_check
 	while (1) {
 		my $rbits;
 		my $n = select($rbits = $bits, undef, undef, $t);
-		return if !$n;
+		return 0 if !$n;
 
 		$t = 0.1;
 
