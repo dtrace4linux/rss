@@ -1022,7 +1022,11 @@ sub do_page2
 {
 	my $fh = new FileHandle("cal |");
 
+	my $d = strftime("%d", localtime());
+	$d = " $d" if length($d) == 1;
+
 	while (<$fh>) {
+		$_ =~ s/$d/\033[42;37m&\033[40;37m/ if $. > 1;
 		print " " x (($columns - 21) / 2);
 		print $_;
 	}
