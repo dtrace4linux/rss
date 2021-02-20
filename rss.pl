@@ -200,9 +200,11 @@ sub clean_text
 
 	$txt =~ s/\xe2\x80/'/g;
 	$txt =~ s/&#039;/'/g;
+	$txt =~ s/&#39;/'/g;
 	$txt =~ s/&amp;#x27;/'/g;
 	$txt =~ s/&quot;/"/g;
 	$txt =~ s/&amp;/\&/g;
+	$txt =~ s/&quot;/"/g;
 
 	return $txt;
 }
@@ -702,10 +704,10 @@ sub do_status_line
 	if ($avg >= 1) {
 		print "\033[33m";
 	} else {
-		print "\033[32m";
+		print "\033[43;30m";
 	}
 	print strftime(" Time: %H:%M:%S ", localtime());
-	printf "\033[%dH", $rows;
+	printf "\033[%dH\033[37;40m", $rows;
 }
 
 my $stock_time = 0;
@@ -731,7 +733,9 @@ sub do_weather
 		$wtime = time();
 		print strftime("%H:%M ", localtime());
 		my $w = `$opts{weather_app} -l $opts{weather_location} -p false`;
-		my $fh = new FileHandle(">>/tmp/weather.log");
+
+		my $fn = "$ENV{HOME}/.rss/ticker/weather.log";
+		my $fh = new FileHandle(">>$fn");
 		print $fh time_string() . $w if $fh;
 		print $w;
 	}
@@ -743,6 +747,15 @@ sub do_weather
 #   addition,  for  console, we may support touch based input. (Not  #
 #   currently implemented).					     #
 ######################################################################
+
+######################################################################
+#   Array  allowing  us to control the order and frequency of pages  #
+#   (per tick == minute)					     #
+######################################################################
+my @tick_to_page = (
+	0, 1, 1, 1, 2, 1, 0, 0, 1, 3,
+	);
+
 sub do_ticker
 {	my $ppid = shift;
 
@@ -756,6 +769,8 @@ sub do_ticker
 
 	my $cols = $columns - 10;
 	my %seen_title;
+
+	mkdir("$ENV{HOME}/.rss/ticker", 0755);
 
 	###############################################
 	#   We  display  other pages, other than raw  #
@@ -845,15 +860,27 @@ sub do_ticker
 		}
 
 		print $con_fh $con_txt;
-		$page = 1 if $opts{page2};
-		if ($page == 0) {
+
+		$page = $tick_to_page[$ticks++ % @tick_to_page];
+		$page = $opts{page} if defined($opts{page});
+		
+		if ($page == 0 || $con_txt) {
 			print $con_txt;
 		} elsif ($page == 1) {
 			my $fn = $files[rand(@files)];
 
 			do_ticker2($fn);
+		} elsif ($page == 2) {
+			print "\n";
+			system("cal");
+			print "\n";
+		} elsif ($page == 3) {
+			my @img = glob("$FindBin::RealBin/images/*");
+			my $fn = $img[rand(@img)];
+			if (-x "/usr/bin/img2txt" && $fn) {
+				system("/usr/bin/img2txt $fn");
+			}
 		}
-		$page = ($page + 1) % 2;
 
 		do_weather();
 		do_stocks();
@@ -885,6 +912,10 @@ sub do_ticker
 
 		for (my $i = 0; $i < $t; $i++) {
 			do_status_line();
+			if (ev_check()) {
+				$ticks++;
+				last;
+			}
 			sleep(1);
 		}
 	}
@@ -894,7 +925,9 @@ sub do_ticker
 sub do_ticker2
 {	my $fn = shift;
 
+
 	my $info = read_article($fn);
+
 	my $title = clean_text($info->{title});
 	my $url = $info->{link};
 	#$url =~ s/^https*:\/\///;
@@ -903,6 +936,17 @@ sub do_ticker2
 	my $txt = $info->{body};
 	$txt =~ s/<[^>]*>//g;
 	$txt = clean_text($txt);
+
+	###############################################
+	#   Keep  a history of what we show; want to  #
+	#   decide  if  we are repeating entries too  #
+	#   often.				      #
+	###############################################
+	my $fh = new FileHandle(">>/tmp/page2.log");
+	if ($fh) {
+		print $fh time_string() . "article=" . basename($fn) . " $title\n";
+	}
+
 	print "\n";
 	print "\033[37mTitle: \033[36m$title\033[32m\n";
 	print $url, "\n";
@@ -930,6 +974,39 @@ sub do_ticker2
 		$last_ln = $ln;
 	}
 	print "\n" if $col;
+}
+
+######################################################################
+#   Check for a touch screen event.				     #
+######################################################################
+my $EV_ABS = 0x03;
+my $ABS_MT_TRACKING_ID = 0x39;
+
+sub ev_check
+{
+	my $fh = new FileHandle("/dev/input/event0");
+	return if !$fh;
+
+	my $bits = '';
+	vec($bits, $fh->fileno(), 1) = 1;
+
+	while (1) {
+		my $rbits;
+		my $n = select($rbits = $bits, undef, undef, 0.1);
+		return if !$n;
+
+		my $s;
+		last if !sysread($fh, $s, 16);
+
+		my ($secs, $usecs, $type, $code, $value) = unpack("LLSSS", $s);
+
+		if ($type == $EV_ABS && 
+		    $code == $ABS_MT_TRACKING_ID &&
+		    $value == 0) {
+		    	return 1;
+		}
+	}
+
 }
 
 sub gen_status
@@ -1533,7 +1610,7 @@ sub main
 		'nokill',
 		'notime',
 		'output',
-		'page2',
+		'page=s',
 		'parse',
 		'size=s',
 		'sleep=s',
@@ -2246,6 +2323,16 @@ Description:
   cookie support to track/hilight what is new compared to your
   last refresh.
 
+Ticker mode:
+
+  When RSS runs, it runs in the background, collecting data.
+  In the foreground, it can display a terminal based display of
+  headlines, and random content.
+
+  (Additionally, an HTML page is created, which can be viewed from
+  an available webserver, to see a richer version of the current
+  headlines).
+
 Switches:
 
   -clean       Just clean and exit.
@@ -2259,6 +2346,8 @@ Switches:
   -init        Initialise the repository.
   -n           Dry run - dont fetch.
   -output      Generate output file.
+  -page2       In ticker mode, just display page#2 which is a random
+               topic
   -parse       Parse RSS feeds into articles
   -size NN     Size (in KB) for the output page.
   -sleep NN    Time for refresh when doing news ticker.

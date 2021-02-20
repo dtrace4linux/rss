@@ -101,3 +101,10 @@ TODO
   * Periodically show the text of a headline
   * Cycle a weather history / prediction
   * Stock chart
+
+Dependencies:
+
+  These tools or packages are optional but will be invoked if installed:
+
+  * ansiweather
+  * caca-utils
