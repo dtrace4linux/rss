@@ -201,6 +201,7 @@ sub clean_text
 	$txt =~ s/\xe2\x80/'/g;
 	$txt =~ s/&#039;/'/g;
 	$txt =~ s/&#39;/'/g;
+	$txt =~ s/&#22;/"/g;
 	$txt =~ s/&amp;#x27;/'/g;
 	$txt =~ s/&quot;/"/g;
 	$txt =~ s/&amp;/\&/g;
@@ -760,10 +761,32 @@ sub do_weather
 #   Array  allowing  us to control the order and frequency of pages  #
 #   (per tick == minute)					     #
 ######################################################################
-my @tick_to_page = (
-	0, 1, 1, 1, 2, 1, 0, 0, 1, 3,
-	4, # rss-hello
+my %page_sched = (
+	0 => { freq => 0},    # headlines
+	1 => { freq => 60},   # random topic
+	2 => { freq => 600},  # calendar
+	3 => { freq => 1200}, # image
+	4 => { freq => 1800}, # rss-hello banner
 	);
+
+sub sched_page
+{	my $txt = shift;
+
+	return 0 if $txt;
+
+	for (my $i = 1; $i < 5; $i++) {
+		if (!defined($page_sched{$i}{last_time})) {
+			$page_sched{$i}{last_time} = time();
+			return $i;
+		}
+		if ($page_sched{$i}{last_time} + $page_sched{$i}{freq} < time()) {
+			$page_sched{$i}{last_time} = time();
+			return $i;
+		}
+	}
+
+	return 1;
+}
 
 sub do_ticker
 {	my $ppid = shift;
@@ -870,10 +893,8 @@ sub do_ticker
 
 		print $con_fh $con_txt;
 
-		$page = $tick_to_page[$ticks++ % @tick_to_page];
-		$page = $opts{page} if defined($opts{page});
-		
-		if ($page == 0 || $con_txt) {
+		$page = sched_page($con_txt);
+		if ($page == 0) {
 			print $con_txt;
 		} elsif ($page == 1) {
 			my $fn = $files[rand(@files)];
