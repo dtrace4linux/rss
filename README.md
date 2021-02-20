@@ -116,4 +116,4 @@ Dependencies:
 
 Examples:
 
-  [Demo](video/video1.svg)
+  ![Demo](video/video1.svg)
