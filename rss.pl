@@ -1018,17 +1018,53 @@ sub do_page1
 	print "\n" if $col;
 }
 
+######################################################################
+#   We do what /bin/cal does, but /bin/cal is not configurable - it  #
+#   wont highlight the current day if stdout is a pipe.		     #
+######################################################################
 sub do_page2
 {
-	my $fh = new FileHandle("cal |");
+	my %dow = (
+		Sun => 0,
+		Mon => 1,
+		Tue => 2,
+		Wed => 3,
+		Thu => 4,
+		Fri => 5,
+		Sat => 6,
+		);
 
+	my $margin = " " x (($columns - 21) / 2);
+	my $s = strftime("   %B %Y", localtime());
 	my $d = strftime("%d", localtime());
-	$d = " $d" if length($d) == 1;
+	my $this_month = strftime("%B", localtime());
+	my $dow = strftime("%a", localtime());
 
-	while (<$fh>) {
-		$_ =~ s/$d/\033[42;37m&\033[40;37m/ if $. > 1;
-		print " " x (($columns - 21) / 2);
-		print $_;
+	print "\n";
+	print "$margin\033[34m$s\033[37m\n";
+	print "${margin}\033[33mSu Mo Tu We Th Fr Sa\033[37m\n";
+
+	my $i = $dow{$dow};
+	my $t = time() - $d * 86400;
+	for (my $j = 0; $j < 40; $j++) {
+		my $d1 = strftime("%d", localtime($t));
+		my $month = strftime("%B", localtime($t));
+		my $dow1 = strftime("%a", localtime($t));
+		$t += 86400;
+
+		if ($dow1 eq 'Sun') {
+			print $margin;
+		}
+		if ($month ne $this_month) {
+			print "   ";
+		} elsif ($d1 == $d) {
+			printf "\033[7m%2d\033[27m ", $d1;
+		} else {
+			printf "%2d ", $d1;
+		}
+		if ($dow1 eq 'Sat') {
+			print "\n";
+		}
 	}
 }
 ######################################################################
