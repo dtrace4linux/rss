@@ -49,7 +49,7 @@ sub main
 		'update',
 		);
 
-	mkdir("/tmp/$ENV{USER}", 0700);
+	mkdir(dirname($opts{o}), 0700);
 
 	my $stty = `stty -a | grep columns`;
 	chomp($stty);
@@ -156,7 +156,7 @@ sub get
 {	my $stock = shift;
 	my $update = shift;
 
-	my $fn = "/tmp/$ENV{USER}/$stock.log";
+	my $fn = dirname($opts{o}) . "/$stock.log";
 	my $mtime = (stat($fn))[9];
 
 	my $do_store = 0;

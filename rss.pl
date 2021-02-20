@@ -203,6 +203,7 @@ sub clean_text
 	$txt =~ s/&#39;/'/g;
 	$txt =~ s/&#22;/"/g;
 	$txt =~ s/&#27;/'/g;
+	$txt =~ s/&#x27;/'/g;
 	$txt =~ s/&amp;#x27;/'/g;
 	$txt =~ s/&quot;/"/g;
 	$txt =~ s/&amp;/\&/g;
@@ -727,7 +728,7 @@ sub do_stocks
 	    time() > $stock_time + $opts{stock_time}) {
 		$stock_time = time();
 		print strftime("%H:%M ", localtime());
-		my $cmd = "$FindBin::RealBin/stock.pl -update -random " .
+		my $cmd = "$FindBin::RealBin/stock.pl -update -random -o $ENV{HOME}/.rss/ticker/stock.log" .
 			join(" ", @{$opts{stocks}});
 		#print "$cmd\n";
 		system($cmd);
@@ -1041,8 +1042,8 @@ sub do_page2
 	my $dow = strftime("%a", localtime());
 
 	print "\n";
-	print "$margin\033[34m$s\033[37m\n";
-	print "${margin}\033[33mSu Mo Tu We Th Fr Sa\033[37m\n";
+	print "$margin\033[36m$s\033[37m\n";
+	print "${margin}\033[33;1mSu Mo Tu We Th Fr Sa\033[0;37m\n";
 
 	my $i = $dow{$dow};
 	my $t = time() - $d * 86400;
@@ -1058,7 +1059,7 @@ sub do_page2
 		if ($month ne $this_month) {
 			print "   ";
 		} elsif ($d1 == $d) {
-			printf "\033[7m%2d\033[27m ", $d1;
+			printf "\033[43;30m%2d\033[37;40m ", $d1;
 		} else {
 			printf "%2d ", $d1;
 		}
