@@ -202,6 +202,7 @@ sub clean_text
 	$txt =~ s/&#039;/'/g;
 	$txt =~ s/&#39;/'/g;
 	$txt =~ s/&#22;/"/g;
+	$txt =~ s/&#27;/'/g;
 	$txt =~ s/&amp;#x27;/'/g;
 	$txt =~ s/&quot;/"/g;
 	$txt =~ s/&amp;/\&/g;
@@ -894,16 +895,16 @@ sub do_ticker
 		print $con_fh $con_txt;
 
 		$page = sched_page($con_txt);
+		$page = $opts{page} if defined($opts{page});
+
 		if ($page == 0) {
 			print $con_txt;
 		} elsif ($page == 1) {
 			my $fn = $files[rand(@files)];
 
-			do_ticker2($fn);
+			do_page1($fn);
 		} elsif ($page == 2) {
-			print "\n";
-			system("cal");
-			print "\n";
+			do_page2();
 		} elsif ($page == 3) {
 			my @img = glob("$FindBin::RealBin/images/*");
 			my $fn = $img[rand(@img)];
@@ -963,7 +964,7 @@ sub do_ticker
 	exit(0);
 }
 
-sub do_ticker2
+sub do_page1
 {	my $fn = shift;
 
 
@@ -1017,6 +1018,15 @@ sub do_ticker2
 	print "\n" if $col;
 }
 
+sub do_page2
+{
+	my $fh = new FileHandle("cal |");
+
+	while (<$fh>) {
+		print " " x (($columns - 21) / 2);
+		print $_;
+	}
+}
 ######################################################################
 #   Check for a touch screen event.				     #
 ######################################################################
