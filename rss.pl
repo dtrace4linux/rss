@@ -694,8 +694,14 @@ sub do_parse
 }
 
 sub do_status_line
-{
+{	my $ppid = shift;
+
 	return if $opts{notime};
+
+	if (defined($ppid) && ! -d "/proc/$ppid") {
+		print time_string() . "[$$] parent $ppid terminated\n";
+		exit(0);
+	}
 
 	my $fh = new FileHandle("/proc/loadavg");
 	my $avg = <$fh>;
@@ -708,8 +714,8 @@ sub do_status_line
 	} else {
 		$c = "\033[43;30m";
 	}
-	print strftime("$c Time: %H:%M:%S ", localtime());
-	printf "\033[%dH\033[37;40m", $rows;
+	printf strftime("$c Time: %H:%M:%S ", localtime()) .
+		"\033[%dH\033[37;40m", $rows;
 }
 
 my $stock_time = 0;
@@ -913,7 +919,7 @@ sub do_ticker
 		}
 
 		for (my $i = 0; $i < $t; $i++) {
-			do_status_line();
+			do_status_line($ppid);
 
 			my $ev = ev_check();
 			if ($ev < 0) {
@@ -993,6 +999,8 @@ my $ABS_MT_TRACKING_ID = 0x39;
 my $ev_fh;
 sub ev_check
 {
+	return -1 if !$opts{touchpad};
+
 	if (!$ev_fh) {
 		$ev_fh = new FileHandle("/dev/input/event0");
 	}
@@ -2193,7 +2201,7 @@ sub read_rss_config
 	my $bin = "$FindBin::RealBin";
 	my $fn;
 
-	foreach my $f ("$ENV{HOME}/.rss_config", "$bin/rss_config.cfg") {
+	foreach my $f ("$ENV{HOME}/.rss/rss_config.cfg", "$bin/rss_config.cfg") {
 		if (-f $f) {
 			$fn = $f;
 			last;
