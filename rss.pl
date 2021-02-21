@@ -715,7 +715,7 @@ sub do_status_line
 	if ($avg >= 1) {
 		$c = "\033[33m";
 	} else {
-		$c = "\033[43;30m";
+		$c = "\033[1;33m";
 	}
 	printf strftime("$c Time: %H:%M:%S ", localtime()) .
 		"\033[%dH\033[37;40m", $rows;
@@ -907,7 +907,8 @@ sub do_ticker
 		} elsif ($page == 2) {
 			do_page2();
 		} elsif ($page == 3) {
-			my @img = glob("$FindBin::RealBin/images/*");
+			$opts{image_dir} =~ s/\$HOME/$ENV{HOME}/;
+			my @img = glob("$opts{image_dir}/*");
 			my $fn = $img[rand(@img)];
 			if (-x "/usr/bin/img2txt" && $fn) {
 				system("/usr/bin/img2txt $fn");
@@ -1059,7 +1060,7 @@ sub do_page2
 		if ($month ne $this_month) {
 			print "   ";
 		} elsif ($d1 == $d) {
-			printf "\033[43;30m%2d\033[37;40m ", $d1;
+			printf "\033[1;43;30m%2d\033[37;40m ", $d1;
 		} else {
 			printf "%2d ", $d1;
 		}

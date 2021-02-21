@@ -1,5 +1,7 @@
 #! /bin/sh
 
+exit 0
+
 fn=$1
 
 # Machine to copy to (if it exists)
