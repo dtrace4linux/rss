@@ -911,7 +911,9 @@ sub do_ticker
 			my @img = glob("$opts{image_dir}/*");
 			my $fn = $img[rand(@img)];
 			if (-x "/usr/bin/img2txt" && $fn) {
-				system("/usr/bin/img2txt $fn");
+				my $w = $columns - 1;
+				my $h = $rows - 1;
+				system("/usr/bin/img2txt -W $w -H $h $fn");
 			}
 		} elsif ($page == 4) {
 			my $fh = new FileHandle("$FindBin::RealBin/rss-hello.txt");
