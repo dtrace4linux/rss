@@ -113,6 +113,7 @@ Dependencies:
 
   * ansiweather
   * caca-utils
+  * libperl-json (for pexels.pl downloading)
 
 Examples:
 

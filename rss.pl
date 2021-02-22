@@ -1062,7 +1062,7 @@ sub do_page2
 		if ($month ne $this_month) {
 			print "   ";
 		} elsif ($d1 == $d) {
-			printf "\033[1;43;30m%2d\033[37;40m ", $d1;
+			printf "\033[1;43;30m%2d\033[37;40;0m ", $d1;
 		} else {
 			printf "%2d ", $d1;
 		}

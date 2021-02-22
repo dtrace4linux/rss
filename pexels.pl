@@ -37,6 +37,8 @@ sub main
 
 #	query("search?query=nature&per_page=1");
 	query("curated?per_page=15"); # max 80, default 15
+	query("search?query=nature&per_page=15"); # max 80, default 15
+	query("search?query=art&per_page=15"); # max 80, default 15
 }
 
 sub query
@@ -57,8 +59,9 @@ sub query
 		$fn =~ s/\?.*//;
 		$fn = basename($fn);
 
-		print "$p->{src}->{tiny}\n";
+		next if -f "$dir/$fn";
 
+		print "$p->{src}->{tiny}\n";
 		spawn("curl --silent -o $dir/$fn '$p->{src}->{tiny}'");
 	}
 }
