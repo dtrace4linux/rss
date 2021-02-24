@@ -1087,11 +1087,12 @@ sub do_page3_image
 
 	$opts{image_dir} =~ s/\$HOME/$ENV{HOME}/;
 	my @img = glob("$opts{image_dir}/*");
+	push @img, glob("$ENV{HOME}/images/*");
 	my $fn = $img[rand(@img)];
 
 	if (-x "$FindBin::RealBin/tools/fb") {
 		# Save screen before
-		if ( -f "/dev/fb0") {
+		if ( -e "/dev/fb0") {
 			system("cat /dev/fb0 > /tmp/screendump");
 		}
 		system("$FindBin::RealBin/tools/fb -fullscreen -q $fn");
