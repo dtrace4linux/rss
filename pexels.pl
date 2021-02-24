@@ -25,6 +25,7 @@ sub main
 	Getopt::Long::Configure('no_ignore_case');
 	usage() unless GetOptions(\%opts,
 		'help',
+		'v',
 		);
 
 	usage(0) if $opts{help};
@@ -39,6 +40,8 @@ sub main
 	query("curated?per_page=15"); # max 80, default 15
 	query("search?query=nature&per_page=15"); # max 80, default 15
 	query("search?query=art&per_page=15"); # max 80, default 15
+	query("search?query=abstract&per_page=15"); # max 80, default 15
+	query("search?query=sky&per_page=15"); # max 80, default 15
 }
 
 sub query
@@ -55,14 +58,18 @@ sub query
 	my $dir = "$ENV{HOME}/pexels";
 
 	foreach my $p (@{$info->{photos}}) {
-		my $fn = "$p->{src}->{tiny}";
-		$fn =~ s/\?.*//;
-		$fn = basename($fn);
+		foreach my $sz (qw/tiny small medium/) {
+			my $fn = "$p->{src}->{$sz}";
+			$fn =~ s/\?.*//;
+			$fn = basename($fn);
 
-		next if -f "$dir/$fn";
+			$fn =~ s/\.jpeg/-$sz.jpeg/;
 
-		print "$p->{src}->{tiny}\n";
-		spawn("curl --silent -o $dir/$fn '$p->{src}->{tiny}'");
+			next if -f "$dir/$fn";
+
+			print "$sz: $p->{src}->{$sz}\n";
+			spawn("curl --silent -o $dir/$fn '$p->{src}->{$sz}'");
+		}
 	}
 }
 

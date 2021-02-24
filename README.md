@@ -18,6 +18,7 @@ As well as news headlines, it includes the following:
 
   * stock symbol updates
   * weather for your area
+  * random jpg images
 
 The file rss_options.cfg can be used to configure the weather, stock
 symbols, and other attributes. The file rss.cfg is used to describe the
@@ -91,11 +92,25 @@ Startup
   rss.pl - and it will take care of killing the existing background
   processes.
 
-images/ directory
+$HOME/pexels directory
 
   If you place a series of images in this folder, then periodically
-  they are rendered to the screen, via the img2txt tool (caca-utils
-  package)
+  they are rendered to the screen, via the img2txt or 'fb' tool.
+
+  img2txt provides ASCII art based rendering, which is fine, but not
+  truely accurate. It is available in the caca-utils package if you
+  want it.
+
+  Additionally, if you cd to the rss/tools dir and type:
+
+  $ make
+
+  It will create a frame-buffer renderer and draw the real JPG
+  image. (JPG only so far, not GIF or PNG).
+
+  The script "pexels.pl" can be used to acquire random stock images
+  from http://pexels.com, but you need an API key to do this. Or,
+  just populate the folder with a random selection of your own photos.
 
 TODO
 
@@ -106,6 +121,7 @@ TODO
 
   * Cycle a weather history / prediction
   * Stock chart
+  * Better JPG rendering - slide ins/gray scale, and scrolling
 
 Dependencies:
 
@@ -114,6 +130,11 @@ Dependencies:
   * ansiweather
   * caca-utils
   * libperl-json (for pexels.pl downloading)
+
+For GUI display
+
+  * unclutter
+  * libjpeg-dev
 
 Examples:
 

@@ -203,11 +203,13 @@ sub clean_text
 	$txt =~ s/&#39;/'/g;
 	$txt =~ s/&#22;/"/g;
 	$txt =~ s/&#27;/'/g;
+	$txt =~ s/&#32;/ /g;
 	$txt =~ s/&#x27;/'/g;
 	$txt =~ s/&amp;#x27;/'/g;
 	$txt =~ s/&quot;/"/g;
 	$txt =~ s/&amp;/\&/g;
 	$txt =~ s/&quot;/"/g;
+	$txt =~ s/\xe2\x80[\x98\x99]/'/g;
 
 	return $txt;
 }
@@ -905,16 +907,9 @@ sub do_ticker
 
 			do_page1($fn);
 		} elsif ($page == 2) {
-			do_page2();
+			do_page2_calendar();
 		} elsif ($page == 3) {
-			$opts{image_dir} =~ s/\$HOME/$ENV{HOME}/;
-			my @img = glob("$opts{image_dir}/*");
-			my $fn = $img[rand(@img)];
-			if (-x "/usr/bin/img2txt" && $fn) {
-				my $w = $columns - 1;
-				my $h = $rows - 1;
-				system("/usr/bin/img2txt -W $w -H $h $fn");
-			}
+			do_page3_image()
 		} elsif ($page == 4) {
 			my $fh = new FileHandle("$FindBin::RealBin/rss-hello.txt");
 			while (<$fh>) {
@@ -999,6 +994,7 @@ sub do_page1
 
 	my $last_ln = 'xxx';
 	my $col = 0;
+	my $row = 0;
 	foreach my $ln (split("\n", $txt)) {
 		$ln =~ s/^\s+//;
 		next if $last_ln eq '' && $ln eq '';
@@ -1008,6 +1004,7 @@ sub do_page1
 		foreach my $wd (split(" ", $ln)) {
 			if ($col + 1 + length($wd) >= $columns) {
 				print "\n";
+				$row++;
 				$col = 0;
 			}
 			if ($col) {
@@ -1026,7 +1023,7 @@ sub do_page1
 #   We do what /bin/cal does, but /bin/cal is not configurable - it  #
 #   wont highlight the current day if stdout is a pipe.		     #
 ######################################################################
-sub do_page2
+sub do_page2_calendar
 {
 	my %dow = (
 		Sun => 0,
@@ -1069,6 +1066,28 @@ sub do_page2
 		if ($dow1 eq 'Sat') {
 			print "\n";
 		}
+	}
+}
+
+######################################################################
+#   Display a random image.					     #
+######################################################################
+sub do_page3_image
+{
+
+	$opts{image_dir} =~ s/\$HOME/$ENV{HOME}/;
+	my @img = glob("$opts{image_dir}/*");
+	my $fn = $img[rand(@img)];
+
+	if (-x "$FindBin::RealBin/tools/fb") {
+		system("$FindBin::RealBin/tools/fb -q $fn");
+		return;
+	}
+
+	if (-x "/usr/bin/img2txt" && $fn) {
+		my $w = $columns - 1;
+		my $h = $rows - 1;
+		system("/usr/bin/img2txt -W $w -H $h $fn");
 	}
 }
 ######################################################################
