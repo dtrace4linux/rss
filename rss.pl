@@ -895,6 +895,16 @@ sub do_ticker
 			$con_txt .= strftime("%H:%M ", localtime()) .  $title . "\n";
 		}
 
+		###############################################
+		#   Screen  may  contain  an image - when we  #
+		#   scroll  we  get turds. So put the screen  #
+		#   back if we have a saved image.	      #
+		###############################################
+		if (-f "/tmp/screendump") {
+			system("cat /tmp/screendump > /dev/fb0");
+			unlink("/tmp/screendump");
+		}
+
 		print $con_fh $con_txt;
 
 		$page = sched_page($con_txt);
@@ -1080,7 +1090,11 @@ sub do_page3_image
 	my $fn = $img[rand(@img)];
 
 	if (-x "$FindBin::RealBin/tools/fb") {
-		system("$FindBin::RealBin/tools/fb -q $fn");
+		# Save screen before
+		if ( -f "/dev/fb0") {
+			system("cat /dev/fb0 > /tmp/screendump");
+		}
+		system("$FindBin::RealBin/tools/fb -fullscreen -q $fn");
 		return;
 	}
 

@@ -14,12 +14,27 @@ Author: Paul Fox (modifications/enhancements)
 #include <stdio.h>
 #include <fcntl.h>
 #include <stdlib.h>
+#include <string.h>
 #include <linux/fb.h>
 #include <sys/mman.h>
 #include <sys/ioctl.h>
 #include "fb.h"
 
 int quiet;
+int fullscreen;
+
+struct fb_var_screeninfo vinfo;
+struct fb_fix_screeninfo finfo;
+long int location = 0;
+long int screensize = 0;
+
+/**********************************************************************/
+/*   Prototypes.						      */
+/**********************************************************************/
+void normal_display(char *fbp, struct imgRawImage *img, int x, int y, int w, int h);
+void fullscreen_display(char *fbp, struct imgRawImage *img);
+void put_pixel(char *fbp, int r, int g, int b);
+void	usage(void);
 
 int do_switches(int argc, char **argv)
 {	int	i;
@@ -31,10 +46,18 @@ int do_switches(int argc, char **argv)
 			break;
 
 		while (*cp) {
+			if (strcmp(cp, "fullscreen") == 0) {
+				fullscreen = 1;
+				break;
+			}
+
 			switch (*cp++) {
 			  case 'q':
 			  	quiet = 1;
 				break;
+			  default:
+			  	usage();
+				exit(0);
 			  }
 		}
 	}
@@ -43,14 +66,10 @@ int do_switches(int argc, char **argv)
 }
 int main(int argc, char **argv)
 {
-    struct fb_var_screeninfo vinfo;
-    struct fb_fix_screeninfo finfo;
-    long int screensize = 0;
     char *fbp = 0;
     int x = 0, y = 0;
     int	w = -1, h = -1;
     int	x0, y0;
-    long int location = 0;
     int	arg_index = 1;
     char	*fname = NULL;
     struct imgRawImage *img;
@@ -113,10 +132,46 @@ int main(int argc, char **argv)
     printf("The framebuffer device was mapped to memory successfully.\n");
 */
 
-    if (w < 0)
-    	w = img->width;
-    if (h < 0)
-    	h = img->height;
+	if (w < 0)
+		w = img->width;
+	if (h < 0)
+		h = img->height;
+
+	if (fullscreen) {
+		fullscreen_display(fbp, img);
+	} else {
+		normal_display(fbp, img, x, y, w, h);
+	}
+
+    munmap(fbp, screensize);
+    close(fbfd);
+    return 0;
+}
+
+void
+fullscreen_display(char *fbp, struct imgRawImage *img)
+{
+	int	x, y;
+	float xfrac = vinfo.xres / (float) img->width;
+	float yfrac = vinfo.yres / (float) img->height;
+//printf("frac=%f %f\n", xfrac, yfrac);
+
+	for (y = 0; y < vinfo.yres; y++) {
+	        location = (vinfo.yoffset + y) * finfo.line_length;
+			vinfo.xoffset * (vinfo.bits_per_pixel / 8);
+		for (x = 0; x < vinfo.xres; x++) {
+			unsigned char *data = &img->lpData[
+				(int) (y / yfrac) * img->width * 3 +
+				(int) (x / xfrac) * 3];
+
+			put_pixel(fbp, data[0], data[1], data[2]);
+		}
+	}
+}
+
+void 
+normal_display(char *fbp, struct imgRawImage *img, int x, int y, int w, int h)
+{	int	x0, y0;
 
 //printf("%d %d w=%d h=%d\n", x, y, w, h);
 
@@ -125,45 +180,57 @@ int main(int argc, char **argv)
     	if (y0 - y >= img->height)
 		break;
 
-        location = (x+vinfo.xoffset) * (vinfo.bits_per_pixel/8) 
-	    	+ (y0+vinfo.yoffset) * finfo.line_length;
+        location = 
+	    	(y0+vinfo.yoffset) * finfo.line_length +
+		(x+vinfo.xoffset) * (vinfo.bits_per_pixel/8);
 
-        for ( x0 = x; x0 < x + w; x0++ ) {
-	    unsigned char *data = &img->lpData[(y0-y) * img->width * 3 + 
-	    	(x0 - x) * 3 + 0];
-	    if (x0 - x >= img->width)
+	unsigned char *data = &img->lpData[((y0-y) * img->width + x) * 3];
+        for (x0 = x; x0 < x + w; x0++) {
+	    if (x0 - x >= img->width) {
 		break;
+	    }
 	    if (location >= screensize) {
 //	    	printf("loc=0x%04x screensize=%04x\n", location, screensize);
 	    	break;
 	    }
 
-	    unsigned int r = *data++;
-	    unsigned int g = *data++;
-	    unsigned int b = *data++;
-
-            if ( vinfo.bits_per_pixel == 32 ) {
-                *(fbp + location) = b;
-                *(fbp + location + 1) = g;
-                *(fbp + location + 2) = r;
-                *(fbp + location + 3) = 0;      // No transparency
-		location += 4;
-	    } else {
-	        /***********************************************/
-	        /*   Really  need to look at the rgb ordering  */
-	        /*   in vinfo				       */
-	        /***********************************************/
-                unsigned short int t = 
-			((r >> 3) <<11) | 
-			(((g >> 2) & 0x3f) << 5) | 
-			((b >> 3) & 0x1f);
-                *((unsigned short int*)(fbp + location)) = t;
-		location += 2;
-	    }
+	    put_pixel(fbp, data[0], data[1], data[2]);
+	    data += 3;
 
         }
     }
-    munmap(fbp, screensize);
-    close(fbfd);
-    return 0;
+}
+
+void
+put_pixel(char *fbp, int r, int g, int b)
+{
+	if ( vinfo.bits_per_pixel == 32 ) {
+		*(fbp + location) = b;
+		*(fbp + location + 1) = g;
+		*(fbp + location + 2) = r;
+		*(fbp + location + 3) = 0;      // No transparency
+		location += 4;
+	} else {
+		/***********************************************/
+		/*   Really  need to look at the rgb ordering  */
+		/*   in vinfo				       */
+		/***********************************************/
+		unsigned short int t = 
+			((r >> 3) <<11) | 
+			(((g >> 2) & 0x3f) << 5) | 
+			((b >> 3) & 0x1f);
+		*((unsigned short int*)(fbp + location)) = t;
+		location += 2;
+	}
+}
+void
+usage()
+{
+	fprintf(stderr, "fb -- tool to display JPG images on the framebuffer\n");
+	fprintf(stderr, "Usage: fb [switches] <filename.jpg>\n");
+	fprintf(stderr, "\n");
+	fprintf(stderr, "Switches:\n");
+	fprintf(stderr, "\n");
+	fprintf(stderr, "   -fullscreen     Stretch image to fill screen\n");
+
 }
