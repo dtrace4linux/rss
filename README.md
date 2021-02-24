@@ -125,6 +125,14 @@ reminders.txt
   (At a later date, may provide a WEB UI to add/update/delete items
   so that others in the house can make updates).
 
+  For example:
+
+ _        _          _   _            _     _                         _
+| |_ __ _| | _____  | |_| |__   ___  | |__ (_)_ __  ___    ___  _   _| |_
+| __/ _` | |/ / _ \ | __| '_ \ / _ \ | '_ \| | '_ \/ __|  / _ \| | | | __|
+| || (_| |   <  __/ | |_| | | |  __/ | |_) | | | | \__ \ | (_) | |_| | |_
+ \__\__,_|_|\_\___|  \__|_| |_|\___| |_.__/|_|_| |_|___/  \___/ \__,_|\__|
+
 TODO
 
   There are many things to do for future work. The current UI for
