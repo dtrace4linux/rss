@@ -770,7 +770,8 @@ my %page_sched = (
 	1 => { freq => 60},   # random topic
 	2 => { freq => 600},  # calendar
 	3 => { freq => 1200}, # image
-	4 => { freq => 1800}, # rss-hello banner
+	4 => { freq => 1800}, # reminder
+	5 => { freq => 1800}, # rss-hello banner
 	);
 
 sub sched_page
@@ -921,6 +922,8 @@ sub do_ticker
 		} elsif ($page == 3) {
 			do_page3_image()
 		} elsif ($page == 4) {
+			do_page4_reminder()
+		} elsif ($page == 5) {
 			my $fh = new FileHandle("$FindBin::RealBin/rss-hello.txt");
 			while (<$fh>) {
 				print;
@@ -1105,6 +1108,12 @@ sub do_page3_image
 		system("/usr/bin/img2txt -W $w -H $h $fn");
 	}
 }
+sub do_page4_reminder
+{
+	my $path = $FindBin::RealBin;
+	system("$path/reminder.pl $path/reminders.txt");
+}
+
 ######################################################################
 #   Check for a touch screen event.				     #
 ######################################################################

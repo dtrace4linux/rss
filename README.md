@@ -19,6 +19,7 @@ As well as news headlines, it includes the following:
   * stock symbol updates
   * weather for your area
   * random jpg images
+  * reminders
 
 The file rss_options.cfg can be used to configure the weather, stock
 symbols, and other attributes. The file rss.cfg is used to describe the
@@ -92,10 +93,11 @@ Startup
   rss.pl - and it will take care of killing the existing background
   processes.
 
-$HOME/pexels directory
+$HOME/pexels & $HOME/images directory
 
-  If you place a series of images in this folder, then periodically
-  they are rendered to the screen, via the img2txt or 'fb' tool.
+  If you place a series of images in the pexels/ or images/ folder, 
+  then periodically they are rendered to the screen, via the img2txt 
+  or 'fb' tool.
 
   img2txt provides ASCII art based rendering, which is fine, but not
   truely accurate. It is available in the caca-utils package if you
@@ -111,6 +113,17 @@ $HOME/pexels directory
   The script "pexels.pl" can be used to acquire random stock images
   from http://pexels.com, but you need an API key to do this. Or,
   just populate the folder with a random selection of your own photos.
+
+  $HOME/images is for personal photos - not derived from pexels,
+  making it easier to manage.
+
+reminders.txt
+
+  Periodically, the reminders.txt file is checked for small/short
+  messages to display on the console. Useful for reminders.
+
+  (At a later date, may provide a WEB UI to add/update/delete items
+  so that others in the house can make updates).
 
 TODO
 
