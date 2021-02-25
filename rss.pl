@@ -1330,7 +1330,7 @@ sub main
 		if (fork() == 0) {
      			open(STDOUT, ">&", $orig_stdout);
      			open(STDIN, "<&", $orig_stdin);
-			exec "$ticker -p $pid";
+			exec "$ticker -ppid $pid";
 			exit(0);
 		}
 	}

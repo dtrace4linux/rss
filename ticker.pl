@@ -108,6 +108,8 @@ sub main
 
 	usage(0) if $opts{help};
 
+	$| = 1;
+
 	print "\033[37m";
 
 	my $s = `stty -a | grep columns`;
