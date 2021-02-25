@@ -79,6 +79,8 @@ my @argv = @ARGV;
 my @writers;
 my $wbits = '';
 my $curl_msg = '';
+my $stock_time = 0;
+my $weather_time = 0;
 
 my $copyright_year = "2015-2021";
 
@@ -723,14 +725,14 @@ sub do_status_line
 		"\033[%dH\033[37;40m", $rows;
 }
 
-my $stock_time = 0;
 sub do_stocks
 {
 	if ($opts{stocks} &&
 	    time() > $stock_time + $opts{stock_time}) {
+	    	reset_fb();
 		$stock_time = time();
 		print strftime("%H:%M ", localtime());
-		my $cmd = "$FindBin::RealBin/stock.pl -update -random -o $ENV{HOME}/.rss/ticker/stock.log" .
+		my $cmd = "$FindBin::RealBin/stock.pl -update -random -o $ENV{HOME}/.rss/ticker/stock.log " .
 			join(" ", @{$opts{stocks}});
 		#print "$cmd\n";
 		system($cmd);
@@ -738,12 +740,12 @@ sub do_stocks
 }
 
 
-my $wtime = 0;
 sub do_weather
 {
 	if ($opts{weather} && $opts{weather_location} &&
-	    time() > $wtime + $opts{weather_time} && -x $opts{weather_app}) {
-		$wtime = time();
+	    time() > $weather_time + $opts{weather_time} && -x $opts{weather_app}) {
+	    	reset_fb();
+		$weather_time = time();
 		print strftime("%H:%M ", localtime());
 		my $w = `$opts{weather_app} -l $opts{weather_location} -p false`;
 
@@ -901,10 +903,7 @@ sub do_ticker
 		#   scroll  we  get turds. So put the screen  #
 		#   back if we have a saved image.	      #
 		###############################################
-		if (-f "/tmp/screendump") {
-			system("cat /tmp/screendump > /dev/fb0");
-			unlink("/tmp/screendump");
-		}
+		reset_fb();
 
 		print $con_fh $con_txt;
 
@@ -1150,6 +1149,11 @@ sub ev_check
 		if ($type == $EV_ABS && 
 		    $code == $ABS_MT_TRACKING_ID &&
 		    $value != 0xffff) {
+		    	# Allow us to quickly see the other pages
+			$page_sched{3}{last_time} = 0;
+			$page_sched{4}{last_time} = 0;
+			$stock_time = 0;
+			$weather_time = 0;
 #printf "touchscreen: ret=1\n";
 		    	return 1;
 		}
@@ -2362,6 +2366,14 @@ sub read_seq_no
 	$a_id = <$fh>;
 	$a_id = 0 if !defined($a_id);
 	chomp($a_id);
+}
+
+sub reset_fb
+{
+	if (-f "/tmp/screendump") {
+		system("cat /tmp/screendump > /dev/fb0");
+		unlink("/tmp/screendump");
+	}
 }
 
 ######################################################################
