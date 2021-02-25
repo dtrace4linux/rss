@@ -1,3 +1,6 @@
+
+  ![Photos](images/IMG_0855.jpg)
+
 "rss.pl" is yet another RSS reader. In many respects, it is nothing
 special. It was written to provide a stream of news headlines, ideal
 for consumption on mobile - just the text, no images or complex javascript.
@@ -160,3 +163,15 @@ For GUI display
 Examples:
 
   ![Demo](video/video1.svg)
+
+  ![Photos](images/IMG_0848.jpg)
+
+  ![Photos](images/IMG_0849.jpg)
+
+  ![Photos](images/IMG_0850.jpg)
+
+  ![Photos](images/IMG_0853.jpg)
+
+  ![Photos](images/IMG_0854.jpg)
+
+  ![Photos](images/IMG_0855.jpg)
