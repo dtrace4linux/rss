@@ -70,11 +70,13 @@ sub do_stocks
 	    time() > $stock_time + $opts{stock_time}) {
 	    	reset_fb();
 		$stock_time = time();
-		print strftime("%H:%M ", localtime());
-		my $cmd = "$FindBin::RealBin/stock.pl -update -random -o $ENV{HOME}/.rss/ticker/stock.log " .
+		my $t = strftime("%H:%M ", localtime());
+		my $cmd = "$FindBin::RealBin/stock.pl " .
+			"-cols $columns -update -random -o $ENV{HOME}/.rss/ticker/stock.log " .
 			join(" ", @{$opts{stocks}});
 		#print "$cmd\n";
-		system($cmd);
+		my $str = `$cmd`;
+		pr($t . $str);
 	}
 }
 
@@ -85,13 +87,13 @@ sub do_weather
 	    time() > $weather_time + $opts{weather_time} && -x $opts{weather_app}) {
 	    	reset_fb();
 		$weather_time = time();
-		print strftime("%H:%M ", localtime());
+		my $t = strftime("%H:%M ", localtime());
 		my $w = `$opts{weather_app} -l $opts{weather_location} -p false`;
 
 		my $fn = "$ENV{HOME}/.rss/ticker/weather.log";
 		my $fh = new FileHandle(">>$fn");
 		print $fh time_string() . $w if $fh;
-		print $w;
+		pr($t . $w);
 	}
 }
 
@@ -179,13 +181,6 @@ sub do_ticker
 	###############################################
 	my $page = 0;
 
-	###############################################
-	#   Save the console output to a file, so we  #
-	#   can replay/debug			      #
-	###############################################
-	my $con_fh = new FileHandle(">>/tmp/rss_console.log");
-	$con_fh->autoflush();
-
 	my @history;
 
 	while (1) {
@@ -265,13 +260,11 @@ sub do_ticker
 		###############################################
 		reset_fb();
 
-		print $con_fh $con_txt;
-
 		$page = sched_page($con_txt);
 		$page = $opts{page} if defined($opts{page});
 
 		if ($page == 0) {
-			print $con_txt;
+			pr($con_txt);
 		} elsif ($page == 1) {
 			my $fn = $files[rand(@files)];
 
@@ -360,9 +353,9 @@ sub do_page1
 		print $fh time_string() . "article=" . basename($fn) . " $title\n";
 	}
 
-	print "\n";
-	print "\033[37mTitle: \033[36m$title\033[32m\n";
-	print $url, "\n";
+	pr("\n");
+	pr("\033[37mTitle: \033[36m$title\033[32m\n");
+	pr($url . "\n");
 
 	my $last_ln = 'xxx';
 	my $col = 0;
@@ -375,20 +368,20 @@ sub do_page1
 		###############################################
 		foreach my $wd (split(" ", $ln)) {
 			if ($col + 1 + length($wd) >= $columns) {
-				print "\n";
+				pr("\n");
 				$row++;
 				$col = 0;
 			}
 			if ($col) {
-				print " ";
+				pr(" ");
 				$col++;
 			}
-			print $wd;
+			pr($wd);
 			$col += length($wd);
 		}
 		$last_ln = $ln;
 	}
-	print "\n" if $col;
+	pr("\n") if $col;
 }
 
 ######################################################################
@@ -413,9 +406,9 @@ sub do_page2_calendar
 	my $this_month = strftime("%B", localtime());
 	my $dow = strftime("%a", localtime());
 
-	print "\n";
-	print "$margin\033[36m$s\033[37m\n";
-	print "${margin}\033[33;1mSu Mo Tu We Th Fr Sa\033[0;37m\n";
+	pr("\n");
+	pr("$margin\033[36m$s\033[37m\n");
+	pr("${margin}\033[33;1mSu Mo Tu We Th Fr Sa\033[0;37m\n");
 
 	my $i = $dow{$dow};
 	my $t = time() - $d * 86400;
@@ -426,19 +419,20 @@ sub do_page2_calendar
 		$t += 86400;
 
 		if ($dow1 eq 'Sun') {
-			print $margin;
+			pr($margin);
 		}
 		if ($month ne $this_month) {
-			print "   ";
+			pr("   ");
 		} elsif ($d1 == $d) {
-			printf "\033[1;43;30m%2d\033[37;40;0m ", $d1;
+			pr(sprintf("\033[1;43;30m%2d\033[37;40;0m ", $d1));
 		} else {
-			printf "%2d ", $d1;
+			pr(sprintf("%2d ", $d1));
 		}
 		if ($dow1 eq 'Sat') {
-			print "\n";
+			pr("\n");
 		}
 	}
+	pr("\n");
 }
 
 ######################################################################
@@ -470,7 +464,10 @@ sub do_page3_image
 sub do_page4_reminder
 {
 	my $path = $FindBin::RealBin;
-	system("$path/reminder.pl $path/reminders.txt");
+	my $fh = new FileHandle("$path/reminder.pl $path/reminders.txt |");
+	while (<$fh>) {
+		pr($_);
+	}
 }
 
 ######################################################################
@@ -535,7 +532,19 @@ sub ev_check
 
 	return 0;
 }
+my $output_fh;
+sub pr
+{
+	my $str = join("", @_);
 
+	if (!$output_fh) {
+		$output_fh = new FileHandle(">>/tmp/rss_console.log");
+		$output_fh->autoflush();
+	}
+
+	print $str;
+	print $output_fh $str;
+}
 sub read_article
 {	my $fname = shift;
 

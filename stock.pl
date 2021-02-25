@@ -39,6 +39,7 @@ sub main
 	Getopt::Long::Configure('require_order');
 	Getopt::Long::Configure('no_ignore_case');
 	usage() unless GetOptions(\%opts,
+		'cols=s',
 		'force',
 		'help',
 		'loop',
@@ -51,10 +52,14 @@ sub main
 
 	mkdir(dirname($opts{o}), 0700);
 
-	my $stty = `stty -a | grep columns`;
-	chomp($stty);
-	$stty =~ m/columns (\d+)/;
-	$cols = $1 - 10;
+	$cols = $opts{cols};
+	if (!defined($cols)) {
+		my $stty = `stty -a | grep columns`;
+		chomp($stty);
+		$stty =~ m/columns (\d+)/;
+		$cols = $1;
+	}
+	$cols -= 10;
 
 	@lst = @ARGV if @ARGV;
 	@lst = sort(@lst);
