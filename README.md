@@ -130,11 +130,13 @@ reminders.txt
 
   For example:
 
+```
  _        _          _   _            _     _                         _
 | |_ __ _| | _____  | |_| |__   ___  | |__ (_)_ __  ___    ___  _   _| |_
 | __/ _` | |/ / _ \ | __| '_ \ / _ \ | '_ \| | '_ \/ __|  / _ \| | | | __|
 | || (_| |   <  __/ | |_| | | |  __/ | |_) | | | | \__ \ | (_) | |_| | |_
  \__\__,_|_|\_\___|  \__|_| |_|\___| |_.__/|_|_| |_|___/  \___/ \__,_|\__|
+```
 
 TODO
 
@@ -145,7 +147,6 @@ TODO
 
   * Cycle a weather history / prediction
   * Stock chart
-  * Better JPG rendering - slide ins/gray scale, and scrolling
 
 Dependencies:
 
