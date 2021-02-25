@@ -8,6 +8,10 @@ buffer.
 Date: Feb 2021
 Author: Paul Fox (modifications/enhancements)
 
+Useful ref for a similar tool to this:
+
+https://github.com/godspeed1989/fbv/blob/master/main.c
+
 */
 
 #include <unistd.h>

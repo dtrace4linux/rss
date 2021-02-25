@@ -58,7 +58,8 @@ sub query
 	my $dir = "$ENV{HOME}/pexels";
 
 	foreach my $p (@{$info->{photos}}) {
-		foreach my $sz (qw/tiny small medium/) {
+		# tiny
+		foreach my $sz (qw/small medium/) {
 			my $fn = "$p->{src}->{$sz}";
 			$fn =~ s/\?.*//;
 			$fn = basename($fn);
