@@ -1097,7 +1097,7 @@ sub do_page3_image
 		if ( -e "/dev/fb0") {
 			system("cat /dev/fb0 > /tmp/screendump");
 		}
-		system("$FindBin::RealBin/tools/fb -fullscreen -q $fn");
+		system("$FindBin::RealBin/tools/fb -effects -fullscreen -q $fn");
 		return;
 	}
 

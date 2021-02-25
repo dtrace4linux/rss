@@ -22,6 +22,7 @@ Author: Paul Fox (modifications/enhancements)
 
 int quiet;
 int fullscreen;
+int	effects;
 
 struct fb_var_screeninfo vinfo;
 struct fb_fix_screeninfo finfo;
@@ -32,7 +33,7 @@ long int screensize = 0;
 /*   Prototypes.						      */
 /**********************************************************************/
 void normal_display(char *fbp, struct imgRawImage *img, int x, int y, int w, int h);
-void fullscreen_display(char *fbp, struct imgRawImage *img);
+void fullscreen_display(char *fbp, struct imgRawImage *img, double f);
 void put_pixel(char *fbp, int r, int g, int b);
 void	usage(void);
 
@@ -46,6 +47,10 @@ int do_switches(int argc, char **argv)
 			break;
 
 		while (*cp) {
+			if (strcmp(cp, "effects") == 0) {
+				effects = 1;
+				break;
+			}
 			if (strcmp(cp, "fullscreen") == 0) {
 				fullscreen = 1;
 				break;
@@ -137,8 +142,19 @@ int main(int argc, char **argv)
 	if (h < 0)
 		h = img->height;
 
-	if (fullscreen) {
-		fullscreen_display(fbp, img);
+	if (effects) {
+		int i;
+		double f = 0;
+		struct timeval tv;
+		for (i = 0; i < 10; i++) {
+			fullscreen_display(fbp, img, f);
+			f += 0.1;
+			tv.tv_sec = 0;
+			tv.tv_usec = 100000;
+			select(0, NULL, NULL, NULL, &tv);
+		}
+	} else if (fullscreen) {
+		fullscreen_display(fbp, img, 1.0);
 	} else {
 		normal_display(fbp, img, x, y, w, h);
 	}
@@ -149,7 +165,7 @@ int main(int argc, char **argv)
 }
 
 void
-fullscreen_display(char *fbp, struct imgRawImage *img)
+fullscreen_display(char *fbp, struct imgRawImage *img, double f)
 {
 	int	x, y;
 	float xfrac = vinfo.xres / (float) img->width;
@@ -164,7 +180,7 @@ fullscreen_display(char *fbp, struct imgRawImage *img)
 				(int) (y / yfrac) * img->width * 3 +
 				(int) (x / xfrac) * 3];
 
-			put_pixel(fbp, data[0], data[1], data[2]);
+			put_pixel(fbp, data[0] * f, data[1] * f, data[2] * f);
 		}
 	}
 }
@@ -231,6 +247,7 @@ usage()
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Switches:\n");
 	fprintf(stderr, "\n");
+	fprintf(stderr, "   -effects        Scroll-in effects enabled\n");
 	fprintf(stderr, "   -fullscreen     Stretch image to fill screen\n");
 
 }
