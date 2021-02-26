@@ -5,4 +5,5 @@ struct imgRawImage {
 	unsigned char	*lpData;
 	};
 struct imgRawImage* loadJpegImageFile(char* lpFilename);
+struct imgRawImage* read_png_file(char *lpFilename);
 

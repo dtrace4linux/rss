@@ -59,7 +59,8 @@ sub query
 
 	foreach my $p (@{$info->{photos}}) {
 		# tiny
-		foreach my $sz (qw/small medium/) {
+		# small
+		foreach my $sz (qw/medium/) {
 			my $fn = "$p->{src}->{$sz}";
 			$fn =~ s/\?.*//;
 			$fn = basename($fn);

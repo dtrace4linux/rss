@@ -27,6 +27,7 @@ https://github.com/godspeed1989/fbv/blob/master/main.c
 int quiet;
 int fullscreen;
 int	effects;
+int	info;
 
 struct fb_var_screeninfo vinfo;
 struct fb_fix_screeninfo finfo;
@@ -59,6 +60,10 @@ int do_switches(int argc, char **argv)
 				fullscreen = 1;
 				break;
 			}
+			if (strcmp(cp, "info") == 0) {
+				info = 1;
+				break;
+			}
 
 			switch (*cp++) {
 			  case 'q':
@@ -82,6 +87,7 @@ int main(int argc, char **argv)
     int	arg_index = 1;
     char	*fname = NULL;
     struct imgRawImage *img;
+    char *ext;
 
     arg_index = do_switches(argc, argv);
 
@@ -102,11 +108,6 @@ int main(int argc, char **argv)
     	h = atoi(argv[arg_index++]);
     }
 
-    if ((img = loadJpegImageFile(fname)) == NULL) {
-    	printf("fb: Failed to load: %s\n", fname);
-	exit(1);
-    }
-
     int fbfd = open("/dev/fb0", O_RDWR);
     if (fbfd == -1) {
         perror("opening /dev/fb0");
@@ -123,6 +124,38 @@ int main(int argc, char **argv)
     if (ioctl(fbfd, FBIOGET_VSCREENINFO, &vinfo)) {
         printf("Error reading variable information.\n");
         return -3;
+    }
+
+    if (info) {
+	    printf("%dx%d, %dbpp\n", vinfo.xres, vinfo.yres, vinfo.bits_per_pixel );
+	    exit(0);
+	}
+
+
+    if (fname == NULL) {
+    	usage();
+	exit(1);
+    }
+
+    if ((ext = strrchr(fname, '.')) == NULL) {
+    	printf("Cannot determine file type from extension\n");
+	exit(1);
+    }
+
+    if (strcasecmp(ext, ".jpeg") == 0 ||
+        strcasecmp(ext, ".jpg") == 0) {
+	if ((img = loadJpegImageFile(fname)) == NULL) {
+    		printf("fb: Failed to load: %s\n", fname);
+		exit(1);
+		}
+    } else if (strcasecmp(ext, ".png") == 0) {
+    	if ((img = read_png_file(fname)) == NULL) {
+    		printf("fb: Failed to load: %s\n", fname);
+		exit(1);
+	}
+    } else {
+    	printf("Cannot determine image format\n");
+	exit(1);
     }
 
     if (!quiet)
@@ -253,5 +286,6 @@ usage()
 	fprintf(stderr, "\n");
 	fprintf(stderr, "   -effects        Scroll-in effects enabled\n");
 	fprintf(stderr, "   -fullscreen     Stretch image to fill screen\n");
+	fprintf(stderr, "   -info           Print screen size info\n");
 
 }

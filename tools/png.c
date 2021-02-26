@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
+#include "fb.h"
 
 #define PNG_DEBUG 3
 #include <png.h>
@@ -36,9 +37,12 @@ png_infop info_ptr;
 int number_of_passes;
 png_bytep * row_pointers;
 
-void read_png_file(char* file_name)
+struct imgRawImage*
+read_png_file(char* file_name)
 {
+	struct imgRawImage* lpNewImage;
         char header[8];    // 8 is the maximum size that can be checked
+	int	x, y;
 
         /* open file and test for it being a png */
         FILE *fp = fopen(file_name, "rb");
@@ -87,6 +91,28 @@ void read_png_file(char* file_name)
         png_read_image(png_ptr, row_pointers);
 
         fclose(fp);
+
+	/***********************************************/
+	/*   Now convert into a standard format.       */
+	/***********************************************/
+	lpNewImage = (struct imgRawImage*)malloc(sizeof(struct imgRawImage));
+	lpNewImage->numComponents = bit_depth;
+	lpNewImage->width = width;
+	lpNewImage->height = height;
+	lpNewImage->lpData = malloc(width * height * 3);
+
+	for (y = 0; y < height; y++) {
+		unsigned char *dp = &lpNewImage->lpData[y * width * 3];
+		unsigned char *sp = row_pointers[y];
+		for (x = 0; x < width; x++) {
+			*dp++ = *sp++;
+			*dp++ = *sp++;
+			*dp++ = *sp++;
+			*sp++;
+		}
+	}
+
+	return lpNewImage;
 }
 
 
@@ -172,6 +198,7 @@ void process_file(void)
 }
 
 
+# if 0
 int main(int argc, char **argv)
 {
         if (argc != 3)
@@ -183,4 +210,4 @@ int main(int argc, char **argv)
 
         return 0;
 }
-
+# endif

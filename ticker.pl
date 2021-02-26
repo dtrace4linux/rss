@@ -103,6 +103,7 @@ sub main
 	Getopt::Long::Configure('no_ignore_case');
 	usage() unless GetOptions(\%opts,
 		'help',
+		'page=s',
 		'ppid=s',
 		);
 
@@ -140,13 +141,14 @@ my %page_sched = (
 	4 => { freq => 1800}, # reminder
 	5 => { freq => 1800}, # rss-hello banner
 	);
+my $npages = scalar(keys(%page_sched));
 
 sub sched_page
 {	my $txt = shift;
 
 	return 0 if $txt;
 
-	for (my $i = 1; $i < 5; $i++) {
+	for (my $i = $npages - 1; $i > 0; $i--) {
 		if (!defined($page_sched{$i}{last_time})) {
 			$page_sched{$i}{last_time} = time();
 			return $i;
@@ -315,7 +317,7 @@ sub do_ticker
 		for (my $i = 0; $i < $t; $i++) {
 			do_status_line();
 
-			my ($ev, $x, $y) = ev_check();
+			my ($ev, $action, $x, $y) = ev_check();
 			if ($ev < 0) {
 				sleep(1);
 				next;
@@ -402,7 +404,24 @@ sub do_page2_calendar
 		Sat => 6,
 		);
 
-	my $margin = " " x (($columns - 21) / 2);
+	###############################################
+	#   Get the time, for the margin.	      #
+	###############################################
+	my $tstr;
+	if (int(rand(2)) == 0) {
+		my $t = strftime("%H:%M", localtime());
+		my $opt = int(rand(2)) == 0 ? " --gay" : "";
+		$tstr = `toilet $opt $t`;
+	} else {
+		my $t = strftime("%H:%M", localtime());
+		$tstr = `figlet $t`;
+	}
+	my @trow = split("\n", $tstr);
+	while ($trow[0] =~ /^ +$/) {
+		shift @trow;
+	}
+
+	my $margin = " " x (($columns - 21) / 4);
 	my $s = strftime("   %B %Y", localtime());
 	my $d = strftime("%d", localtime());
 	my $this_month = strftime("%B", localtime());
@@ -414,6 +433,7 @@ sub do_page2_calendar
 
 	my $i = $dow{$dow};
 	my $t = time() - $d * 86400;
+	my $row = 0;
 	for (my $j = 0; $j < 40; $j++) {
 		my $d1 = strftime("%d", localtime($t));
 		my $month = strftime("%B", localtime($t));
@@ -431,7 +451,12 @@ sub do_page2_calendar
 			pr(sprintf("%2d ", $d1));
 		}
 		if ($dow1 eq 'Sat') {
+			if (@trow) {
+				pr("    ");
+				print shift @trow;
+			}
 			pr("\n");
+			$row++;
 		}
 	}
 	pr("\n");
@@ -447,6 +472,7 @@ sub do_page3_image
 	my @img = glob("$opts{image_dir}/*");
 	push @img, glob("$ENV{HOME}/images/*");
 	my $fn = $img[rand(@img)];
+	pr(time_string() . "[img: $fn]\n");
 
 	if (-x "$FindBin::RealBin/tools/fb") {
 		# Save screen before
@@ -461,7 +487,9 @@ sub do_page3_image
 		my $w = $columns - 1;
 		my $h = $rows - 1;
 		system("/usr/bin/img2txt -W $w -H $h $fn");
+		return;
 	}
+	pr("(No images found to display)\n");
 }
 sub do_page4_reminder
 {
@@ -479,6 +507,8 @@ my $EV_ABS = 0x03;
 my $ABS_X = 0x00;
 my $ABS_Y = 0x01;
 my $ABS_MT_TRACKING_ID = 0x39;
+my $scr_pix_width = 0;
+my $scr_pix_height = 0;
 
 my $ev_fh;
 sub ev_check
@@ -489,6 +519,13 @@ sub ev_check
 		$ev_fh = new FileHandle("/dev/input/event0");
 	}
 	return -1 if !$ev_fh;
+
+	if ($scr_pix_width == 0) {
+		my $s = `$FindBin::RealBin/tools/fb -info`;
+		chomp($s);
+		$s =~ s/,.*$//;
+		($scr_pix_width, $scr_pix_height) = split(/x/, $s);
+	}
 
 	my $bits = '';
 	vec($bits, $ev_fh->fileno(), 1) = 1;
@@ -521,14 +558,27 @@ sub ev_check
 
 		if ($type == $EV_ABS && 
 		    $code == $ABS_MT_TRACKING_ID &&
-		    $value != 0xffff) {
+		    $value == 0xffff) {
 		    	# Allow us to quickly see the other pages
 			$page_sched{3}{last_time} = 0;
 			$page_sched{4}{last_time} = 0;
 			$stock_time = 0;
 			$weather_time = 0;
 #printf "touchscreen: ret=1\n";
-		    	return (1, $x, $y);
+			
+			my $event = '';
+			if ($x < $scr_pix_width / 2 && $y < $scr_pix_height/ 2) {
+				$event = "top-left";
+			} elsif ($x < $scr_pix_width / 2 && $y >= $scr_pix_height / 2) {
+				$event = "bottom-left";
+			} elsif ($x >= $scr_pix_width / 2 && $y < $scr_pix_height / 2) {
+				$event = "top-right";
+			} else {
+				$event = "bottom-right";
+			}
+
+			pr("[touchpad - $event ($x, $y) width=$scr_pix_width scr_height=$scr_pix_height]\n");
+		    	return (1, $event, $x, $y);
 		}
 	}
 

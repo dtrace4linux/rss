@@ -110,8 +110,8 @@ $HOME/pexels & $HOME/images directory
 
   $ make
 
-  It will create a frame-buffer renderer and draw the real JPG
-  image. (JPG only so far, not GIF or PNG).
+  It will create a frame-buffer renderer and draw the real JPG or PNG
+  image. 
 
   The script "pexels.pl" can be used to acquire random stock images
   from http://pexels.com, but you need an API key to do this. Or,
