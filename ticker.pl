@@ -64,6 +64,43 @@ sub do_status_line
 		"\033[%dH\033[37;40m", $rows;
 }
 
+my $hist_mode = 0;
+my $hist_pos = -1;
+sub do_history
+{	my $dir = shift;
+
+	my $fh = new FileHandle("/tmp/rss_console.log");
+	my @lns = <$fh>;
+
+	if ($hist_mode == 0) {
+		$hist_pos = @lns;
+	}
+
+	my $pos;
+	my $pgsize = ($rows * 2) / 3;
+	if ($dir > 0) {
+		$pos = $hist_pos + $pgsize;
+	} else {
+		$pos = $hist_pos - $pgsize;
+	}
+	return if $pos < 0;
+	if ($pos > @lns) {
+		$hist_mode = 0;
+		return;
+	}
+
+	$hist_pos = $pos;
+	print "\033[93;37m  ==== history pos=$hist_pos, size=", scalar(@lns), "\033[K\n";
+	print "\033[37;40m";
+	$hist_mode = 1;
+	for (my $i = 0; $i < $pgsize; $i++) {
+		print $lns[$pos + $i];
+	}
+	my $green = "32";
+	my $white = "37";
+	print "\033[${green}m  -- More --\033[${white}m";
+}
+
 sub do_stocks
 {
 	if ($opts{stocks} &&
@@ -323,7 +360,18 @@ sub do_ticker
 				next;
 			}
 
-			if ($ev > 0) {
+			next if $ev == 0;
+
+			if ($action eq 'top-left' || $action eq 'top-right') {
+				do_history(-1);
+				next;
+			}
+			
+			if ($action eq 'bottom-left' || $action eq 'bottom-right') {
+				do_history(1);
+			}
+
+			if ($hist_mode == 0) {
 				$ticks++;
 				last;
 			}
@@ -577,7 +625,7 @@ sub ev_check
 				$event = "bottom-right";
 			}
 
-			pr("[touchpad - $event ($x, $y) width=$scr_pix_width scr_height=$scr_pix_height]\n");
+#			pr("[touchpad - $event ($x, $y) width=$scr_pix_width scr_height=$scr_pix_height]\n");
 		    	return (1, $event, $x, $y);
 		}
 	}
