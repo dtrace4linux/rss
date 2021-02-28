@@ -177,6 +177,7 @@ my %page_sched = (
 	3 => { freq => 1200}, # image
 	4 => { freq => 1800}, # reminder
 	5 => { freq => 1800}, # rss-hello banner
+	6 => { freq => 3600}, # rss-help 
 	);
 my $npages = scalar(keys(%page_sched));
 
@@ -317,10 +318,9 @@ sub do_ticker
 		} elsif ($page == 4) {
 			do_page4_reminder()
 		} elsif ($page == 5) {
-			my $fh = new FileHandle("$FindBin::RealBin/rss-hello.txt");
-			while (<$fh>) {
-				print;
-			}
+			do_page5_hello();
+		} elsif ($page == 6) {
+			do_page6_help();
 		}
 
 		do_weather();
@@ -548,6 +548,42 @@ sub do_page4_reminder
 	}
 }
 
+sub do_page5_hello
+{
+	my $fh = new FileHandle("$FindBin::RealBin/rss-hello.txt");
+	while (<$fh>) {
+		print;
+	}
+}
+
+my $hostname = `hostname`;
+sub do_page6_help
+{
+	my $fh = new FileHandle("$FindBin::RealBin/rss-help.txt");
+	while (<$fh>) {
+		print;
+	}
+	if (! -w "/dev/input/event0") {
+		print <<EOF;
+      NOTE: /dev/input/event0 is not writable. Touch screen will not work.
+           \$ chmod 666 /dev/input/event0
+EOF
+	}
+	if (! -w "/dev/input/event0") {
+		print <<EOF;
+      NOTE: /dev/fb0 is not writable. Images will not display.
+          \$ chmod 666 /dev/input/event0
+EOF
+	}
+	chomp($hostname);
+	my $ip = `getent hosts $hostname`;
+	chomp($ip);
+	$ip = (split(" ", $ip))[0];
+	my $disk = `df -h /`;
+	$disk = (split("\n", $disk))[1];
+	my ($size, $used, $pc) = (split(" ", $disk))[1, 2, 4];
+	print "Running on: $hostname ($ip)      Disk: $used/$size $pc\n";
+}
 ######################################################################
 #   Check for a touch screen event.				     #
 ######################################################################

@@ -22,6 +22,7 @@ https://github.com/godspeed1989/fbv/blob/master/main.c
 #include <linux/fb.h>
 #include <sys/mman.h>
 #include <sys/ioctl.h>
+#include <errno.h>
 #include "fb.h"
 
 int quiet;
@@ -87,7 +88,8 @@ int main(int argc, char **argv)
     int	arg_index = 1;
     char	*fname = NULL;
     struct imgRawImage *img;
-    char *ext;
+    int	fd;
+    char	buf[BUFSIZ];
 
     arg_index = do_switches(argc, argv);
 
@@ -137,22 +139,26 @@ int main(int argc, char **argv)
 	exit(1);
     }
 
-    if ((ext = strrchr(fname, '.')) == NULL) {
-    	printf("Cannot determine file type from extension\n");
+    if ((fd = open(fname, O_RDONLY)) < 0) {
+    	printf("Cannot open %s - %s\n", fname, strerror(errno));
 	exit(1);
     }
+    if (read(fd, buf, 4) != 4) {
+    	printf("File too short - %s\n", fname);
+	exit(1);
+    }
+    close(fd);
 
-    if (strcasecmp(ext, ".jpeg") == 0 ||
-        strcasecmp(ext, ".jpg") == 0) {
-	if ((img = loadJpegImageFile(fname)) == NULL) {
-    		printf("fb: Failed to load: %s\n", fname);
-		exit(1);
-		}
-    } else if (strcasecmp(ext, ".png") == 0) {
+    if (memcmp(buf, "\x89PNG", 4) == 0) {
     	if ((img = read_png_file(fname)) == NULL) {
     		printf("fb: Failed to load: %s\n", fname);
 		exit(1);
 	}
+    } else if (memcmp(buf, "\xff\xd8\xff", 3) == 0) {
+	if ((img = loadJpegImageFile(fname)) == NULL) {
+    		printf("fb: Failed to load: %s\n", fname);
+		exit(1);
+		}
     } else {
     	printf("Cannot determine image format\n");
 	exit(1);
