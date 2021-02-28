@@ -60,8 +60,17 @@ sub do_status_line
 	} else {
 		$c = "\033[1;33m";
 	}
-	printf strftime("$c Time: %H:%M:%S ", localtime()) .
-		"\033[%dH\033[37;40m", $rows;
+
+	my $s = '';
+	$s = strftime("$c Time: %H:%M:%S ", localtime());
+#	if (! -w "/dev/input/event0") {
+#		$s .= sprintf "\033[2;%dH\033[41;37m /dev/input/event0 perms", $columns - 30;
+#	}
+#	if (! -w "/dev/fb0") {
+#		$s .= sprintf "\033[3;%dH\033[41;37m /dev/fb0 perms         ", $columns - 30;
+#	}
+	$s .= sprintf("\033[37;40m\033[%dH", $rows);
+	print $s;
 }
 
 my $hist_mode = 0;

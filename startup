@@ -10,5 +10,24 @@ fi
 dir=$(dirname $0)
 
 $root chvt 1
+
+# The following is ugly - opening up world write perms. Probably
+# should use a helper script to do this.
 $root chmod 666 /dev/tty1
+
+# We need access to:
+#
+# /dev/input/event0 - touchpad input, and
+# /dev/fb0 - image drawing
+#
+# For this to work, we need to be in the same groups as user 'pi'
+# (assuming we run on a raspberry pi).
+#
+# More specifically, we need to be in groups:
+#
+#	tty
+#	input
+#
+# Check /etc/group for details
+
 $dir/rss.pl -ticker </dev/tty1 >/dev/tty1 &

@@ -5,4 +5,8 @@
 | 									| 
 | If you have a touch screen, you can automatically scroll forward	| 
 | and back - just touch the top or bottom half of the screen.		| 
+| 									| 
+| If you see warnings about lack of access to /dev/input/event0 or      |
+| /dev/fb0, ensure your running user is in the /etc/groups for 'input'  |
+| and 'tty', otherwise the process cannot write to the /dev entries.    |
 =========================================================================
