@@ -1,4 +1,15 @@
 # use this file to have random reminders shown
-#created date,dow,interval,algorithm,message
-20210215,sat sun,600,normal,Its the weekend!
-20210215,mon,600,normal,take the bins out
+#created date,dow,times,interval,algorithm,message
+#
+# dow is a space separated series of 3-letter days, e.g. "mon tue wed"
+#     You can also use 'everyday', 'weekday' or 'weekend'
+#
+# times is a start-stop (in 24h format) to indicate when to show the item
+#
+# algo is the type of item. 
+#        - "normal" for a displayed message.
+#        - "cmd" to run a command, such as check mail, or poweroff
+#
+20210215,sat sun,,600,normal,Its the weekend!
+20210215,mon,0600-2100,600,normal,take the bins out
+20210304,everyday,2355,600,cmd,echo /sbin/poweroff

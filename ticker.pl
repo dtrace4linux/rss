@@ -567,9 +567,20 @@ sub do_page4_reminder
 sub do_page5_hello
 {
 	my $fh = new FileHandle("$FindBin::RealBin/rss-hello.txt");
+	my @msg;
+	my $txt = '';
 	while (<$fh>) {
-		print;
+		chomp;
+		if ($_ =~ /^:/) {
+			push @msg, substr($_, 1);
+		} else {
+			$txt .= "$_\n";
+		}
 	}
+	my $m = $msg[rand(scalar(@msg))];
+	system("toilet -t --gay $m");
+	print $txt;
+
 }
 
 my $hostname = `hostname`;
@@ -614,7 +625,7 @@ EOF
 			next;
 		}
 		if (/inet ([^ ]*) /) {
-			$ip .= " " if $ip;
+			$ip .= " " if $ip && $ip !~ /^127/;
 			$ip .= $1;
 		}
 	}

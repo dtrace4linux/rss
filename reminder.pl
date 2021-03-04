@@ -38,11 +38,26 @@ sub main
 	my @lst;
 
 	my $d = strftime("%a", localtime());
+	my $t = strftime("%H%M", localtime());
+
 	while (<$fh>) {
 		next if /^#/;
 		chomp;
-		my ($cdate, $dow, $interval, $algo, $msg) = split(/,/);
+		my ($cdate, $dow, $times, $interval, $algo, $msg) = split(/,/);
+
+		$dow = "sat sun" if $dow eq 'weekend';
+		$dow = "mon tue wed thu fri" if $dow eq 'weekday';
+		$dow = "sat sun mon tue wed thu fri" if $dow eq 'everyday';
+
 		next if $dow !~ /$d/i;
+
+		if ($times) {
+			my ($s, $e) = split("-", $times);
+			next if $t < $s;
+			next if $e && $t > $e;
+		}
+
+		next if $algo ne 'normal';
 
 		push @lst, $msg;
 	}
