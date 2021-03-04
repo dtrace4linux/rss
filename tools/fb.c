@@ -27,6 +27,7 @@ https://github.com/godspeed1989/fbv/blob/master/main.c
 
 int quiet;
 int fullscreen;
+int	stretch;
 int	effects;
 int	info;
 
@@ -40,6 +41,7 @@ long int screensize = 0;
 /**********************************************************************/
 void normal_display(char *fbp, struct imgRawImage *img, int x, int y, int w, int h);
 void fullscreen_display(char *fbp, struct imgRawImage *img, double f);
+void stretch_display(char *fbp, struct imgRawImage *img);
 void put_pixel(char *fbp, int r, int g, int b);
 void	usage(void);
 
@@ -63,6 +65,10 @@ int do_switches(int argc, char **argv)
 			}
 			if (strcmp(cp, "info") == 0) {
 				info = 1;
+				break;
+			}
+			if (strcmp(cp, "stretch") == 0) {
+				stretch = 1;
 				break;
 			}
 
@@ -130,11 +136,12 @@ int main(int argc, char **argv)
 
     if (info) {
 	    printf("%dx%d, %dbpp\n", vinfo.xres, vinfo.yres, vinfo.bits_per_pixel );
-	    exit(0);
-	}
+    }
 
 
     if (fname == NULL) {
+    	if (info)
+		exit(0);
     	usage();
 	exit(1);
     }
@@ -164,8 +171,15 @@ int main(int argc, char **argv)
 	exit(1);
     }
 
-    if (!quiet)
+    if (info) {
+    	printf("Image: %dx%d\n", img->width, img->height);
+    	exit(0);
+    }
+
+    if (!quiet) {
 	    printf("%dx%d, %dbpp\n", vinfo.xres, vinfo.yres, vinfo.bits_per_pixel );
+	    printf("Image: %dx%d\n", img->width, img->height);
+    }
 
     // Figure out the size of the screen in bytes
     screensize = vinfo.xres * vinfo.yres * vinfo.bits_per_pixel / 8;
@@ -198,6 +212,8 @@ int main(int argc, char **argv)
 		}
 	} else if (fullscreen) {
 		fullscreen_display(fbp, img, 1.0);
+	} else if (stretch) {
+		stretch_display(fbp, img);
 	} else {
 		normal_display(fbp, img, x, y, w, h);
 	}
@@ -216,7 +232,7 @@ fullscreen_display(char *fbp, struct imgRawImage *img, double f)
 //printf("frac=%f %f\n", xfrac, yfrac);
 
 	for (y = 0; y < vinfo.yres; y++) {
-	        location = (vinfo.yoffset + y) * finfo.line_length;
+	        location = (vinfo.yoffset + y) * finfo.line_length +
 			vinfo.xoffset * (vinfo.bits_per_pixel / 8);
 		for (x = 0; x < vinfo.xres; x++) {
 			unsigned char *data = &img->lpData[
@@ -261,6 +277,40 @@ normal_display(char *fbp, struct imgRawImage *img, int x, int y, int w, int h)
 }
 
 void
+stretch_display(char *fbp, struct imgRawImage *img)
+{
+	int	x, y;
+	float xfrac = 1;
+	float yfrac = 1;
+	int	width = img->width;
+
+	xfrac = vinfo.xres / (float) img->width;
+	yfrac = vinfo.yres / (float) img->height;
+	xfrac = yfrac;
+	width *= xfrac;
+
+	int	x0 = (vinfo.xres - width) / 2;
+//printf("frac=%f %f\n", xfrac, yfrac);
+//printf("x0=%d xfrac=%.2f yfrac=%.2f\n", x0, xfrac, yfrac);
+
+	for (y = 0; y < vinfo.yres; y++) {
+	        location = (vinfo.yoffset + y) * finfo.line_length +
+			vinfo.xoffset * (vinfo.bits_per_pixel / 8);
+		for (x = 0; x < vinfo.xres; x++) {
+			if (x < x0 || x > x0 + width)
+				put_pixel(fbp, 0, 0, 0);
+			else {
+				unsigned char *data = &img->lpData[
+					(int) (y / yfrac) * img->width * 3 +
+					(int) ((x - x0) / xfrac) * 3];
+
+				put_pixel(fbp, data[0], data[1], data[2]);
+			}
+		}
+	}
+}
+
+void
 put_pixel(char *fbp, int r, int g, int b)
 {
 	if ( vinfo.bits_per_pixel == 32 ) {
@@ -293,5 +343,6 @@ usage()
 	fprintf(stderr, "   -effects        Scroll-in effects enabled\n");
 	fprintf(stderr, "   -fullscreen     Stretch image to fill screen\n");
 	fprintf(stderr, "   -info           Print screen size info\n");
+	fprintf(stderr, "   -stretch        Stretch but dont change aspect ratio\n");
 
 }

@@ -12,6 +12,21 @@ use IO::File;
 use POSIX;
 use FindBin;
 
+######################################################################
+#   Array  allowing  us to control the order and frequency of pages  #
+#   (per tick == minute)					     #
+######################################################################
+my %page_sched = (
+	0 => { freq => 0},    # headlines
+	1 => { freq => 60},   # random topic
+	2 => { freq => 600},  # calendar
+	3 => { freq => 1200}, # image
+	4 => { freq => 1750}, # reminder
+	5 => { freq => 1850}, # rss-hello banner
+	6 => { freq => 3630}, # rss-help 
+	);
+my $npages = scalar(keys(%page_sched));
+
 #######################################################################
 #   Command line switches.					      #
 #######################################################################
@@ -174,21 +189,6 @@ sub main
 #   addition,  for  console, we may support touch based input. (Not  #
 #   currently implemented).					     #
 ######################################################################
-
-######################################################################
-#   Array  allowing  us to control the order and frequency of pages  #
-#   (per tick == minute)					     #
-######################################################################
-my %page_sched = (
-	0 => { freq => 0},    # headlines
-	1 => { freq => 60},   # random topic
-	2 => { freq => 600},  # calendar
-	3 => { freq => 1200}, # image
-	4 => { freq => 1800}, # reminder
-	5 => { freq => 1800}, # rss-hello banner
-	6 => { freq => 3600}, # rss-help 
-	);
-my $npages = scalar(keys(%page_sched));
 
 sub sched_page
 {	my $txt = shift;
@@ -468,7 +468,7 @@ sub do_page2_calendar
 	if (int(rand(2)) == 0) {
 		my $t = strftime("%H:%M", localtime());
 		my $opt = int(rand(2)) == 0 ? " --gay" : "";
-		$tstr = `toilet $opt $t`;
+		$tstr = `toilet -t $opt $t`;
 	} else {
 		my $t = strftime("%H:%M", localtime());
 		$tstr = `figlet $t`;
@@ -532,18 +532,25 @@ sub do_page3_image
 	pr(time_string() . "[img: $fn]\n");
 
 	if (-x "$FindBin::RealBin/tools/fb") {
+		# Check we are currently the active console.
+		my $vt = `fgconsole`;
+		chomp($vt);
+		if ($vt != 1) {
+			print "[No image displayed - we lost the console: vt=$vt]\n";
+			return;
+		}
 		# Save screen before
 		if ( -e "/dev/fb0") {
 			system("cat /dev/fb0 > /tmp/screendump");
 		}
-		system("$FindBin::RealBin/tools/fb -effects -fullscreen -q $fn");
+		system("$FindBin::RealBin/tools/fb -effects -stretch -q \"$fn\"");
 		return;
 	}
 
 	if (-x "/usr/bin/img2txt" && $fn) {
 		my $w = $columns - 1;
 		my $h = $rows - 1;
-		system("/usr/bin/img2txt -W $w -H $h $fn");
+		system("/usr/bin/img2txt -W $w -H $h \"$fn\"");
 		return;
 	}
 	pr("(No images found to display)\n");
@@ -585,9 +592,32 @@ EOF
 EOF
 	}
 	chomp($hostname);
-	my $ip = `getent hosts $hostname`;
-	chomp($ip);
-	$ip = (split(" ", $ip))[0];
+
+	###############################################
+	#   We  want  the IP addr of the interfaces,  #
+	#   but  we  cant  assume  the  IP  for  our  #
+	#   hostname  is  an actual external address  #
+	#   (its usually a localhost address).	      #
+	###############################################
+	$fh = new FileHandle("ifconfig |");
+	my $up = 0;
+	my $interface;
+	my $ip = '';
+	while (<$fh>) {
+		chomp;
+		if (/^(.*): flags/) {
+			$interface = $1;
+			$up = 0;
+			if (/\<UP/) {
+				$up = 1;
+			}
+			next;
+		}
+		if (/inet ([^ ]*) /) {
+			$ip .= " " if $ip;
+			$ip .= $1;
+		}
+	}
 	my $disk = `df -h /`;
 	$disk = (split("\n", $disk))[1];
 	my ($size, $used, $pc) = (split(" ", $disk))[1, 2, 4];

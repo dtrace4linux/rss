@@ -1,3 +1,4 @@
 # use this file to have random reminders shown
 #created date,dow,interval,algorithm,message
-20210215,mon wed,600,normal,take the bins out
+20210215,sat sun,600,normal,Its the weekend!
+20210215,mon,600,normal,take the bins out

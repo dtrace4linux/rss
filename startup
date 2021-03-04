@@ -15,6 +15,9 @@ $root chvt 1
 # should use a helper script to do this.
 $root chmod 666 /dev/tty1
 
+# /usr/bin/fgconsole needs this to find the current console
+$root chmod 666 /dev/console
+
 # We need access to:
 #
 # /dev/input/event0 - touchpad input, and
