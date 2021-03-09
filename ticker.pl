@@ -67,7 +67,7 @@ sub do_status_line
 	my $fh = new FileHandle("/proc/loadavg");
 	my $avg = <$fh>;
 	$avg =~ s/ .*//;
-	printf "\033[1;%dH", $columns - 20;
+	my $s = sprintf "\033[1;%dH", $columns - 20;
 
 	my $c;
 	if ($avg >= 1) {
@@ -76,16 +76,77 @@ sub do_status_line
 		$c = "\033[1;33m";
 	}
 
-	my $s = '';
-	$s = strftime("$c Time: %H:%M:%S ", localtime());
+	$s .= strftime("$c Time: %H:%M:%S ", localtime());
 #	if (! -w "/dev/input/event0") {
 #		$s .= sprintf "\033[2;%dH\033[41;37m /dev/input/event0 perms", $columns - 30;
 #	}
 #	if (! -w "/dev/fb0") {
 #		$s .= sprintf "\033[3;%dH\033[41;37m /dev/fb0 perms         ", $columns - 30;
 #	}
+
+	###############################################
+	#   Get network status.			      #
+	###############################################
+	$fh = new FileHandle("/tmp/rss_status.log");
+	my %info;
+	if ($fh) {
+		while (<$fh>) {
+			chomp;
+			my ($lh, $rh) = split(/=/);
+			$info{$lh} = $rh;
+		}
+	}
+	if (!$info{gw}) {
+		$s .= sprintf("\033[2;%dH\033[1;41;37mNetwork down\033[K", $columns - 20);
+	}
+
 	$s .= sprintf("\033[37;40m\033[%dH", $rows);
 	print $s;
+}
+
+######################################################################
+#   Scan  the  environment  for  useful  stuff,  especially  if the  #
+#   network is down.						     #
+######################################################################
+sub do_status
+{
+	my $ppid = $$;
+
+	return if fork();
+
+	my $gw;
+	my $last_stock = 0;
+
+	while (1) {
+		exit(0) if ! -d "/proc/$ppid";
+
+		###############################################
+		#   Get the gateway to ping		      #
+		###############################################
+		my $fh = new FileHandle("route -n |");
+		$gw = '';
+		while (<$fh>) {
+			chomp;
+			next if !/^\d/;
+			my $s = (split(" ", $_))[1];
+			next if $s eq '0.0.0.0';
+			$gw = $s;
+		}
+		$fh->close();
+
+		my $ofh = new FileHandle(">/tmp/rss_status.log");
+		print $ofh "gw=$gw\n";
+		$ofh->close();
+
+		if ($gw && time() > $last_stock + $opts{stock_time}) {
+			my $cmd = "$FindBin::RealBin/stock.pl " .
+				"-cols $columns -update -random -o $ENV{HOME}/.rss/ticker/stock.log " .
+				join(" ", @{$opts{stocks}});
+			my $str = `$cmd`;
+		}
+
+		sleep(5);
+	}
 }
 
 my $hist_mode = 0;
@@ -133,7 +194,7 @@ sub do_stocks
 		$stock_time = time();
 		my $t = strftime("%H:%M ", localtime());
 		my $cmd = "$FindBin::RealBin/stock.pl " .
-			"-cols $columns -update -random -o $ENV{HOME}/.rss/ticker/stock.log " .
+			"-cols $columns -random -o $ENV{HOME}/.rss/ticker/stock.log " .
 			join(" ", @{$opts{stocks}});
 		#print "$cmd\n";
 		my $str = `$cmd`;
@@ -158,6 +219,13 @@ sub do_weather
 	}
 }
 
+sub get_tty_size
+{
+	my $s = `stty -a | grep columns`;
+	chomp($s);
+	$s =~ m/rows (\d+); columns (\d+)/;
+	($rows, $columns) = ($1, $2);
+}
 sub main
 {
 	Getopt::Long::Configure('require_order');
@@ -174,12 +242,11 @@ sub main
 
 	print "\033[37m";
 
-	my $s = `stty -a | grep columns`;
-	chomp($s);
-	$s =~ m/rows (\d+); columns (\d+)/;
-	($rows, $columns) = ($1, $2);
+	get_tty_size();
 
 	read_rss_config();
+
+	do_status();
 
 	do_ticker();
 }
@@ -384,6 +451,8 @@ sub do_ticker
 				$ticks++;
 				last;
 			}
+
+		get_tty_size();
 		}
 	}
 	exit(0);

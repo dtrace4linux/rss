@@ -166,7 +166,7 @@ sub get
 
 	my $do_store = 0;
 	if ($opts{force} || !defined($mtime) || $mtime + 15 * 60 < time()) {
-		my $cmd = "wget -q -O $fn http://www.google.com/finance/quote/$stock";
+		my $cmd = "wget -T 5 -q -O $fn http://www.google.com/finance/quote/$stock";
 		system($cmd);
 		$do_store = 1;
 		$ofh = new FileHandle(">>$opts{o}");

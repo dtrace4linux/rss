@@ -1,5 +1,5 @@
 # use this file to have random reminders shown
-#created date,dow,times,interval,algorithm,message
+#created date,enabled,dow,times,interval,algorithm,message
 #
 # dow is a space separated series of 3-letter days, e.g. "mon tue wed"
 #     You can also use 'everyday', 'weekday' or 'weekend'
@@ -10,6 +10,11 @@
 #        - "normal" for a displayed message.
 #        - "cmd" to run a command, such as check mail, or poweroff
 #
-20210215,sat sun,,600,normal,Its the weekend!
-20210215,mon,0600-2100,600,normal,take the bins out
-20210304,everyday,2355,600,cmd,echo /sbin/poweroff
+20210215,enabled,sat sun,,600,normal,Its the weekend!
+20210215,enabled,mon,0600-2100,600,normal,take the bins out
+20210304,disabled,everyday,2355,600,cmd,echo /sbin/poweroff
+20210306,enabled,mon,,600,normal,It's monday!
+20210306,enabled,tue,,600,normal,It's tuesday!
+20210306,enabled,wed,,600,normal,It's wednesday!
+20210306,enabled,thu,,600,normal,It's thursday!
+20210306,enabled,fri,,600,normal,It's friday!

@@ -43,7 +43,8 @@ sub main
 	while (<$fh>) {
 		next if /^#/;
 		chomp;
-		my ($cdate, $dow, $times, $interval, $algo, $msg) = split(/,/);
+		my ($cdate, $enabled, $dow, $times, $interval, $algo, $msg) = split(/,/);
+		next if $enabled ne 'enabled';
 
 		$dow = "sat sun" if $dow eq 'weekend';
 		$dow = "mon tue wed thu fri" if $dow eq 'weekday';
@@ -68,7 +69,7 @@ sub main
 	if (int(rand(3)) == 0) {
 		system("figlet $msg");
 	} else {
-		system("toilet --gay $msg");
+		system("toilet -t --gay $msg");
 	}
 }
 #######################################################################
