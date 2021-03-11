@@ -2,6 +2,9 @@
 
 # You want to use sudo.
 
+# You can run 'startup' manually, but also S99rss can start it up on
+# boot up.
+
 root=/home/$USER/bin/root
 if [ ! -f $root ]; then
 	root=sudo
@@ -17,6 +20,16 @@ $root chmod 666 /dev/tty1
 
 # /usr/bin/fgconsole needs this to find the current console
 $root chmod 666 /dev/console
+
+# Arrange to startup automatically on boot. 'rc3.d' is for non-GUI
+# display, and 'rc5.d' for graphical. In graphical mode, we force a 
+# chvt - as above, to get to the console
+#
+if [ ! -f /etc/init.d/rss ]; then
+	$sudo cp S99rss /etc/init.d/rss
+	$sudo ln -s ../init.d/rss /etc/rc3.d/S99rss
+	$sudo ln -s ../init.d/rss /etc/rc5.d/S99rss
+fi
 
 # We need access to:
 #

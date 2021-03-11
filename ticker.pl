@@ -39,7 +39,7 @@ my $weather_time = 0;
 sub clean_text
 {	my $txt = shift;
 
-	$txt =~ s/\xe2\x80/'/g;
+	$txt =~ s/\xe2\x80./'/g;
 	$txt =~ s/&#039;/'/g;
 	$txt =~ s/&#39;/'/g;
 	$txt =~ s/&#22;/"/g;
@@ -47,6 +47,7 @@ sub clean_text
 	$txt =~ s/&#32;/ /g;
 	$txt =~ s/&#x27;/'/g;
 	$txt =~ s/&amp;#x27;/'/g;
+	$txt =~ s/&amp;#32;/ /g;
 	$txt =~ s/&quot;/"/g;
 	$txt =~ s/&amp;/\&/g;
 	$txt =~ s/&quot;/"/g;
@@ -84,6 +85,7 @@ sub do_status_line
 #		$s .= sprintf "\033[3;%dH\033[41;37m /dev/fb0 perms         ", $columns - 30;
 #	}
 
+	my $row = 2;
 	###############################################
 	#   Get network status.			      #
 	###############################################
@@ -96,9 +98,20 @@ sub do_status_line
 			$info{$lh} = $rh;
 		}
 	}
+
+	$s .= sprintf("\033[$row;%dH", $columns - 20);
 	if (!$info{gw}) {
-		$s .= sprintf("\033[2;%dH\033[1;41;37mNetwork down\033[K", $columns - 20);
+		$s .= sprintf("\033[1;41;37m Net ");
+	} else {
+		$s .= sprintf("\033[1;42;40m Net ");
 	}
+	$row++;
+	if (!$info{ping}) {
+		$s .= sprintf("\033[1;41;37m Ping ");
+	} else {
+		$s .= sprintf("\033[1;42;40m Ping ");
+	}
+	$row++;
 
 	$s .= sprintf("\033[37;40m\033[%dH", $rows);
 	print $s;
@@ -114,8 +127,9 @@ sub do_status
 
 	return if fork();
 
-	my $gw;
 	my $last_stock = 0;
+	my %stats;
+	my %old_stats;
 
 	while (1) {
 		exit(0) if ! -d "/proc/$ppid";
@@ -124,21 +138,50 @@ sub do_status
 		#   Get the gateway to ping		      #
 		###############################################
 		my $fh = new FileHandle("route -n |");
-		$gw = '';
+		$stats{gw} = '';
 		while (<$fh>) {
 			chomp;
 			next if !/^\d/;
 			my $s = (split(" ", $_))[1];
 			next if $s eq '0.0.0.0';
-			$gw = $s;
+			$stats{gw} = $s;
 		}
 		$fh->close();
 
-		my $ofh = new FileHandle(">/tmp/rss_status.log");
-		print $ofh "gw=$gw\n";
-		$ofh->close();
+		$stats{ping} = 0;
+		if ($stats{gw}) {
+			my $s = system("ping -c 1 -W 2 $stats{gw} >/dev/null");
+			$stats{ping} = $? ? 0 : 1;
+		}
 
-		if ($gw && time() > $last_stock + $opts{stock_time}) {
+		###############################################
+		#   See if anything changed		      #
+		###############################################
+		my $chg = 0;
+		foreach my $s (sort(keys(%stats))) {
+			$chg = 1 if !defined($old_stats{$s}) || $old_stats{$s} ne $stats{$s};
+		}
+
+		###############################################
+		#   Keep status, and audit trail.	      #
+		###############################################
+		if ($chg) {
+			my $ofh = new FileHandle(">>/tmp/rss_status_history.log");
+			foreach my $s (sort(keys(%stats))) {
+				print $ofh time_string() . "$s=$stats{$s}\n";
+			}
+			$ofh->close();
+
+			$ofh = new FileHandle(">/tmp/rss_status.log");
+			foreach my $s (sort(keys(%stats))) {
+				print $ofh "$s=$stats{$s}\n";
+			}
+			$ofh->close();
+		}
+
+		%old_stats = %stats;
+
+		if ($stats{gw} && time() > $last_stock + $opts{stock_time}) {
 			my $cmd = "$FindBin::RealBin/stock.pl " .
 				"-cols $columns -update -random -o $ENV{HOME}/.rss/ticker/stock.log " .
 				join(" ", @{$opts{stocks}});
@@ -235,6 +278,11 @@ sub main
 		'page=s',
 		'ppid=s',
 		);
+
+#my $a = read_article("$ENV{HOME}/.rss/articles/art0005921");
+#print "t=", clean_text($a->{title}), "\n";
+#print clean_text($a->{body});
+#exit;
 
 	usage(0) if $opts{help};
 
@@ -732,6 +780,7 @@ sub ev_check
 
 	my $bits = '';
 	vec($bits, $ev_fh->fileno(), 1) = 1;
+	vec($bits, STDIN->fileno(), 1) = 1;
 
 	my $t = 1;
 	my $x = 0;
@@ -742,9 +791,16 @@ sub ev_check
 		my $n = select($rbits = $bits, undef, undef, $t);
 		return 0 if !$n;
 
+		my $s;
+		if (vec($rbits, STDIN->fileno(), 1)) {
+			if (sysread(STDIN, $s, 1)) {
+				return (1, "enter", 0, 0);
+			}
+			next;
+		}
+
 		$t = 0.1;
 
-		my $s;
 		last if !sysread($ev_fh, $s, 16);
 
 		my ($secs, $usecs, $type, $code, $value) = unpack("LLSSS", $s);
