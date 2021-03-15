@@ -30,6 +30,7 @@ int fullscreen;
 int	stretch;
 int	effects;
 int	info;
+int	page = -1;
 
 struct fb_var_screeninfo vinfo;
 struct fb_fix_screeninfo finfo;
@@ -65,6 +66,12 @@ int do_switches(int argc, char **argv)
 			}
 			if (strcmp(cp, "info") == 0) {
 				info = 1;
+				break;
+			}
+			if (strcmp(cp, "page") == 0) {
+				if (++i >= argc)
+					usage();
+				page = atoi(argv[i]);
 				break;
 			}
 			if (strcmp(cp, "stretch") == 0) {
@@ -343,6 +350,7 @@ usage()
 	fprintf(stderr, "   -effects        Scroll-in effects enabled\n");
 	fprintf(stderr, "   -fullscreen     Stretch image to fill screen\n");
 	fprintf(stderr, "   -info           Print screen size info\n");
+	fprintf(stderr, "   -page N         Display page/screen N of the image\n");
 	fprintf(stderr, "   -stretch        Stretch but dont change aspect ratio\n");
 
 }
