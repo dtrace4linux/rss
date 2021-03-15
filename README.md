@@ -160,6 +160,7 @@ For GUI display
 
   * unclutter
   * libjpeg-dev
+  * firefox, or firefox-esr (raspberry pi)
 
 Examples:
 

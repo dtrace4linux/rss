@@ -24,6 +24,7 @@ my %page_sched = (
 	4 => { freq => 1750}, # reminder
 	5 => { freq => 1850}, # rss-hello banner
 	6 => { freq => 3630}, # rss-help 
+	7 => { freq => 600 }, # status
 	);
 my $npages = scalar(keys(%page_sched));
 
@@ -91,11 +92,16 @@ sub do_status_line
 	###############################################
 	$fh = new FileHandle("/tmp/rss_status.log");
 	my %info;
+	my $if_string = '';
 	if ($fh) {
 		while (<$fh>) {
 			chomp;
 			my ($lh, $rh) = split(/=/);
 			$info{$lh} = $rh;
+			if ($lh =~ /^iface_(.*)/ && $1 ne 'lo') {
+				$rh =~ s/^.*,//;
+				$if_string .= " $rh ";
+			}
 		}
 	}
 
@@ -112,6 +118,8 @@ sub do_status_line
 		$s .= sprintf("\033[1;42;40m Ping ");
 	}
 	$row++;
+
+	$s .= sprintf("\033[1H$if_string ");
 
 	$s .= sprintf("\033[37;40m\033[%dH", $rows);
 	print $s;
@@ -130,14 +138,36 @@ sub do_status
 	my $last_stock = 0;
 	my %stats;
 	my %old_stats;
+	my $fh;
 
 	while (1) {
 		exit(0) if ! -d "/proc/$ppid";
 
 		###############################################
+		#   Get interface state.		      #
+		###############################################
+		$fh = new FileHandle("ifconfig |");
+		my $iface;
+		my $up = 0;
+		while (<$fh>) {
+			chomp;
+			if (/^(.*): flags=/) {
+				$iface = $1;
+			}
+			if (/flags=.*UP/) {
+				$up = 1;
+			} elsif (/flags=/) {
+				$up = 0;
+			}
+			if (/inet ([^\s]*) /) {
+				$stats{"iface_$iface"} = "$up,$1";
+			}
+		}
+
+		###############################################
 		#   Get the gateway to ping		      #
 		###############################################
-		my $fh = new FileHandle("route -n |");
+		$fh = new FileHandle("route -n |");
 		$stats{gw} = '';
 		while (<$fh>) {
 			chomp;
@@ -182,7 +212,7 @@ sub do_status
 		%old_stats = %stats;
 
 		if ($stats{gw} && time() > $last_stock + $opts{stock_time}) {
-			my $cmd = "$FindBin::RealBin/stock.pl " .
+			my $cmd = "$FindBin::RealBin/scripts/stock.pl " .
 				"-cols $columns -update -random -o $ENV{HOME}/.rss/ticker/stock.log " .
 				join(" ", @{$opts{stocks}});
 			my $str = `$cmd`;
@@ -236,7 +266,7 @@ sub do_stocks
 	    	reset_fb();
 		$stock_time = time();
 		my $t = strftime("%H:%M ", localtime());
-		my $cmd = "$FindBin::RealBin/stock.pl " .
+		my $cmd = "$FindBin::RealBin/scripts/stock.pl " .
 			"-cols $columns -random -o $ENV{HOME}/.rss/ticker/stock.log " .
 			join(" ", @{$opts{stocks}});
 		#print "$cmd\n";
@@ -426,6 +456,7 @@ sub do_ticker
 		###############################################
 		reset_fb();
 
+		my $do_weather = 1;
 		$page = sched_page($con_txt);
 		$page = $opts{page} if defined($opts{page});
 
@@ -438,17 +469,22 @@ sub do_ticker
 		} elsif ($page == 2) {
 			do_page2_calendar();
 		} elsif ($page == 3) {
-			do_page3_image()
+			do_page3_image();
+			$do_weather = 0;
 		} elsif ($page == 4) {
 			do_page4_reminder()
 		} elsif ($page == 5) {
 			do_page5_hello();
 		} elsif ($page == 6) {
 			do_page6_help();
+		} elsif ($page == 7) {
+			do_page7_status();
 		}
 
-		do_weather();
-		do_stocks();
+		if ($do_weather) {
+			do_weather();
+			do_stocks();
+		}
 
 		if (@history > 100) {
 			@history = @history[0..99];
@@ -751,6 +787,59 @@ EOF
 	my ($size, $used, $pc) = (split(" ", $disk))[1, 2, 4];
 	print "Running on: $hostname ($ip)      Disk: $used/$size $pc\n";
 }
+
+sub do_page7_status
+{
+	my $disk = `df -h /`;
+	$disk = (split("\n", $disk))[1];
+	my ($size, $used, $pc) = (split(" ", $disk))[1, 2, 4];
+	$pc =~ s/%//;
+
+	my $d = " " x (60 * ($pc / 100.));
+	my $d1 = " " x (60 - length($d));
+
+	pr("Disk Usage: [\033[41m$d\033[40m$d1] $pc%\n");
+
+	###############################################
+	#   We  want  the IP addr of the interfaces,  #
+	#   but  we  cant  assume  the  IP  for  our  #
+	#   hostname  is  an actual external address  #
+	#   (its usually a localhost address).	      #
+	###############################################
+	my $fh = new FileHandle("ifconfig |");
+	my %iface;
+	my $up = 0;
+	my $interface;
+	my $ip = '';
+	while (<$fh>) {
+		chomp;
+		if (/^(.*): flags/) {
+			$interface = $1;
+			$iface{$interface}{up} = 0;
+			if (/\<UP/) {
+				$iface{$interface}{up} = 1;
+			}
+			next;
+		}
+		if (/inet ([^ ]*) /) {
+			$iface{$interface}{ip} = $1;
+			$ip .= " " if $ip && $ip !~ /^127/;
+		}
+	}
+
+	my $s = "Network: ";
+	foreach my $n (sort(keys(%iface))) {
+		next if $n eq 'lo';
+		$s .= sprintf( " $n: %s %s",
+			$iface{$n}{up} ? "\033[33mUp\033[37m" : 
+				"\033[31mDOWN\033[37m",
+			"$iface{$n}{ip} ");
+	}
+	pr("$s\n");
+
+
+}
+
 ######################################################################
 #   Check for a touch screen event.				     #
 ######################################################################
