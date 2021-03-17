@@ -55,7 +55,7 @@ sub query
 	my $json = JSON->new->allow_nonref;
 	my $info = $json->decode($txt);
 
-	my $dir = "$ENV{HOME}/pexels";
+	my $dir = "$ENV{HOME}/images/images";
 
 	foreach my $p (@{$info->{photos}}) {
 		# tiny

@@ -1751,7 +1751,7 @@ sub read_cfg
 	my $fh = new FileHandle($fname);
 	if (!$fh) {
 		return if $quiet;
-		print "Cannot open $fname - $!\n";
+		print "rss.pl: Cannot open $fname - $!\n";
 		return;
 	}
 

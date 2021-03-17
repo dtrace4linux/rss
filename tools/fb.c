@@ -31,6 +31,8 @@ int	stretch;
 int	effects;
 int	info;
 int	page = -1;
+float	xfrac = 1.0;
+float	yfrac = 1.0;
 
 struct fb_var_screeninfo vinfo;
 struct fb_fix_screeninfo finfo;
@@ -76,6 +78,18 @@ int do_switches(int argc, char **argv)
 			}
 			if (strcmp(cp, "stretch") == 0) {
 				stretch = 1;
+				break;
+			}
+			if (strcmp(cp, "xfrac") == 0) {
+				if (++i >= argc)
+					usage();
+				xfrac = atof(argv[i]);
+				break;
+			}
+			if (strcmp(cp, "yfrac") == 0) {
+				if (++i >= argc)
+					usage();
+				yfrac = atof(argv[i]);
 				break;
 			}
 
@@ -154,7 +168,7 @@ int main(int argc, char **argv)
     }
 
     if ((fd = open(fname, O_RDONLY)) < 0) {
-    	printf("Cannot open %s - %s\n", fname, strerror(errno));
+    	printf("fb: Cannot open %s - %s\n", fname, strerror(errno));
 	exit(1);
     }
     if (read(fd, buf, 4) != 4) {
@@ -179,13 +193,13 @@ int main(int argc, char **argv)
     }
 
     if (info) {
-    	printf("Image: %dx%d\n", img->width, img->height);
+    	printf("Image: %ldx%ld\n", img->width, img->height);
     	exit(0);
     }
 
     if (!quiet) {
 	    printf("%dx%d, %dbpp\n", vinfo.xres, vinfo.yres, vinfo.bits_per_pixel );
-	    printf("Image: %dx%d\n", img->width, img->height);
+	    printf("Image: %ldx%ld\n", img->width, img->height);
     }
 
     // Figure out the size of the screen in bytes
@@ -254,7 +268,10 @@ fullscreen_display(char *fbp, struct imgRawImage *img, double f)
 void 
 normal_display(char *fbp, struct imgRawImage *img, int x, int y, int w, int h)
 {	int	x0, y0;
+	unsigned char *img_data = img->lpData;
 
+	if (page > 0)
+		img_data += img->width * 3 * page * vinfo.yres;
 //printf("%d %d w=%d h=%d\n", x, y, w, h);
 
     // Figure out where in memory to put the pixel
@@ -266,7 +283,7 @@ normal_display(char *fbp, struct imgRawImage *img, int x, int y, int w, int h)
 	    	(y0+vinfo.yoffset) * finfo.line_length +
 		(x+vinfo.xoffset) * (vinfo.bits_per_pixel/8);
 
-	unsigned char *data = &img->lpData[((y0-y) * img->width + x) * 3];
+	unsigned char *data = &img_data[((y0-y) * img->width + x) * 3];
         for (x0 = x; x0 < x + w; x0++) {
 	    if (x0 - x >= img->width) {
 		break;
@@ -352,5 +369,7 @@ usage()
 	fprintf(stderr, "   -info           Print screen size info\n");
 	fprintf(stderr, "   -page N         Display page/screen N of the image\n");
 	fprintf(stderr, "   -stretch        Stretch but dont change aspect ratio\n");
+	fprintf(stderr, "   -xfrac N.NN     Shrink image on the x-axis\n");
+	fprintf(stderr, "   -yfrac N.NN     Shrink image on the y-axis\n");
 
 }

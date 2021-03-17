@@ -101,7 +101,7 @@ sub do_random
 {
 	my $fh = new FileHandle($opts{o});
 	if (!$fh) {
-		print "Cannot open $opts{o} - $!\n";
+		print "stock.pl: Cannot open $opts{o} - $!\n";
 		return;
 	}
 

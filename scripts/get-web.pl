@@ -21,10 +21,12 @@ my @pages = (
 #   Command line switches.					      #
 #######################################################################
 my %opts = (
-	dir => "/tmp/web",
+	dir => "$ENV{HOME}/images/news",
 	once => 0,
 	sleep => 1800,
 	timeout => 20,
+	w => 1024,
+	h => 2000,
 	);
 
 sub main
@@ -36,6 +38,8 @@ sub main
 		'help',
 		'once',
 		'ppid=s',
+		'w=s',
+		'h=s',
 		);
 
 	usage(0) if $opts{help};
@@ -63,14 +67,15 @@ sub get_pages
 		$fn =~ s/^.*\/\///;
 		$fn =~ s/\/.*//;
 		my $ofn = "$opts{dir}/$fn";
-		unlink($ofn);
+		rename($ofn, "$ofn.old");
 
 		$ENV{HOME} = "/tmp";
 		my $cmd = "timeout $opts{timeout}s firefox --profile /tmp/headless " .
-			"--window-size 1024,4800 " .
+			"--window-size $opts{w},$opts{h} " .
 			"-screenshot $ofn $w";
 		print time_string() . "$cmd\n";
-		system($cmd);
+		system("$cmd ; ls -h $ofn");
+
 	}
 }
 

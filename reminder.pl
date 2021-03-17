@@ -31,7 +31,7 @@ sub main
 
 	my $fh = new FileHandle($fn);
 	if (!$fh) {
-		print "Cannot open $fn - $!\n";
+		print "reminder.pl: Cannot open $fn - $!\n";
 		exit(0);
 	}
 
@@ -67,10 +67,19 @@ sub main
 	exit(0) if !$msg;
 
 	if (int(rand(3)) == 0) {
-		system("figlet $msg");
+		system("figlet " . encode_msg($msg));
 	} else {
-		system("toilet -t --gay $msg");
+		system("toilet -t --gay " . encode_msg($msg));
 	}
+}
+
+sub encode_msg
+{	my $m = shift;
+
+	return "'$m'" if $m !~ /[']/;
+
+	$m =~ s/'/\\'/g;
+	return $m;
 }
 #######################################################################
 #   Print out command line usage.				      #

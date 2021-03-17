@@ -17,14 +17,18 @@ use FindBin;
 #   (per tick == minute)					     #
 ######################################################################
 my %page_sched = (
-	0 => { freq => 0},    # headlines
-	1 => { freq => 60},   # random topic
-	2 => { freq => 600},  # calendar
-	3 => { freq => 1200}, # image
-	4 => { freq => 1750}, # reminder
-	5 => { freq => 1850}, # rss-hello banner
-	6 => { freq => 3630}, # rss-help 
-	7 => { freq => 600 }, # status
+	0  => { freq => 0,    title => "News topics"},
+	1  => { freq => 60,   title => "Articles"},
+	2  => { freq => 600,  title => "Calendar"},
+	3  => { freq => 1750, title => "Reminder"},
+	4  => { freq => 1850, title => "Hello"},
+	5  => { freq => 3630, title => "Help"},
+	6  => { freq => 600,  title => "Status" },
+
+	7  => { freq => 1500, title => "News: front page"},
+	8  => { freq => 1200, title => "Photos",},
+	9  => { freq => 1200, title => "Images",},
+	10 => { freq => 1200, title => "Album covers",},
 	);
 my $npages = scalar(keys(%page_sched));
 
@@ -34,6 +38,8 @@ my $npages = scalar(keys(%page_sched));
 my %opts;
 my $columns;
 my $rows;
+my $cur_page = 0;
+my $do_next_page = 0;
 my $stock_time = 0;
 my $weather_time = 0;
 
@@ -52,9 +58,54 @@ sub clean_text
 	$txt =~ s/&quot;/"/g;
 	$txt =~ s/&amp;/\&/g;
 	$txt =~ s/&quot;/"/g;
+	$txt =~ s/&hellip;/.../g;
 	$txt =~ s/\xe2\x80[\x98\x99]/'/g;
 
 	return $txt;
+}
+
+sub display_image
+{	my $fn = shift;
+
+	if (-x "$FindBin::RealBin/tools/fb") {
+		# Check we are currently the active console.
+		my $vt = `fgconsole`;
+		chomp($vt);
+		if ($vt != 1) {
+			print "[No image displayed - we lost the console: vt=$vt]\n";
+			return;
+		}
+		# Save screen before
+		if ( -e "/dev/fb0") {
+			system("cat /dev/fb0 > /tmp/screendump");
+		}
+		system("$FindBin::RealBin/tools/fb -effects -stretch -q \"$fn\"");
+		return;
+	}
+
+	if (-x "/usr/bin/img2txt" && $fn) {
+		my $w = $columns - 1;
+		my $h = $rows - 1;
+		system("/usr/bin/img2txt -W $w -H $h \"$fn\"");
+		return;
+	}
+	pr("(No images found to display)\n");
+}
+
+sub display_pictures
+{	my $dir = shift;
+
+	$opts{image_dir} =~ s/\$HOME/$ENV{HOME}/;
+	my @img = glob("$opts{image_dir}/$dir/*");
+	my $fn = $img[rand(@img)];
+	if (!$fn) {
+		pr(time_string() . "[No images in $opts{image_dir}/$dir]\n");
+		return;
+	}
+
+	pr(time_string() . "[img: $fn]\n");
+
+	display_image($fn);
 }
 
 sub do_status_line
@@ -62,7 +113,7 @@ sub do_status_line
 	return if $opts{notime};
 
 	if (defined($opts{ppid}) && ! -d "/proc/$opts{ppid}") {
-		print time_string() . "[$$] parent $opts{ppid} terminated\n";
+		print time_string() . "[$$] ticker: parent $opts{ppid} terminated\n";
 		exit(0);
 	}
 
@@ -318,6 +369,14 @@ sub main
 
 	$| = 1;
 
+	my $pid = $$;
+	if (!defined($opts{page})) {
+		if (fork() == 0) {
+			exec "$FindBin::RealBin/scripts/get-web.pl -ppid $pid";
+			exit(0);
+		}
+	}
+
 	print "\033[37m";
 
 	get_tty_size();
@@ -339,6 +398,11 @@ sub sched_page
 {	my $txt = shift;
 
 	return 0 if $txt;
+
+	if ($do_next_page) {
+		$do_next_page = 0;
+		return $cur_page;
+	}
 
 	for (my $i = $npages - 1; $i > 0; $i--) {
 		if (!defined($page_sched{$i}{last_time})) {
@@ -469,16 +533,25 @@ sub do_ticker
 		} elsif ($page == 2) {
 			do_page2_calendar();
 		} elsif ($page == 3) {
-			do_page3_image();
-			$do_weather = 0;
+			do_page3_reminder();
 		} elsif ($page == 4) {
-			do_page4_reminder()
+			do_page4_hello();
 		} elsif ($page == 5) {
-			do_page5_hello();
+			do_page5_help();
 		} elsif ($page == 6) {
-			do_page6_help();
+			do_page6_status();
 		} elsif ($page == 7) {
-			do_page7_status();
+			do_page7_web();
+			$do_weather = 0;
+		} elsif ($page == 8) {
+			do_page8_photos();
+			$do_weather = 0;
+		} elsif ($page == 9) {
+			do_page9_images();
+			$do_weather = 0;
+		} elsif ($page == 10) {
+			do_page10_album();
+			$do_weather = 0;
 		}
 
 		if ($do_weather) {
@@ -527,8 +600,13 @@ sub do_ticker
 				next;
 			}
 			
-			if ($action eq 'bottom-left' || $action eq 'bottom-right') {
+			if ($action eq 'bottom-left') {
 				do_history(1);
+			}
+
+			if ($action eq 'bottom-right') {
+				$cur_page = ($cur_page + 1) % scalar(keys(%page_sched));
+				$do_next_page = 1;
 			}
 
 			if ($hist_mode == 0) {
@@ -672,43 +750,7 @@ sub do_page2_calendar
 	pr("\n");
 }
 
-######################################################################
-#   Display a random image.					     #
-######################################################################
-sub do_page3_image
-{
-
-	$opts{image_dir} =~ s/\$HOME/$ENV{HOME}/;
-	my @img = glob("$opts{image_dir}/*");
-	push @img, glob("$ENV{HOME}/images/*");
-	my $fn = $img[rand(@img)];
-	pr(time_string() . "[img: $fn]\n");
-
-	if (-x "$FindBin::RealBin/tools/fb") {
-		# Check we are currently the active console.
-		my $vt = `fgconsole`;
-		chomp($vt);
-		if ($vt != 1) {
-			print "[No image displayed - we lost the console: vt=$vt]\n";
-			return;
-		}
-		# Save screen before
-		if ( -e "/dev/fb0") {
-			system("cat /dev/fb0 > /tmp/screendump");
-		}
-		system("$FindBin::RealBin/tools/fb -effects -stretch -q \"$fn\"");
-		return;
-	}
-
-	if (-x "/usr/bin/img2txt" && $fn) {
-		my $w = $columns - 1;
-		my $h = $rows - 1;
-		system("/usr/bin/img2txt -W $w -H $h \"$fn\"");
-		return;
-	}
-	pr("(No images found to display)\n");
-}
-sub do_page4_reminder
+sub do_page3_reminder
 {
 	my $path = $FindBin::RealBin;
 	my $fh = new FileHandle("$path/reminder.pl $path/reminders.txt |");
@@ -717,7 +759,7 @@ sub do_page4_reminder
 	}
 }
 
-sub do_page5_hello
+sub do_page4_hello
 {
 	my $fh = new FileHandle("$FindBin::RealBin/rss-hello.txt");
 	my @msg;
@@ -737,7 +779,7 @@ sub do_page5_hello
 }
 
 my $hostname = `hostname`;
-sub do_page6_help
+sub do_page5_help
 {
 	my $fh = new FileHandle("$FindBin::RealBin/rss-help.txt");
 	while (<$fh>) {
@@ -788,7 +830,7 @@ EOF
 	print "Running on: $hostname ($ip)      Disk: $used/$size $pc\n";
 }
 
-sub do_page7_status
+sub do_page6_status
 {
 	my $disk = `df -h /`;
 	$disk = (split("\n", $disk))[1];
@@ -830,14 +872,37 @@ sub do_page7_status
 	my $s = "Network: ";
 	foreach my $n (sort(keys(%iface))) {
 		next if $n eq 'lo';
-		$s .= sprintf( " $n: %s %s",
+		$s .= sprintf( " $n: %s %s ",
 			$iface{$n}{up} ? "\033[33mUp\033[37m" : 
 				"\033[31mDOWN\033[37m",
-			"$iface{$n}{ip} ");
+			$iface{$n}{ip} || "(noip)");
 	}
 	pr("$s\n");
 
 
+}
+
+sub do_page7_web
+{
+	display_pictures("news");
+}
+
+sub do_page8_photos
+{
+	display_pictures("photos");
+}
+
+######################################################################
+#   Display a random image.					     #
+######################################################################
+sub do_page9_images
+{
+	display_pictures("images");
+}
+
+sub do_page10_album
+{
+	display_pictures("album");
 }
 
 ######################################################################

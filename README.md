@@ -96,11 +96,25 @@ Startup
   rss.pl - and it will take care of killing the existing background
   processes.
 
-$HOME/pexels & $HOME/images directory
+$HOME/images directory
 
-  If you place a series of images in the pexels/ or images/ folder, 
-  then periodically they are rendered to the screen, via the img2txt 
-  or 'fb' tool.
+  The $HOME/images folder is used to store and display images. So
+  far, there are four types of pages:
+
+  images/news - autopopulated with the home page of certain news web
+  sites
+
+  images/photos - your selection of personal photos
+
+  images/album - album covers
+
+  By segregating the photos, we can be sure that each type will be
+  displayed on a periodic basis, rather than one single/giant collection
+  of images.
+
+  If the screen frame buffer cannot be accessed (eg permission issue
+  or OS specific issue), then the image will be rendered with the img2txt
+  utility
 
   img2txt provides ASCII art based rendering, which is fine, but not
   truely accurate. It is available in the caca-utils package if you
@@ -113,12 +127,9 @@ $HOME/pexels & $HOME/images directory
   It will create a frame-buffer renderer and draw the real JPG or PNG
   image. 
 
-  The script "pexels.pl" can be used to acquire random stock images
+  The script "scripts/pexels.pl" can be used to acquire random stock images
   from http://pexels.com, but you need an API key to do this. Or,
   just populate the folder with a random selection of your own photos.
-
-  $HOME/images is for personal photos - not derived from pexels,
-  making it easier to manage.
 
 reminders.txt
 
@@ -150,17 +161,8 @@ TODO
 
 Dependencies:
 
-  These tools or packages are optional but will be invoked if installed:
-
-  * ansiweather
-  * caca-utils
-  * libperl-json (for pexels.pl downloading)
-
-For GUI display
-
-  * unclutter
-  * libjpeg-dev
-  * firefox, or firefox-esr (raspberry pi)
+  See scripts/get-deps.pl for the dependencies on Raspbian/Buster
+  and Ubuntu.
 
 Examples:
 
