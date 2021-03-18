@@ -86,12 +86,32 @@ sub main
 
 	usage(0) if $opts{help};
 
-	my $fh = new FileHandle("/dev/input/event0");
-	die "Cannot open /dev/input/event0 - $!" if !$fh;
+	my $dev = shift @ARGV || "/dev/input/event0";
+
+	my $arch = `uname -m`;
+	chomp($arch);
+	my $is_64bit = $arch =~ /64/;
+
+	my $fh = new FileHandle($dev);
+	die "Cannot open $dev - $!" if !$fh;
+
+	my $bits = '';
+	vec($bits, $fh->fileno(), 1) = 1;
+
 	while (1) {
 		my $s;
-		last if !sysread($fh, $s, 16);
-		my ($secs, $usecs, $type, $code, $value) = unpack("LLSSS", $s);
+		my $rbits;
+		my $n = select($rbits = $bits, undef, undef, 1.0);
+		next if !$n;
+
+		last if !sysread($fh, $s, $is_64bit ? 24 : 16);
+		my ($secs, $usecs, $type, $code, $value);
+
+		if ($is_64bit) {
+			($secs, $usecs, $type, $code, $value) = unpack("qqSSS", $s);
+		} else {
+			($secs, $usecs, $type, $code, $value) = unpack("LLSSS", $s);
+		}
 
 		if ($opts{all}) {
 			print "$secs.$usecs event $type $types{$type} $code $value\n";
@@ -102,6 +122,8 @@ sub main
 			print "$secs.$usecs event $type $types{$type} $code $abs_codes{$code} $value\n";
 		}
 	}
+
+	print "EOF detected\n";
 }
 #######################################################################
 #   Print out command line usage.				      #

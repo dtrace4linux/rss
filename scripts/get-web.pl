@@ -15,6 +15,21 @@ my @pages = (
 	"https://www.dailymail.co.uk/home/index.html",
 	"https://www.bbc.co.uk/news",
 	"http://wttr.in",
+	"http://www.theguardian.com",
+	"http://news.sky.com",
+	"http://express.co.uk",
+	"http://www.ft.com",
+	"http://www.thetimes.co.uk",
+	"http://huffingtonpost.co.uk",
+	"http://www.cnn.com",
+	"http://time.com",
+	"http://abcnews.go.com",
+	"http://www.thevergecom",
+	"http://cbsnews.com",
+	"http://variety.com",
+	"http://digg.com",
+	"http://arstechnica.com",
+	"http://slate.com",
 	);
 
 #######################################################################
@@ -66,6 +81,8 @@ sub get_pages
 		my $fn = $w;
 		$fn =~ s/^.*\/\///;
 		$fn =~ s/\/.*//;
+		$fn =~ s/^www\.//;
+
 		my $ofn = "$opts{dir}/$fn";
 		rename($ofn, "$ofn.old");
 

@@ -157,6 +157,8 @@ int main(int argc, char **argv)
 
     if (info) {
 	    printf("%dx%d, %dbpp\n", vinfo.xres, vinfo.yres, vinfo.bits_per_pixel );
+	    printf("xres_virtual=%d yres_virtual=%d\n",
+	    	vinfo.xres_virtual, vinfo.yres_virtual);
     }
 
 

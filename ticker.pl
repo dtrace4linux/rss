@@ -59,6 +59,7 @@ sub clean_text
 	$txt =~ s/&amp;/\&/g;
 	$txt =~ s/&quot;/"/g;
 	$txt =~ s/&hellip;/.../g;
+	$txt =~ s/&;#821[12];/-/g;
 	$txt =~ s/\xe2\x80[\x98\x99]/'/g;
 
 	return $txt;
@@ -96,7 +97,11 @@ sub display_pictures
 {	my $dir = shift;
 
 	$opts{image_dir} =~ s/\$HOME/$ENV{HOME}/;
-	my @img = glob("$opts{image_dir}/$dir/*");
+	my @img;
+	foreach my $f (glob("$opts{image_dir}/$dir/*")) {
+		next if $f =~ /.old$/;
+		push @img, $f;
+	}
 	my $fn = $img[rand(@img)];
 	if (!$fn) {
 		pr(time_string() . "[No images in $opts{image_dir}/$dir]\n");
@@ -303,7 +308,7 @@ sub do_history
 	print "\033[37;40m";
 	$hist_mode = 1;
 	for (my $i = 0; $i < $pgsize; $i++) {
-		print $lns[$pos + $i];
+		print $lns[$pos + $i] if $lns[$pos + $i];
 	}
 	my $green = "32";
 	my $white = "37";
@@ -355,6 +360,7 @@ sub main
 	Getopt::Long::Configure('require_order');
 	Getopt::Long::Configure('no_ignore_case');
 	usage() unless GetOptions(\%opts,
+		'debug',
 		'help',
 		'page=s',
 		'ppid=s',
@@ -372,7 +378,7 @@ sub main
 	my $pid = $$;
 	if (!defined($opts{page})) {
 		if (fork() == 0) {
-			exec "$FindBin::RealBin/scripts/get-web.pl -ppid $pid";
+			exec "$FindBin::RealBin/scripts/get-web.pl -ppid $pid >/tmp/get-web.log";
 			exit(0);
 		}
 	}
@@ -820,8 +826,9 @@ EOF
 			next;
 		}
 		if (/inet ([^ ]*) /) {
+			my $p = $1;
 			$ip .= " " if $ip && $ip !~ /^127/;
-			$ip .= $1;
+			$ip .= $p;
 		}
 	}
 	my $disk = `df -h /`;
@@ -914,14 +921,30 @@ my $ABS_Y = 0x01;
 my $ABS_MT_TRACKING_ID = 0x39;
 my $scr_pix_width = 0;
 my $scr_pix_height = 0;
+my $is_64bit = 0;
+my $ev_device = "/dev/input/event0";
 
 my $ev_fh;
 sub ev_check
 {
 	return -1 if !$opts{touchpad};
 
+	###############################################
+	#   Ubuntu 64b edition will have a different  #
+	#   input_event structure size.		      #
+	###############################################
+	if (!defined($is_64bit)) {
+		my $arch = `uname -m`;
+		chomp($arch);
+		$is_64bit = $arch =~ /64/;
+		# Dirty to assume this.
+		if ($is_64bit) {
+			$ev_device = "/dev/input/event1";
+		}
+	}
+
 	if (!$ev_fh) {
-		$ev_fh = new FileHandle("/dev/input/event0");
+		$ev_fh = new FileHandle($ev_device);
 	}
 	return -1 if !$ev_fh;
 
@@ -955,9 +978,15 @@ sub ev_check
 
 		$t = 0.1;
 
-		last if !sysread($ev_fh, $s, 16);
+		last if !sysread($ev_fh, $s, $is_64bit ? 24 : 16);
 
-		my ($secs, $usecs, $type, $code, $value) = unpack("LLSSS", $s);
+		my ($secs, $usecs, $type, $code, $value);
+
+		if ($is_64bit) {
+			($secs, $usecs, $type, $code, $value) = unpack("qqSSS", $s);
+		} else {
+			($secs, $usecs, $type, $code, $value) = unpack("LLSSS", $s);
+		}
 #printf "type=0x%x code=0x%x value=0x%x\n", $type, $code, $value if $type == $EV_ABS;
 
 		if ($type == $EV_ABS && $code == $ABS_X) {
@@ -990,7 +1019,9 @@ sub ev_check
 				$event = "bottom-right";
 			}
 
-#			pr("[touchpad - $event ($x, $y) width=$scr_pix_width scr_height=$scr_pix_height]\n");
+			if ($opts{debug}) {
+				pr("[touchpad - $event ($x, $y) width=$scr_pix_width scr_height=$scr_pix_height]\n");
+			}
 		    	return (1, $event, $x, $y);
 		}
 	}
