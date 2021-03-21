@@ -77,6 +77,7 @@ sub main
 
 sub get_pages
 {
+return;
 	foreach my $w (@pages) {
 		my $fn = $w;
 		$fn =~ s/^.*\/\///;
@@ -89,9 +90,9 @@ sub get_pages
 		$ENV{HOME} = "/tmp";
 		my $cmd = "timeout $opts{timeout}s firefox --profile /tmp/headless " .
 			"--window-size $opts{w},$opts{h} " .
-			"-screenshot $ofn $w";
+			"-screenshot $ofn $w >/dev/null 2>&1";
 		print time_string() . "$cmd\n";
-		system("$cmd ; ls -h $ofn");
+		system($cmd);
 
 	}
 }

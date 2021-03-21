@@ -21,8 +21,8 @@ my %page_sched = (
 	1  => { freq => 60,   title => "Articles"},
 	2  => { freq => 600,  title => "Calendar"},
 	3  => { freq => 1750, title => "Reminder"},
-	4  => { freq => 1850, title => "Hello"},
-	5  => { freq => 3630, title => "Help"},
+	4  => { freq => 3600, title => "Hello"},
+	5  => { freq => 4000, title => "Help"},
 	6  => { freq => 600,  title => "Status" },
 
 	7  => { freq => 1500, title => "News: front page"},
@@ -52,10 +52,12 @@ sub clean_text
 	$txt =~ s/&#22;/"/g;
 	$txt =~ s/&#27;/'/g;
 	$txt =~ s/&#32;/ /g;
+	$txt =~ s/&#34;/"/g;
 	$txt =~ s/&#x27;/'/g;
 	$txt =~ s/&amp;#x27;/'/g;
 	$txt =~ s/&amp;#32;/ /g;
 	$txt =~ s/&quot;/"/g;
+	$txt =~ s/&amp;/\&/g;
 	$txt =~ s/&amp;/\&/g;
 	$txt =~ s/&quot;/"/g;
 	$txt =~ s/&hellip;/.../g;
@@ -68,10 +70,10 @@ sub clean_text
 sub display_image
 {	my $fn = shift;
 
-	if (-x "$FindBin::RealBin/tools/fb") {
-		# Check we are currently the active console.
-		my $vt = `fgconsole`;
-		chomp($vt);
+	# Check we are currently the active console.
+	my $vt = `fgconsole 2>/dev/null`;
+	chomp($vt) if defined($vt);
+	if (defined($vt) && $vt ne '' && -x "$FindBin::RealBin/tools/fb") {
 		if ($vt != 1) {
 			print "[No image displayed - we lost the console: vt=$vt]\n";
 			return;
@@ -97,14 +99,31 @@ sub display_pictures
 {	my $dir = shift;
 
 	$opts{image_dir} =~ s/\$HOME/$ENV{HOME}/;
+	$dir = "$opts{image_dir}/$dir";
+
 	my @img;
-	foreach my $f (glob("$opts{image_dir}/$dir/*")) {
+
+	my $ctime1 = (stat($dir))[10];
+	my $ctime2 = (stat("$dir/index.log"))[10];
+
+	###############################################
+	#   Cache   directory   so   we   dont  keep  #
+	#   stat()'ing everything		      #
+	###############################################
+	if (!$ctime2 || $ctime1 > $ctime2 + 5) {
+		index_dir($dir);
+	}
+	my $fh = new FileHandle("$dir/index.log");
+	while (<$fh>) {
+		chomp;
+		my $f = $_;
 		next if $f =~ /.old$/;
+		next if $f !~ /jpg|jpeg|png/i;
 		push @img, $f;
 	}
 	my $fn = $img[rand(@img)];
 	if (!$fn) {
-		pr(time_string() . "[No images in $opts{image_dir}/$dir]\n");
+		pr(time_string() . "[No images in $dir]\n");
 		return;
 	}
 
@@ -148,6 +167,7 @@ sub do_status_line
 	###############################################
 	$fh = new FileHandle("/tmp/rss_status.log");
 	my %info;
+	my %iface;
 	my $if_string = '';
 	if ($fh) {
 		while (<$fh>) {
@@ -155,10 +175,20 @@ sub do_status_line
 			my ($lh, $rh) = split(/=/);
 			$info{$lh} = $rh;
 			if ($lh =~ /^iface_(.*)/ && $1 ne 'lo') {
+				my $nm = $1;
 				$rh =~ s/^.*,//;
-				$if_string .= " $rh ";
+				$iface{$nm}{ip} = $rh;
+			}
+			if ($lh =~ /^ssid_(.*)/) {
+				$iface{$1}{ssid} = $rh;
 			}
 		}
+	}
+
+	foreach my $i (sort(keys(%iface))) {
+		$if_string .= " " if $if_string;
+		$if_string .= $iface{$i}{ip};
+		$if_string .= "/$iface{$i}{ssid}" if $iface{$i}{ssid};
 	}
 
 	$s .= sprintf("\033[$row;%dH", $columns - 20);
@@ -209,6 +239,7 @@ sub do_status
 			chomp;
 			if (/^(.*): flags=/) {
 				$iface = $1;
+				$stats{"iface_$iface"} = "0,";
 			}
 			if (/flags=.*UP/) {
 				$up = 1;
@@ -238,6 +269,14 @@ sub do_status
 		if ($stats{gw}) {
 			my $s = system("ping -c 1 -W 2 $stats{gw} >/dev/null");
 			$stats{ping} = $? ? 0 : 1;
+		}
+
+		$fh = new FileHandle("iwconfig |");
+		while (<$fh>) {
+			chomp;
+			if (/^([^ ]*) .*ESSID:"(.*)"/) {
+				$stats{"ssid_$1"} = $2;
+			}
 		}
 
 		###############################################
@@ -839,6 +878,28 @@ EOF
 
 sub do_page6_status
 {
+	my %d = (
+		album => "Album covers",
+		images => "Stock photos",
+		photos => "Personal photos",
+		news => "Web Images",
+		);
+
+	$opts{image_dir} =~ s/\$HOME/$ENV{HOME}/;
+
+	foreach my $d (sort(keys(%d))) {
+		index_dir("$opts{image_dir}/$d");
+
+		my $fh = new FileHandle("$opts{image_dir}/$d/index.log");
+		next if !$fh;
+		my $n = 0;
+		while (<$fh>) {
+			$n++ if $_ =~ /jpg|jpeg|png/i;
+		}
+		pr(sprintf("%-18s: %4d\n", $d{$d}, $n));
+
+	}
+
 	my $disk = `df -h /`;
 	$disk = (split("\n", $disk))[1];
 	my ($size, $used, $pc) = (split(" ", $disk))[1, 2, 4];
@@ -1028,6 +1089,15 @@ sub ev_check
 
 	return 0;
 }
+
+sub index_dir
+{	my $dir = shift;
+
+	return if ! -d $dir;
+
+	system("find $dir -follow -type f | sort > $dir/index.log");
+}
+
 my $output_fh;
 sub pr
 {
