@@ -1011,7 +1011,7 @@ my $ABS_Y = 0x01;
 my $ABS_MT_TRACKING_ID = 0x39;
 my $scr_pix_width = 0;
 my $scr_pix_height = 0;
-my $is_64bit = 0;
+my $is_64bit;
 my $ev_device = "/dev/input/event0";
 
 sub ev_check
@@ -1028,7 +1028,7 @@ sub ev_check
 		$is_64bit = $arch =~ /64/;
 		# Dirty to assume this.
 		if ($is_64bit) {
-			$ev_device = "/dev/input/event1";
+#			$ev_device = "/dev/input/event1";
 		}
 	}
 
