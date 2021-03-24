@@ -42,6 +42,7 @@ my $cur_page = 0;
 my $do_next_page = 0;
 my $stock_time = 0;
 my $weather_time = 0;
+my $ev_fh;
 
 sub clean_text
 {	my $txt = shift;
@@ -69,6 +70,7 @@ sub clean_text
 
 sub display_image
 {	my $fn = shift;
+	my %opts = @_;
 
 	# Check we are currently the active console.
 	my $vt = `fgconsole 2>/dev/null`;
@@ -82,7 +84,12 @@ sub display_image
 		if ( -e "/dev/fb0") {
 			system("cat /dev/fb0 > /tmp/screendump");
 		}
-		system("$FindBin::RealBin/tools/fb -effects -stretch -q \"$fn\"");
+
+		if ($opts{multiimage}) {
+			system("$FindBin::RealBin/tools/fb -effects -q \"$fn\" $opts{x} $opts{y}");
+		} else {
+			system("$FindBin::RealBin/tools/fb -effects -stretch -q \"$fn\"");
+		}
 		return;
 	}
 
@@ -95,8 +102,13 @@ sub display_image
 	pr("(No images found to display)\n");
 }
 
+######################################################################
+#   Select  a random collection of pictures and display them. We do  #
+#   multi-image for news web pages.				     #
+######################################################################
 sub display_pictures
 {	my $dir = shift;
+	my $num = shift || 1;
 
 	$opts{image_dir} =~ s/\$HOME/$ENV{HOME}/;
 	$dir = "$opts{image_dir}/$dir";
@@ -121,15 +133,27 @@ sub display_pictures
 		next if $f !~ /jpg|jpeg|png/i;
 		push @img, $f;
 	}
-	my $fn = $img[rand(@img)];
-	if (!$fn) {
+
+	if (@img == 0) {
 		pr(time_string() . "[No images in $dir]\n");
 		return;
 	}
 
-	pr(time_string() . "[img: $fn]\n");
+	for (my $i = 0; $i < $num; $i++) {
+		my $n = rand(@img);
+		($img[$i], $img[$n]) = ($img[$n], $img[$i]);
+	}
 
-	display_image($fn);
+	my %iopts = { x => 0, y => 0};
+	$iopts{multimage} = 1 if $num > 1;
+	for (my $i = 0; $i < $num; $i++) {
+		pr(time_string() . "[img: $img[$i]]\n");
+
+		display_image($img[$i], %iopts);
+		last if $num == 1;
+		sleep(5);
+		$iopts{x} += 600; # HACK: should be by img width
+	}
 }
 
 sub do_status_line
@@ -204,6 +228,9 @@ sub do_status_line
 		$s .= sprintf("\033[1;42;40m Ping ");
 	}
 	$row++;
+	if (!defined($ev_fh)) {
+		$s .= sprintf("\033[1;41;37m Touch ");
+	}
 
 	$s .= sprintf("\033[1H$if_string ");
 
@@ -274,7 +301,7 @@ sub do_status
 		$fh = new FileHandle("iwconfig |");
 		while (<$fh>) {
 			chomp;
-			if (/^([^ ]*) .*ESSID:"(.*)"/) {
+			if (/^([^ ]*) .*ESSID:"([^"]*)"/) {
 				$stats{"ssid_$1"} = $2;
 			}
 		}
@@ -585,7 +612,7 @@ sub do_ticker
 			do_page5_help();
 		} elsif ($page == 6) {
 			do_page6_status();
-		} elsif ($page == 7) {
+		} elsif ($page == 7 && !$opts{enable_news_scraping}) {
 			do_page7_web();
 			$do_weather = 0;
 		} elsif ($page == 8) {
@@ -697,6 +724,7 @@ sub do_page1
 	my $last_ln = 'xxx';
 	my $col = 0;
 	my $row = 0;
+	my $str = '';
 	foreach my $ln (split("\n", $txt)) {
 		$ln =~ s/^\s+//;
 		next if $last_ln eq '' && $ln eq '';
@@ -705,20 +733,21 @@ sub do_page1
 		###############################################
 		foreach my $wd (split(" ", $ln)) {
 			if ($col + 1 + length($wd) >= $columns) {
-				pr("\n");
+				$str .= "\n";
 				$row++;
 				$col = 0;
 			}
 			if ($col) {
-				pr(" ");
+				$str .= " ";
 				$col++;
 			}
-			pr($wd);
+			$str .= $wd;
 			$col += length($wd);
 		}
 		$last_ln = $ln;
 	}
-	pr("\n") if $col;
+	$str .= "\n" if $col;
+	pr($str);
 }
 
 ######################################################################
@@ -952,7 +981,7 @@ sub do_page6_status
 
 sub do_page7_web
 {
-	display_pictures("news");
+	display_pictures("news", 2);
 }
 
 sub do_page8_photos
@@ -985,7 +1014,6 @@ my $scr_pix_height = 0;
 my $is_64bit = 0;
 my $ev_device = "/dev/input/event0";
 
-my $ev_fh;
 sub ev_check
 {
 	return -1 if !$opts{touchpad};
@@ -1004,6 +1032,9 @@ sub ev_check
 		}
 	}
 
+	# On Ubuntu, sometimes the touchpad disappears
+	my $mtime = (stat($ev_device))[9];
+	$ev_fh = undef if !defined($mtime);
 	if (!$ev_fh) {
 		$ev_fh = new FileHandle($ev_device);
 	}

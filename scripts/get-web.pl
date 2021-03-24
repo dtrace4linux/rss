@@ -77,22 +77,25 @@ sub main
 
 sub get_pages
 {
-return;
 	foreach my $w (@pages) {
 		my $fn = $w;
 		$fn =~ s/^.*\/\///;
 		$fn =~ s/\/.*//;
 		$fn =~ s/^www\.//;
 
-		my $ofn = "$opts{dir}/$fn";
-		rename($ofn, "$ofn.old");
+		my $ofn = "$opts{dir}/$fn.jpg";
 
 		$ENV{HOME} = "/tmp";
 		my $cmd = "timeout $opts{timeout}s firefox --profile /tmp/headless " .
 			"--window-size $opts{w},$opts{h} " .
-			"-screenshot $ofn $w >/dev/null 2>&1";
+			"-screenshot $ofn.tmp $w >/dev/null 2>&1";
 		print time_string() . "$cmd\n";
 		system($cmd);
+		if (-f "$ofn.tmp") {
+			rename($ofn, "$ofn.old");
+			rename("$ofn.tmp", $ofn);
+		}
+
 
 	}
 }
