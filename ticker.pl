@@ -64,6 +64,8 @@ sub clean_text
 	$txt =~ s/&hellip;/.../g;
 	$txt =~ s/&;#821[12];/-/g;
 	$txt =~ s/\xe2\x80[\x98\x99]/'/g;
+	$txt =~ s/&lt;/</g;
+	$txt =~ s/&gt;/>/g;
 
 	return $txt;
 }
@@ -77,11 +79,11 @@ sub display_image
 	chomp($vt) if defined($vt);
 	if (defined($vt) && $vt ne '' && -x "$FindBin::RealBin/tools/fb") {
 		if ($vt != 1) {
-			print "[No image displayed - we lost the console: vt=$vt]\n";
+			pr("[No image displayed - we lost the console: vt=$vt]\n");
 			return;
 		}
 		# Save screen before
-		if ( -e "/dev/fb0") {
+		if ( ! -f "/tmp/screendump" && -e "/dev/fb0") {
 			system("cat /dev/fb0 > /tmp/screendump");
 		}
 
@@ -151,9 +153,39 @@ sub display_pictures
 
 		display_image($img[$i], %iopts);
 		last if $num == 1;
-		sleep(5);
+		last if do_sleep(10);
 		$iopts{x} += 600; # HACK: should be by img width
 	}
+}
+
+sub do_glob
+{	my $dir = shift;
+
+	my $dh;
+	my @lst;
+	return if !opendir($dh, $dir);
+	while (my $de = readdir($dh)) {
+		next if $de eq '.' || $de eq '..';
+		push @lst, "$dir/$de";
+	}
+	closedir($dh);
+
+	return sort(@lst);
+}
+
+######################################################################
+#   Wait for a period, but get out quick if user tapping on screen.  #
+######################################################################
+sub do_sleep
+{	my $n = shift;
+
+	$n += time();
+	while (time() < $n) {
+		my ($ev, $action, $x, $y) = ev_check();
+		return 1 if $ev >= 0;
+		sleep(1);
+	}
+	return 0;
 }
 
 sub do_status_line
@@ -232,7 +264,7 @@ sub do_status_line
 		$s .= sprintf("\033[1;41;37m Touch ");
 	}
 
-	$s .= sprintf("\033[1H$if_string ");
+	$s .= sprintf("\033[1H\033[33;40m$if_string ");
 
 	$s .= sprintf("\033[37;40m\033[%dH", $rows);
 	print $s;
@@ -298,7 +330,7 @@ sub do_status
 			$stats{ping} = $? ? 0 : 1;
 		}
 
-		$fh = new FileHandle("iwconfig |");
+		$fh = new FileHandle("iwconfig 2>/dev/null |");
 		while (<$fh>) {
 			chomp;
 			if (/^([^ ]*) .*ESSID:"([^"]*)"/) {
@@ -895,8 +927,10 @@ EOF
 		}
 		if (/inet ([^ ]*) /) {
 			my $p = $1;
-			$ip .= " " if $ip && $ip !~ /^127/;
-			$ip .= $p;
+			if ($p !~ /^127/) {
+				$ip .= " " if $ip;
+				$ip .= $p;
+			}
 		}
 	}
 	my $disk = `df -h /`;
@@ -975,6 +1009,42 @@ sub do_page6_status
 			$iface{$n}{ip} || "(noip)");
 	}
 	pr("$s\n");
+
+	pr("Sites:\n");
+
+	my @lst = do_glob("$ENV{HOME}/.rss/sites");
+	my %mtimes;
+	foreach my $f (@lst) {
+		$mtimes{$f} = (stat($f))[9];
+		#print strftime("%Y%m%d %H:%M:%S ", localtime($mtimes{$f})), $f, "\n";
+	}
+
+	@lst = sort {
+		$mtimes{$b} <=> $mtimes{$a}
+		} @lst;
+	my $row = 0;
+	foreach my $f (@lst) {
+		last if ++$row >= 12;
+
+		my $mtime = $mtimes{$f};
+		my $t = '';
+		if (time() - $mtime > 86400) {
+			my $d = int((time() - $mtime) / 86400);
+			$t = sprintf("${d}d");
+			$mtime += $d * 86400;
+		}
+		if (time() - $mtime > 3600) {
+			$t .= ", " if $t;
+			my $d .= int((time() - $mtime) / 3600);
+			$t .= sprintf("%dh", $d);
+			$mtime += $d * 3600;
+		}
+		$t .= ", " if $t;
+		$t .= sprintf("%dm", (time() - $mtime) / 60);
+		my $site = basename($f);
+		pr(sprintf("%-40s %s ago\n", $site, $t));
+	}
+	print "\033[43m", " " x ($columns - 1), "\033[40m\n";
 
 
 }
