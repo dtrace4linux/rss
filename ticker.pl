@@ -29,6 +29,7 @@ my %page_sched = (
 	8  => { freq => 1200, title => "Photos",},
 	9  => { freq => 1200, title => "Images",},
 	10 => { freq => 1200, title => "Album covers",},
+	11 => { freq => 3600, title => "ASCII Art",},
 	);
 my $npages = scalar(keys(%page_sched));
 
@@ -656,6 +657,9 @@ sub do_ticker
 		} elsif ($page == 10) {
 			do_page10_album();
 			$do_weather = 0;
+		} elsif ($page == 11) {
+			do_page11_ascii_art();
+			$do_weather = 0;
 		}
 
 		if ($do_weather) {
@@ -1070,6 +1074,11 @@ sub do_page9_images
 sub do_page10_album
 {
 	display_pictures("album");
+}
+
+sub do_page11_ascii_art
+{
+	system("$FindBin::RealBin/scripts/ascii-art.pl");
 }
 
 ######################################################################

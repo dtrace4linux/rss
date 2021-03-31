@@ -14,7 +14,7 @@ use POSIX;
 my @pages = (
 	"https://www.dailymail.co.uk/home/index.html",
 	"https://www.bbc.co.uk/news",
-	"http://wttr.in",
+#	"http://wttr.in",
 	"http://www.theguardian.com",
 	"http://news.sky.com",
 	"http://express.co.uk",
@@ -49,6 +49,7 @@ sub main
 	Getopt::Long::Configure('require_order');
 	Getopt::Long::Configure('no_ignore_case');
 	usage() unless GetOptions(\%opts,
+		'clean',
 		'dir=s',
 		'help',
 		'once',
@@ -58,6 +59,11 @@ sub main
 		);
 
 	usage(0) if $opts{help};
+
+	if ($opts{clean}) {
+		do_clean();
+		exit(0);
+	}
 
 	mkdir($opts{dir}, 0755);
 	mkdir("/tmp/headless", 0755);
@@ -72,16 +78,33 @@ sub main
 			exit(0) if $opts{ppid} && ! -d "/proc/$opts{ppid}";
 			sleep(1);
 		}
+
+		do_clean();
+	}
+}
+
+sub do_clean
+{
+	my %valid;
+	foreach my $p (@pages) {
+		my $fn = site_to_fn($p);
+		$valid{ "$opts{dir}/$fn.jpg" } = 1;
+	}
+
+	foreach my $f (glob("$opts{dir}/*")) {
+		next if -d $f;
+		next if $f =~ /\.log$/;
+		next if $valid{$f};
+
+		print time_string() . "clean: $f\n";
+		unlink($f);
 	}
 }
 
 sub get_pages
 {
 	foreach my $w (@pages) {
-		my $fn = $w;
-		$fn =~ s/^.*\/\///;
-		$fn =~ s/\/.*//;
-		$fn =~ s/^www\.//;
+		my $fn = site_to_fn($w);
 
 		my $ofn = "$opts{dir}/$fn.jpg";
 
@@ -92,12 +115,26 @@ sub get_pages
 		print time_string() . "$cmd\n";
 		system($cmd);
 		if (-f "$ofn.tmp") {
-			rename($ofn, "$ofn.old");
+			my $d = strftime("%Y.%m", localtime());
+			mkdir("$opts{dir}/$d", 0755);
+			my $fn1 = strftime("$fn-%d.%H", localtime());
+			rename($ofn, "$opts{dir}/$d/$fn1.jpg");
 			rename("$ofn.tmp", $ofn);
 		}
 
 
 	}
+}
+
+sub site_to_fn
+{	my $w = shift;
+
+	my $fn = $w;
+	$fn =~ s/^.*\/\///;
+	$fn =~ s/\/.*//;
+	$fn =~ s/^www\.//;
+
+	return $fn;
 }
 
 sub time_string
