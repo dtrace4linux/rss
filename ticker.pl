@@ -792,26 +792,19 @@ sub do_page1
 ######################################################################
 sub do_page2_calendar
 {
-	my %dow = (
-		Sun => 0,
-		Mon => 1,
-		Tue => 2,
-		Wed => 3,
-		Thu => 4,
-		Fri => 5,
-		Sat => 6,
-		);
+	my $time = time();
+	$time += ($ENV{DOW_DELTA} || 0) * 86400;
 
 	###############################################
 	#   Get the time, for the margin.	      #
 	###############################################
 	my $tstr;
 	if (int(rand(2)) == 0) {
-		my $t = strftime("%H:%M", localtime());
+		my $t = strftime("%H:%M", localtime($time));
 		my $opt = int(rand(2)) == 0 ? " --gay" : "";
 		$tstr = `toilet -t $opt $t`;
 	} else {
-		my $t = strftime("%H:%M", localtime());
+		my $t = strftime("%H:%M", localtime($time));
 		$tstr = `figlet $t`;
 	}
 	my @trow = split("\n", $tstr);
@@ -820,17 +813,20 @@ sub do_page2_calendar
 	}
 
 	my $margin = " " x (($columns - 21) / 4);
-	my $s = strftime("   %B %Y", localtime());
-	my $d = strftime("%d", localtime());
-	my $this_month = strftime("%B", localtime());
-	my $dow = strftime("%a", localtime());
+	my $s = strftime("   %B %Y", localtime($time));
+	my $this_month = strftime("%B", localtime($time));
+	my $dom = strftime("%d", localtime($time));
+	my $dow_num = strftime("%w", localtime($time));
 
 	pr("\n");
 	pr("$margin\033[36m$s\033[37m\n");
 	pr("${margin}\033[33;1mSu Mo Tu We Th Fr Sa\033[0;37m\n");
 
-	my $i = $dow{$dow};
-	my $t = time() - $d * 86400;
+	my $t = $time - ($dom) * 86400;
+	my $dow_num2 = strftime("%w", localtime($t));
+	$t -= $dow_num2 * 86400;
+
+	my $m = $margin;
 	my $row = 0;
 	for (my $j = 0; $j < 40; $j++) {
 		my $d1 = strftime("%d", localtime($t));
@@ -838,12 +834,12 @@ sub do_page2_calendar
 		my $dow1 = strftime("%a", localtime($t));
 		$t += 86400;
 
-		if ($dow1 eq 'Sun') {
-			pr($margin);
-		}
+		pr($m);
+		$m = '';
+
 		if ($month ne $this_month) {
 			pr("   ");
-		} elsif ($d1 == $d) {
+		} elsif ($d1 == $dom) {
 			pr(sprintf("\033[1;43;30m%2d\033[37;40;0m ", $d1));
 		} else {
 			pr(sprintf("%2d ", $d1));
@@ -854,10 +850,13 @@ sub do_page2_calendar
 				print shift @trow;
 			}
 			pr("\n");
+			$m = $margin;
 			$row++;
 		}
 	}
 	pr("\n");
+
+	exit(0) if $ENV{DOW_EXIT};
 }
 
 sub do_page3_reminder
