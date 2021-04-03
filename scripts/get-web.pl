@@ -24,12 +24,14 @@ my @pages = (
 	"http://www.cnn.com",
 	"http://time.com",
 	"http://abcnews.go.com",
-	"http://www.thevergecom",
+	"http://www.theverge.com",
 	"http://cbsnews.com",
 	"http://variety.com",
 	"http://digg.com",
 	"http://arstechnica.com",
 	"http://slate.com",
+	"http://slashdot.org",
+	"http://reddit.com",
 	);
 
 #######################################################################
@@ -38,7 +40,7 @@ my @pages = (
 my %opts = (
 	dir => "$ENV{HOME}/images/news",
 	once => 0,
-	sleep => 1800,
+	sleep => 2700,
 	timeout => 20,
 	w => 1024,
 	h => 2000,

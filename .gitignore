@@ -1,2 +1,5 @@
 *.o
 tools/fb
+bin
+bin.x86_64
+tmp

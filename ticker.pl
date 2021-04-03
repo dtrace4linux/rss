@@ -44,6 +44,24 @@ my $do_next_page = 0;
 my $stock_time = 0;
 my $weather_time = 0;
 my $ev_fh;
+my $exec_mtime = (stat("$FindBin::RealBin/ticker.pl"))[9];
+my @cmdline = ( $0, @ARGV );
+my $status_pid;
+my $web_pid;
+
+$SIG{INT} = sub { write_pidfile(1); exit(0); };
+
+sub check_executable
+{
+	my $exec_mtime1 = (stat("$FindBin::RealBin/ticker.pl"))[9];
+	if ($exec_mtime1 && $exec_mtime1 != $exec_mtime) {
+		print time_string() . "$0 changed - re-executing...\n";
+		print time_string() . " cmd: ", join(" ", @cmdline), "\n";
+		kill('INT', $status_pid) if $status_pid;
+		kill('INT', $web_pid) if $web_pid;
+		exec @cmdline;
+	}
+}
 
 sub clean_text
 {	my $txt = shift;
@@ -78,7 +96,7 @@ sub display_image
 	# Check we are currently the active console.
 	my $vt = `fgconsole 2>/dev/null`;
 	chomp($vt) if defined($vt);
-	if (defined($vt) && $vt ne '' && -x "$FindBin::RealBin/tools/fb") {
+	if (defined($vt) && $vt ne '' && -x "$FindBin::RealBin/bin/fb") {
 		if ($vt != 1) {
 			pr("[No image displayed - we lost the console: vt=$vt]\n");
 			return;
@@ -89,10 +107,17 @@ sub display_image
 		}
 
 		if ($opts{multiimage}) {
-			system("$FindBin::RealBin/tools/fb -effects -q \"$fn\" $opts{x} $opts{y}");
+			system("$FindBin::RealBin/bin/fb -effects -q \"$fn\" $opts{x} $opts{y}");
 		} else {
-			system("$FindBin::RealBin/tools/fb -effects -stretch -q \"$fn\"");
+			system("$FindBin::RealBin/bin/fb -effects -stretch -q \"$fn\"");
 		}
+
+		my $title = $fn;
+		$title = join("/", (split("/", $fn))[-2, -1]);
+		$title =~ s/\.(jpeg|jpg|png)$//i;
+		$title =~ s/^news\///;
+		my $c = int(($columns - length($title)) / 2);
+		printf "\033[%d;%dH$title", $rows - 1, $c;
 		return;
 	}
 
@@ -112,6 +137,7 @@ sub display_image
 sub display_pictures
 {	my $dir = shift;
 	my $num = shift || 1;
+	my $toplevel = shift || 0;
 
 	$opts{image_dir} =~ s/\$HOME/$ENV{HOME}/;
 	$dir = "$opts{image_dir}/$dir";
@@ -128,12 +154,19 @@ sub display_pictures
 	if (!$ctime2 || $ctime1 > $ctime2 + 5) {
 		index_dir($dir);
 	}
+
+	my $dcnt = scalar(split("/", $dir));
 	my $fh = new FileHandle("$dir/index.log");
 	while (<$fh>) {
 		chomp;
 		my $f = $_;
 		next if $f =~ /.old$/;
 		next if $f !~ /jpg|jpeg|png/i;
+		if ($toplevel &&
+			scalar(split("/", $f)) > $dcnt + 1) {
+			next;
+		}
+#print "$dcnt ", scalar(split("/", $f)), " $f\n";
 		push @img, $f;
 	}
 
@@ -147,7 +180,7 @@ sub display_pictures
 		($img[$i], $img[$n]) = ($img[$n], $img[$i]);
 	}
 
-	my %iopts = { x => 0, y => 0};
+	my %iopts = ( x => 0, y => 0);
 	$iopts{multimage} = 1 if $num > 1;
 	for (my $i = 0; $i < $num; $i++) {
 		pr(time_string() . "[img: $img[$i]]\n");
@@ -279,7 +312,8 @@ sub do_status
 {
 	my $ppid = $$;
 
-	return if fork();
+	$status_pid = fork();
+	return if $status_pid;
 
 	my $last_stock = 0;
 	my %stats;
@@ -470,13 +504,17 @@ sub main
 #print clean_text($a->{body});
 #exit;
 
+	$ENV{TZ} = "/etc/localtime";
+
 	usage(0) if $opts{help};
+
+	write_pidfile();
 
 	$| = 1;
 
 	my $pid = $$;
 	if (!defined($opts{page})) {
-		if (fork() == 0) {
+		if (($web_pid = fork()) == 0) {
 			exec "$FindBin::RealBin/scripts/get-web.pl -ppid $pid >/tmp/get-web.log";
 			exit(0);
 		}
@@ -549,6 +587,11 @@ sub do_ticker
 	my @history;
 
 	while (1) {
+		###############################################
+		#   See if executable changed.		      #
+		###############################################
+		check_executable();
+
 		if (defined($opts{ppid}) && ! -d "/proc/$opts{ppid}") {
 			print "parent $opts{ppid} terminated\n";
 			exit(0);
@@ -646,7 +689,7 @@ sub do_ticker
 		} elsif ($page == 6) {
 			do_page6_status();
 		} elsif ($page == 7 && !$opts{enable_news_scraping}) {
-			do_page7_web();
+			do_page7_news();
 			$do_weather = 0;
 		} elsif ($page == 8) {
 			do_page8_photos();
@@ -840,7 +883,7 @@ sub do_page2_calendar
 		if ($month ne $this_month) {
 			pr("   ");
 		} elsif ($d1 == $dom) {
-			pr(sprintf("\033[1;43;30m%2d\033[37;40;0m ", $d1));
+			pr(sprintf("\033[1;47;30m%2d\033[37;40;0m ", $d1));
 		} else {
 			pr(sprintf("%2d ", $d1));
 		}
@@ -1052,9 +1095,9 @@ sub do_page6_status
 
 }
 
-sub do_page7_web
+sub do_page7_news
 {
-	display_pictures("news", 2);
+	display_pictures("news", 2, 1);
 }
 
 sub do_page8_photos
@@ -1094,6 +1137,8 @@ my $ev_device = "/dev/input/event0";
 
 sub ev_check
 {
+	check_executable();
+
 	return -1 if !$opts{touchpad};
 
 	###############################################
@@ -1119,7 +1164,7 @@ sub ev_check
 	return -1 if !$ev_fh;
 
 	if ($scr_pix_width == 0) {
-		my $s = `$FindBin::RealBin/tools/fb -info`;
+		my $s = `$FindBin::RealBin/bin/fb -info`;
 		chomp($s);
 		$s =~ s/,.*$//;
 		($scr_pix_width, $scr_pix_height) = split(/x/, $s);
@@ -1134,6 +1179,8 @@ sub ev_check
 	my $y = 0;
 
 	while (1) {
+		check_executable();
+
 		my $rbits;
 		my $n = select($rbits = $bits, undef, undef, $t);
 		return 0 if !$n;
@@ -1319,6 +1366,18 @@ Switches:
 EOF
 
 	exit(defined($ret) ? $ret : 1);
+}
+
+sub write_pidfile
+{	my $n = shift;
+
+	if ($n) {
+		unlink("/tmp/ticker.pid");
+		return;
+	}
+
+	my $fh = new FileHandle(">/tmp/ticker.pid");
+	print $fh "$$\n";
 }
 
 main();
