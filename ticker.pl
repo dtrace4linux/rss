@@ -1120,7 +1120,9 @@ sub do_page10_album
 
 sub do_page11_ascii_art
 {
-	system("$FindBin::RealBin/scripts/ascii-art.pl");
+	my @lst = ("ascii-art", "fortune", "pi");
+	my $n = int(rand(@lst));
+	system("$FindBin::RealBin/scripts/$lst[$n].pl");
 }
 
 ######################################################################
