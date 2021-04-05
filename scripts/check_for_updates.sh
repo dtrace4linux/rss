@@ -1,5 +1,9 @@
 #! /bin/sh
 
+# Configure a host in $HOME/.rss/rss_config.cfg. ticker.pl will
+# poll once an hour for a software update.
+# This is mostly useful for myself, during development.
+
 eval `grep check_update_host=.. $HOME/.rss/rss_config.cfg`
 if [ "$check_update_host" = "" ]; then
 	exit 0
@@ -20,7 +24,7 @@ if [ $? = 1 ]; then
 fi
 
 if [ $get = 0 ]; then
-	date "+%Y%m%d %H:%M:%S No new release detected"
+	date "+%Y%m%d %H:%M:%S Software release up-to date."
 	exit 0
 fi
 date "+%Y%m%d %H:%M:%S New update available"

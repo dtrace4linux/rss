@@ -28,7 +28,7 @@ sub main
 
 	$| = 1;
 
-	my $n = shift @ARGV || 500;
+	my $n = shift @ARGV || 1000;
 
 	pi($n);
 

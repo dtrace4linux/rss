@@ -74,26 +74,47 @@ sub do_graphic3
 
 sub do_graphic4
 {
-	for (my $i = 0; $i < 100; $i++) {
+	my $num_rect = 0;
+	while ($num_rect < 15) {
 		my $r = rand($rows);
 		my $c = rand($columns);
 		my $w = rand($columns - $c);
 		my $h = rand($rows - $r);
-		my $dir = int(rand(2)) ? 1 : -1;
+		my $dirx = int(rand(2)) ? 1 : -1;
+		my $diry = int(rand(2)) ? 1 : -1;
+		my $do_x = int(rand(2));
 		my $color = 40 + int(rand(8));
 
-		while ($c > 0 && $w > 2) {
+#print "rect2=$num_rect\n";
+		next if $w < 2 || $c < 2;
+
+		$num_rect++;
+#print "rect=$num_rect\n";
+		while ($r > 0 && $h > 2 && $c > 0 && $w > 2) {
 			draw_rect($color, $r, $c, $w, $h);
 
 			select(undef, undef, undef, 0.04);
-			if ($dir == 1) {
-				draw_rect(40, $r, $c, 1, $h);
+			if ($do_x) {
+				if ($dirx == 1) {
+					draw_rect(40, $r, $c, 1, $h);
+				} else {
+					draw_rect(40, $r, $c+$w, 1, $h);
+				}
+				$c += $dirx;
+				if ($c + $w > $columns) {
+					$w--;
+				}
 			} else {
-				draw_rect(40, $r, $c+$w, 1, $h);
-			}
-			$c += $dir;
-			if ($c + $w > $columns) {
-				$w--;
+				if ($diry == 1) {
+					draw_rect(40, $r, $c, $w, $h);
+				} else {
+					draw_rect(40, $r+$h, $c, $w, $h);
+				}
+				$r += $diry;
+
+				if ($r + $h > $rows) {
+					$h--;
+				}
 			}
 		}
 		select(undef, undef, undef, 0.01);
@@ -152,6 +173,8 @@ sub draw_rect
 	my $c = shift;
 	my $w = shift;
 	my $h = shift;
+
+#	print "draw_rect: h is not specified\n" if !defined($h);
 
 	my $r1 = $r + $h;
 
