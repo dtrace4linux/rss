@@ -1058,6 +1058,14 @@ sub do_page6_status
 
 	pr("Sites:\n");
 
+	my $sites = read_sites();
+
+	$fh = new FileHandle("$ENV{HOME}/.rss/status");
+	if ($fh) {
+		while (<$fh>) {
+		}
+	}
+
 	my @lst = do_glob("$ENV{HOME}/.rss/sites");
 	my %mtimes;
 	foreach my $f (@lst) {
@@ -1072,7 +1080,9 @@ sub do_page6_status
 	foreach my $f (@lst) {
 		last if ++$row >= 12;
 
-		my $mtime = $mtimes{$f};
+		my $site = basename($f);
+#		my $mtime = $mtimes{$f};
+		my $mtime = $sites->{$site}{mtime} || $sites->{$site}{stime};
 		my $t = '';
 		if (time() - $mtime > 86400) {
 			my $d = int((time() - $mtime) / 86400);
@@ -1087,12 +1097,9 @@ sub do_page6_status
 		}
 		$t .= ", " if $t;
 		$t .= sprintf("%dm", (time() - $mtime) / 60);
-		my $site = basename($f);
-		pr(sprintf("%-40s %s ago\n", $site, $t));
+		pr(sprintf("%-35s %8s ago  %3s new articles\n", $site, $t, $sites->{$site}{art_new}) || 0);
 	}
-	print "\033[43m", " " x ($columns - 1), "\033[40m\n";
-
-
+#	print "\033[43m", " " x ($columns - 1), "\033[40m\n";
 }
 
 sub do_page7_news
@@ -1332,6 +1339,61 @@ sub read_rss_config
 			$opts{$lh} = $rh;
 		}
 	}
+}
+
+######################################################################
+#   Read the config file - site definitions and other aspects.	     #
+######################################################################
+sub read_sites
+{
+
+	my $fname = "$ENV{HOME}/.rss/status";
+	my $fh = new FileHandle($fname);
+	if (!$fh) {
+		return;
+	}
+
+	my %sites;
+	my $site = '';
+	while (<$fh>) {
+		chomp;
+		next if /^#/;
+		$_ =~ s/^\s+//;
+		$_ =~ s/^\s+$//;
+
+		my ($lh, $rh) = split("=");
+		next if !$lh;
+		if ($lh eq "dir") {
+			$rh =~ s/\$HOME/$ENV{HOME}/;
+			$opts{dir} = $rh;
+			mkdir($rh, 0755);
+			next;
+		}
+		if ($lh =~ /^(period|retry)$/) {
+			if ($rh =~ /m$/) {
+				$rh =~ s/m$//;
+				$rh *= 60;
+			} elsif ($rh =~ /h$/) {
+				$rh =~ s/h$//;
+				$rh *= 3600;
+			} elsif ($rh =~ /d$/) {
+				$rh =~ s/d$//;
+				$rh *= 86400;
+			}
+		}
+		if ($lh =~ /^retry$/) {
+			$opts{$lh} = $rh;
+			next;
+		}
+		if ($lh eq 'name') {
+			$site = $rh;
+		}
+#print "$site.$lh=$rh\n";
+		$sites{$site}{$lh} = $rh;
+		$sites{$site}{stime} ||= 0;
+	}
+
+	return \%sites;
 }
 
 sub reset_fb

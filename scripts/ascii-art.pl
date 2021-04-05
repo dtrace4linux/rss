@@ -74,7 +74,7 @@ sub do_graphic3
 
 sub do_graphic4
 {
-	for (my $i = 0; $i < 200; $i++) {
+	for (my $i = 0; $i < 100; $i++) {
 		my $r = rand($rows);
 		my $c = rand($columns);
 		my $w = rand($columns - $c);
@@ -191,6 +191,8 @@ sub main
 	}
 
 	eval "do_graphic$game();";
+
+	printf "\033[%dH\n", $rows;
 }
 
 sub max

@@ -32,6 +32,8 @@ my @pages = (
 	"http://slate.com",
 	"http://slashdot.org",
 	"http://reddit.com",
+	"https://en.wikipedia.org/wiki/Special:Random",
+	"https://www.notebookcheck.net/",
 	);
 
 #######################################################################

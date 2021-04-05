@@ -512,7 +512,10 @@ sub do_parse
 			#   www.register.co.uk			      #
 			###############################################
 			if ($sec =~ /link.*href="([^"]*)"/) {
-				$info{link} = $1;
+				my $lnk = $1;
+				$lnk =~ s/&#x2f;/\//gi;
+				$lnk =~ s/&amp;/\&/g;
+				$info{link} = $lnk;
 				$sec = '';
 				next;
 			}
@@ -665,6 +668,7 @@ sub do_parse
 
 		$sites{$site}{tot_art} += $tot_art;
 		$sites{$site}{tot_new} += $num_art;
+		$sites{$site}{mtime} = time() if $num_art;
 		$sites{$site}{art_new} = $num_art;
 		$sites{$site}{art_tot} = $tot_art;
 		print "$site: $num_art/$tot_art\n";
