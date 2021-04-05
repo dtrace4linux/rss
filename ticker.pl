@@ -320,8 +320,18 @@ sub do_status
 	my %old_stats;
 	my $fh;
 
+	my $upd_time = 0;
+
 	while (1) {
 		exit(0) if ! -d "/proc/$ppid";
+
+		###############################################
+		#   Check for a new release.		      #
+		###############################################
+		if (time() > $upd_time + 3600) {
+			system("$FindBin::RealBin/scripts/check_for_updates.sh");
+			$upd_time = time();
+		}
 
 		###############################################
 		#   Get interface state.		      #

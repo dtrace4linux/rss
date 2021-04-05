@@ -26,5 +26,4 @@ release:
 	echo $$fn created ; \
 	rm -f $(HOME)/release/rss/rss-current.tar.gz ; \
 	ln -s rss-$$label.tar.gz $(HOME)/release/rss/rss-current.tar.gz ;
-	cd $(HOME)/release/rss ; .
-	find . | sort > updates.txt
+	cd $(HOME)/release/rss ; . ; find . | sort > updates.txt
