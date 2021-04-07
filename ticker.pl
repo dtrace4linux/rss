@@ -285,13 +285,13 @@ sub do_status_line
 	if (!$info{gw}) {
 		$s .= sprintf("\033[1;41;37m Net ");
 	} else {
-		$s .= sprintf("\033[1;42;40m Net ");
+#		$s .= sprintf("\033[1;42;40m Net ");
 	}
 	$row++;
 	if (!$info{ping}) {
 		$s .= sprintf("\033[1;41;37m Ping ");
 	} else {
-		$s .= sprintf("\033[1;42;40m Ping ");
+#		$s .= sprintf("\033[1;42;40m Ping ");
 	}
 	$row++;
 	if (!defined($ev_fh)) {
@@ -1107,7 +1107,9 @@ sub do_page6_status
 		}
 		$t .= ", " if $t;
 		$t .= sprintf("%dm", (time() - $mtime) / 60);
-		pr(sprintf("%-35s %8s ago  %3s new articles\n", $site, $t, $sites->{$site}{art_new}) || 0);
+		my $na = '';
+		$na = sprintf("%3s new articles", $sites->{$site}{art_new}) if $sites->{$site}{art_new};
+		pr(sprintf("%-35s %8s ago  %s\n", $site, $t, $na));
 	}
 #	print "\033[43m", " " x ($columns - 1), "\033[40m\n";
 }
