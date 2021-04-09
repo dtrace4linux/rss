@@ -121,7 +121,7 @@ sub get_pages
 		if (-f "$ofn.tmp") {
 			my $d = strftime("%Y.%m", localtime());
 			mkdir("$opts{dir}/$d", 0755);
-			my $fn1 = strftime("$fn-%d.%H", localtime());
+			my $fn1 = strftime("%Y%m%d-%H-$fn", localtime());
 			rename($ofn, "$opts{dir}/$d/$fn1.jpg");
 			rename("$ofn.tmp", $ofn);
 		}

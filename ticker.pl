@@ -953,13 +953,12 @@ sub do_page5_help
 	}
 	if (! -w "/dev/input/event0") {
 		print <<EOF;
-      NOTE: /dev/input/event0 is not writable. Touch screen will not work.
-           \$ chmod 666 /dev/input/event0
+      NOTE: /dev/input/event0 is not writable. Touch screen will not work. User not in 'input' group
 EOF
 	}
-	if (! -w "/dev/input/event0") {
+	if (! -w "/dev/fb0") {
 		print <<EOF;
-      NOTE: /dev/fb0 is not writable. Images will not display.
+      NOTE: /dev/fb0 is not writable. Images will not display. User not in 'video' group
           \$ chmod 666 /dev/input/event0
 EOF
 	}
