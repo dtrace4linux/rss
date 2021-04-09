@@ -286,6 +286,7 @@ sub get
 	}
 
 	my $fh = new FileHandle($fn);
+	die "Cannot open $fn - $!" if !$fh;
 	local $/ = undef;
 	my $txt = <$fh>;
 
@@ -302,36 +303,30 @@ sub get
 		printf "Temp max   : %4d C\n", $info->{main}{temp_max};
 		printf "Pressure   : %4d hPa\n", $info->{main}{pressure};
 		printf "Humidity   : %4d %%\n", $info->{main}{humidity};
+		print show_temp($info->{main}{temp_max}), "\n";
 		return;
 	}
 
-	print "\033[44m    \033[46m    \033[43m    \033[41m    \033[40m\n";
+#	print "\033[44m    \033[46m    \033[43m    \033[41m    \033[40m\n";
 
 	my %data;
 	my $r = 0;
 	my $c = 0;
 	foreach my $dt (@{$info->{list}}) {
-#		my $c = ($dt->{temp}{max} - -15) / 6;
-		my $s = sprintf("| %s %2dC / %-3s\n|    %s - %s\n",
+		my $s = sprintf("%s %2dC / %-3s  %s - %s\n",
 			strftime("%a %b %d", localtime($dt->{dt})),
-#			sprintf("\033[48;5;%dm        \033[0m", $c),
 			$dt->{temp}{min},
 			sprintf("%dC", $dt->{temp}{max}),
-#			show_temp($dt->{temp}{max}),
 			$dt->{weather}[0]{main},
 			$dt->{weather}[0]{description},
 			);
 
 		foreach my $w (qw/morn day eve night/) {
-			$s .= sprintf("|  %-6s %3d C\n", 
+			$s .= sprintf("  %-6s %3d C %s\n", 
 				$w, $dt->{temp}{$w},
+				show_temp($dt->{temp}{$w}),
 				);
 		}
-		$s .= "  " . show_temp($dt->{temp}{max}) . "\n";
-
-#		my $d = get_icon($dt->{weather}[0]{main} . " " .
-#			$dt->{weather}[0]{description});
-#		print $_, "\n" foreach @{$icons{$d}};
 
 		$data{$r}{$c} = $s;
 		if (++$c > 2) {
@@ -374,7 +369,7 @@ sub show_temp
 	my $s = '';
 	for (my $i = 0; $i < @grad && $i < $t1; $i += 4) {
 
-		$s .= sprintf("\033[48;2;%d;%d;%dm  \033[0m", 
+		$s .= sprintf("\033[48;2;%d;%d;%dm   \033[0m", 
 			$grad[$i][0],
 			$grad[$i][1],
 			$grad[$i][2],
@@ -399,6 +394,8 @@ weather.pl -- show temperature and forecast information
 Usage:
 
 Switches:
+
+   -daily     Show daily forecast
 
 EOF
 

@@ -5,6 +5,13 @@
 #     You can also use 'everyday', 'weekday' or 'weekend'
 #
 # times is a start-stop (in 24h format) to indicate when to show the item
+#      Needs work to support more powerful date semantics
+#      Supports:
+#          everyday
+#          weekday
+#          weekend
+#
+# interval - currently unused
 #
 # algo is the type of item. 
 #        - "normal" for a displayed message.
@@ -18,3 +25,9 @@
 20210306,enabled,wed,,600,normal,It's wednesday!
 20210306,enabled,thu,,600,normal,It's thursday!
 20210306,enabled,fri,,600,normal,It's friday!
+#
+# Following turn off the display overnight, turning it back on at 6am
+#
+20210408,enabled,everyday,2355,600,cmd,/usr/bin/vcgencmd display_power 0
+20210408,enabled,everyday,0600,600,cmd,/usr/bin/vcgencmd display_power 1
+

@@ -5,4 +5,5 @@
 apt install toilet figlet ansiweather \
 	libjpeg-dev gcc make libpng-dev \
 	libjson-perl \
-	caca-utils
+	caca-utils \
+	libraspberrypi-bin

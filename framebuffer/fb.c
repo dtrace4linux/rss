@@ -29,8 +29,10 @@ int quiet;
 int fullscreen;
 int	stretch;
 int	effects;
+int	scroll = 1;
 int	info;
 int	page = -1;
+long	delay = 100;
 float	xfrac = 1.0;
 float	yfrac = 1.0;
 
@@ -42,7 +44,7 @@ long int screensize = 0;
 /**********************************************************************/
 /*   Prototypes.						      */
 /**********************************************************************/
-void normal_display(char *fbp, struct imgRawImage *img, int x, int y, int w, int h);
+void normal_display(char *fbp, struct imgRawImage *img, int x, int y, int w, int h, int x1, int y1);
 void fullscreen_display(char *fbp, struct imgRawImage *img, double f);
 void stretch_display(char *fbp, struct imgRawImage *img);
 void put_pixel(char *fbp, int r, int g, int b);
@@ -58,6 +60,12 @@ int do_switches(int argc, char **argv)
 			break;
 
 		while (*cp) {
+			if (strcmp(cp, "delay") == 0) {
+				if (++i >= argc)
+					usage();
+				delay = atol(argv[i]);
+				break;
+			}
 			if (strcmp(cp, "effects") == 0) {
 				effects = 1;
 				break;
@@ -74,6 +82,10 @@ int do_switches(int argc, char **argv)
 				if (++i >= argc)
 					usage();
 				page = atoi(argv[i]);
+				break;
+			}
+			if (strcmp(cp, "scroll") == 0) {
+				scroll = 1;
 				break;
 			}
 			if (strcmp(cp, "stretch") == 0) {
@@ -237,8 +249,20 @@ int main(int argc, char **argv)
 		fullscreen_display(fbp, img, 1.0);
 	} else if (stretch) {
 		stretch_display(fbp, img);
+	} else if (scroll) {
+		int i;
+		int	x1 = 0;
+		int	y1 = 0;
+		struct timeval tv;
+		while (y1 + vinfo.yres < img->height) {
+			normal_display(fbp, img, x, y, w, h, x1, y1);
+			tv.tv_sec = delay / 1000;
+			tv.tv_usec = (delay % 1000) * 1000;
+			y1 += 100;
+			select(0, NULL, NULL, NULL, &tv);
+		}
 	} else {
-		normal_display(fbp, img, x, y, w, h);
+		normal_display(fbp, img, x, y, w, h, 0, 0);
 	}
 
     munmap(fbp, screensize);
@@ -268,37 +292,38 @@ fullscreen_display(char *fbp, struct imgRawImage *img, double f)
 }
 
 void 
-normal_display(char *fbp, struct imgRawImage *img, int x, int y, int w, int h)
+normal_display(char *fbp, struct imgRawImage *img, int x, int y, int w, int h, int x_off, int y_off)
 {	int	x0, y0;
 	unsigned char *img_data = img->lpData;
+
+	img_data += y_off * 3 * img->width;
 
 	if (page > 0)
 		img_data += img->width * 3 * page * vinfo.yres;
 //printf("%d %d w=%d h=%d\n", x, y, w, h);
 
-    // Figure out where in memory to put the pixel
-    for ( y0 = y; y0 < y + h; y0++ ) {
-    	if (y0 - y >= img->height)
-		break;
+	for (y0 = y; y0 < y + h; y0++) {
+		if (y0 - y >= img->height)
+			break;
 
-        location = 
-	    	(y0+vinfo.yoffset) * finfo.line_length +
-		(x+vinfo.xoffset) * (vinfo.bits_per_pixel/8);
+	        location = 
+		    	(y0+vinfo.yoffset) * finfo.line_length +
+			(x+vinfo.xoffset) * (vinfo.bits_per_pixel/8);
 
-	unsigned char *data = &img_data[((y0-y) * img->width + x) * 3];
-        for (x0 = x; x0 < x + w; x0++) {
-	    if (x0 - x >= img->width) {
-		break;
-	    }
-	    if (location >= screensize) {
-//	    	printf("loc=0x%04x screensize=%04x\n", location, screensize);
-	    	break;
-	    }
+		unsigned char *data = &img_data[((y0-y) * img->width + x) * 3];
+	        for (x0 = x; x0 < x + w; x0++) {
+		    if (x0 - x >= img->width) {
+			break;
+		    }
+		    if (location >= screensize) {
+	//	    	printf("loc=0x%04x screensize=%04x\n", location, screensize);
+		    	break;
+		    }
 
-	    put_pixel(fbp, data[0], data[1], data[2]);
-	    data += 3;
+		    put_pixel(fbp, data[0], data[1], data[2]);
+		    data += 3;
 
-        }
+	        }
     }
 }
 
@@ -366,10 +391,12 @@ usage()
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Switches:\n");
 	fprintf(stderr, "\n");
+	fprintf(stderr, "   -delay NN       Scroll delay in milliseconds\n");
 	fprintf(stderr, "   -effects        Scroll-in effects enabled\n");
 	fprintf(stderr, "   -fullscreen     Stretch image to fill screen\n");
 	fprintf(stderr, "   -info           Print screen size info\n");
 	fprintf(stderr, "   -page N         Display page/screen N of the image\n");
+	fprintf(stderr, "   -scroll         Scroll image\n");
 	fprintf(stderr, "   -stretch        Stretch but dont change aspect ratio\n");
 	fprintf(stderr, "   -xfrac N.NN     Shrink image on the x-axis\n");
 	fprintf(stderr, "   -yfrac N.NN     Shrink image on the y-axis\n");

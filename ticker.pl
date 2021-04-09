@@ -106,7 +106,9 @@ sub display_image
 			system("cat /dev/fb0 > /tmp/screendump");
 		}
 
-		if ($opts{multiimage}) {
+		if ($opts{do_scroll}) {
+			system("$FindBin::RealBin/bin/fb -delay 250 -scroll -q \"$fn\" $opts{x} $opts{y}");
+		} elsif ($opts{multimage}) {
 			system("$FindBin::RealBin/bin/fb -effects -q \"$fn\" $opts{x} $opts{y}");
 		} else {
 			system("$FindBin::RealBin/bin/fb -effects -stretch -q \"$fn\"");
@@ -116,8 +118,13 @@ sub display_image
 		$title = join("/", (split("/", $fn))[-2, -1]);
 		$title =~ s/\.(jpeg|jpg|png)$//i;
 		$title =~ s/^news\///;
-		my $c = int(($columns - length($title)) / 2);
-		printf "\033[%d;%dH$title", $rows - 1, $c;
+		my $c = int(($columns - length($title) - 2) / 2);
+
+		# The linux console has a bug where the flashing
+		# cursor resides - causing 'breakthrough' of the underlying
+		# content, whilst we have the image on display. Move
+		# cursor to (1,1) to avoid this.
+		printf "\033[%d;%dH $title \033[1H", $rows - 1, $c;
 		return;
 	}
 
@@ -138,6 +145,7 @@ sub display_pictures
 {	my $dir = shift;
 	my $num = shift || 1;
 	my $toplevel = shift || 0;
+	my $do_scroll = shift || 0;
 
 	$opts{image_dir} =~ s/\$HOME/$ENV{HOME}/;
 	$dir = "$opts{image_dir}/$dir";
@@ -182,6 +190,7 @@ sub display_pictures
 
 	my %iopts = ( x => 0, y => 0);
 	$iopts{multimage} = 1 if $num > 1;
+	$iopts{do_scroll} = $do_scroll;
 	for (my $i = 0; $i < $num; $i++) {
 		pr(time_string() . "[img: $img[$i]]\n");
 
@@ -507,6 +516,7 @@ sub main
 		'help',
 		'page=s',
 		'ppid=s',
+		'notime',
 		);
 
 #my $a = read_article("$ENV{HOME}/.rss/articles/art0005921");
@@ -678,7 +688,6 @@ sub do_ticker
 		###############################################
 		reset_fb();
 
-		my $do_weather = 1;
 		$page = sched_page($con_txt);
 		$page = $opts{page} if defined($opts{page});
 
@@ -700,25 +709,18 @@ sub do_ticker
 			do_page6_status();
 		} elsif ($page == 7 && !$opts{enable_news_scraping}) {
 			do_page7_news();
-			$do_weather = 0;
 		} elsif ($page == 8) {
 			do_page8_photos();
-			$do_weather = 0;
 		} elsif ($page == 9) {
 			do_page9_images();
-			$do_weather = 0;
 		} elsif ($page == 10) {
 			do_page10_album();
-			$do_weather = 0;
 		} elsif ($page == 11) {
 			do_page11_ascii_art();
-			$do_weather = 0;
 		}
 
-		if ($do_weather) {
-			do_weather();
-			do_stocks();
-		}
+#			do_weather();
+#			do_stocks();
 
 		if (@history > 100) {
 			@history = @history[0..99];
@@ -908,6 +910,8 @@ sub do_page2_calendar
 		}
 	}
 	pr("\n");
+
+	system("$FindBin::Bin/scripts/weather.pl -daily");
 
 	exit(0) if $ENV{DOW_EXIT};
 }
@@ -1116,7 +1120,7 @@ sub do_page6_status
 
 sub do_page7_news
 {
-	display_pictures("news", 2, 1);
+	display_pictures("news", 2, 1, 1);
 }
 
 sub do_page8_photos

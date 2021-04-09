@@ -9,7 +9,7 @@ export PATH=/bin:/usr/bin:/usr/sbin:/home/$RSS_USERID/bin
 
 do_start ()
 {
-	sleep 15
+	sleep 10
 	chvt 1
 	log_daemon_msg "Starting RSS newsfeed" "rss"
   	sudo -u $RSS_USERID /home/$RSS_USERID/src/rss/startup >>/tmp/rss_startup.log
