@@ -24,7 +24,7 @@ if [ $? = 1 ]; then
 fi
 
 if [ $get = 0 ]; then
-	date "+%Y%m%d %H:%M:%S Software release up-to date."
+#	date "+%Y%m%d %H:%M:%S Software release up-to date."
 	exit 0
 fi
 date "+%Y%m%d %H:%M:%S New update available"

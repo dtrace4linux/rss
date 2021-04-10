@@ -21,12 +21,16 @@ As well as news headlines, it includes the following:
 
   * stock symbol updates
   * weather for your area
-  * random jpg images
+  * image display - divided up into album covers, photos,
+    stock images, web site front pages
   * reminders
 
 The file rss_options.cfg can be used to configure the weather, stock
 symbols, and other attributes. The file rss.cfg is used to describe the
 sites to poll.
+
+Screenshots are recorded, so you can publish random samples of whats
+on the display (easier than trying to get a good quality photograph).
 
 Outputs
 
@@ -40,6 +44,9 @@ Outputs
 Notes
   
   The code is largely standalone with almost no dependencies.
+  (scripts/get-deps.sh can be used to install some of the optional
+  useful utilities for text manipulation, and to build the
+  framebuffer driver).
   
   The weather report relies on /usr/bin/ansiweather - so you would need
   to install that. At some point I may replace with a native API.
@@ -106,7 +113,8 @@ $HOME/images directory
 
   images/photos - your selection of personal photos
 
-  images/album - album covers
+  images/album - album covers - put your own selection of jpg/png
+  files in here.
 
   By segregating the photos, we can be sure that each type will be
   displayed on a periodic basis, rather than one single/giant collection
@@ -120,7 +128,10 @@ $HOME/images directory
   truely accurate. It is available in the caca-utils package if you
   want it.
 
-  Additionally, if you cd to the rss/tools dir and type:
+Makefile
+  The makefile is setup to build the C utility, "fb" (framebuffer).
+  You will need gcc and libjpeg/libpng libraries to build this.
+  The fb utility is used to display images and take screenshots.
 
   $ make
 
@@ -168,14 +179,16 @@ Examples:
 
   ![Demo](video/video1.svg)
 
-  ![Photos](images/IMG_0848.jpg)
+  ![Screenshot](images/screenshot-1510.jpg)
 
-  ![Photos](images/IMG_0849.jpg)
+  ![Screenshot](images/screenshot-1511.jpg)
 
-  ![Photos](images/IMG_0850.jpg)
+  ![Screenshot](images/screenshot-1520.jpg)
 
-  ![Photos](images/IMG_0853.jpg)
+  ![Screenshot](images/screenshot-1547.jpg)
 
-  ![Photos](images/IMG_0854.jpg)
+  ![Screenshot](images/screenshot-1626.jpg)
 
-  ![Photos](images/IMG_0855.jpg)
+  ![Screenshot](images/screenshot-1635.jpg)
+
+  ![Screenshot](images/screenshot-1708.jpg)
