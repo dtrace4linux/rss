@@ -45,7 +45,7 @@ my %opts = (
 	sleep => 2700,
 	timeout => 20,
 	w => 1024,
-	h => 2000,
+	h => 1600,
 	);
 
 sub main
@@ -92,7 +92,7 @@ sub do_clean
 	my %valid;
 	foreach my $p (@pages) {
 		my $fn = site_to_fn($p);
-		$valid{ "$opts{dir}/$fn.jpg" } = 1;
+		$valid{ "$opts{dir}/$fn.png" } = 1;
 	}
 
 	foreach my $f (glob("$opts{dir}/*")) {
@@ -110,7 +110,7 @@ sub get_pages
 	foreach my $w (@pages) {
 		my $fn = site_to_fn($w);
 
-		my $ofn = "$opts{dir}/$fn.jpg";
+		my $ofn = "$opts{dir}/$fn.png";
 
 		$ENV{HOME} = "/tmp";
 		my $cmd = "timeout $opts{timeout}s firefox --profile /tmp/headless " .
@@ -122,7 +122,7 @@ sub get_pages
 			my $d = strftime("%Y.%m", localtime());
 			mkdir("$opts{dir}/$d", 0755);
 			my $fn1 = strftime("%Y%m%d-%H-$fn", localtime());
-			rename($ofn, "$opts{dir}/$d/$fn1.jpg");
+			rename($ofn, "$opts{dir}/$d/$fn1.png");
 			rename("$ofn.tmp", $ofn);
 		}
 

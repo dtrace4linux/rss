@@ -161,7 +161,7 @@ write_jpeg(char *ofname, unsigned char *img, int w, int h, int depth)
 			/***********************************************/
 			/*   Assumes 32bpp			       */
 			/***********************************************/
-			unsigned char *sp = (unsigned short *) 
+			unsigned char *sp = (unsigned char *) 
 				&img[cinfo.next_scanline * w * (depth >> 3)];
 			for (i = 0; i < w; i++) {
 				rp[0] = sp[2];

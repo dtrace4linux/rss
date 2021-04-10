@@ -48,6 +48,8 @@ my $exec_mtime = (stat("$FindBin::RealBin/ticker.pl"))[9];
 my @cmdline = ( $0, @ARGV );
 my $status_pid;
 my $web_pid;
+my $scr_pix_width = 0;
+my $scr_pix_height = 0;
 
 $SIG{INT} = sub { write_pidfile(1); exit(0); };
 
@@ -107,7 +109,7 @@ sub display_image
 		}
 
 		if ($opts{do_scroll}) {
-			system("$FindBin::RealBin/bin/fb -delay 750 -scroll -q \"$fn\" $opts{x} $opts{y}");
+			system("$FindBin::RealBin/bin/fb -delay 1000 -scroll -q \"$fn\" $opts{x} $opts{y}");
 		} elsif ($opts{multimage}) {
 			system("$FindBin::RealBin/bin/fb -effects -q \"$fn\" $opts{x} $opts{y}");
 		} else {
@@ -433,6 +435,10 @@ sub do_status
 		#   Take a period screenshot		      #
 		###############################################
 		if (time() > $ss_time + 500) {
+			###############################################
+			#   Collect  a  set of screenshots, but keep  #
+			#   an infinite number.			      #
+			###############################################
 			$ss_time = time();
 			my $fn = strftime("screenshot-%H%M.jpg", localtime());
 			my $cmd = "$FindBin::RealBin/bin/fb -q -o /tmp/screenshots/$fn";
@@ -545,10 +551,20 @@ sub main
 
 	$| = 1;
 
+	###############################################
+	#   Remember  the  pixel  dimensions  of the  #
+	#   screen.				      #
+	###############################################
+	my $s = `$FindBin::RealBin/bin/fb -info`;
+	chomp($s);
+	$s =~ s/,.*$//;
+	($scr_pix_width, $scr_pix_height) = split(/x/, $s);
+
 	my $pid = $$;
 	if (!defined($opts{page})) {
 		if (($web_pid = fork()) == 0) {
-			exec "$FindBin::RealBin/scripts/get-web.pl -ppid $pid >/tmp/get-web.log";
+			exec "$FindBin::RealBin/scripts/get-web.pl -w $scr_pix_width " .
+				"-ppid $pid >/tmp/get-web.log";
 			exit(0);
 		}
 	}
@@ -1167,8 +1183,6 @@ my $EV_ABS = 0x03;
 my $ABS_X = 0x00;
 my $ABS_Y = 0x01;
 my $ABS_MT_TRACKING_ID = 0x39;
-my $scr_pix_width = 0;
-my $scr_pix_height = 0;
 my $is_64bit;
 my $ev_device = "/dev/input/event0";
 
@@ -1199,13 +1213,6 @@ sub ev_check
 		$ev_fh = new FileHandle($ev_device);
 	}
 	return -1 if !$ev_fh;
-
-	if ($scr_pix_width == 0) {
-		my $s = `$FindBin::RealBin/bin/fb -info`;
-		chomp($s);
-		$s =~ s/,.*$//;
-		($scr_pix_width, $scr_pix_height) = split(/x/, $s);
-	}
 
 	my $bits = '';
 	vec($bits, $ev_fh->fileno(), 1) = 1;

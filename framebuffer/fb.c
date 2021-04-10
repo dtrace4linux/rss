@@ -30,6 +30,7 @@ int fullscreen;
 int	stretch;
 int	effects;
 int	scroll = 1;
+int	scroll_y_incr = 50;
 int	info;
 int	page = -1;
 char	*ofname;
@@ -94,6 +95,12 @@ int do_switches(int argc, char **argv)
 			}
 			if (strcmp(cp, "scroll") == 0) {
 				scroll = 1;
+				break;
+			}
+			if (strcmp(cp, "scroll_y_incr") == 0) {
+				if (++i >= argc)
+					usage();
+				scroll_y_incr = atoi(argv[i]);
 				break;
 			}
 			if (strcmp(cp, "stretch") == 0) {
@@ -275,7 +282,7 @@ int main(int argc, char **argv)
 			normal_display(fbp, img, x, y, w, h, x1, y1);
 			tv.tv_sec = delay / 1000;
 			tv.tv_usec = (delay % 1000) * 1000;
-			y1 += 100;
+			y1 += scroll_y_incr;
 			select(0, NULL, NULL, NULL, &tv);
 		}
 	} else {
@@ -408,15 +415,16 @@ usage()
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Switches:\n");
 	fprintf(stderr, "\n");
-	fprintf(stderr, "   -delay NN       Scroll delay in milliseconds\n");
-	fprintf(stderr, "   -effects        Scroll-in effects enabled\n");
-	fprintf(stderr, "   -fullscreen     Stretch image to fill screen\n");
-	fprintf(stderr, "   -info           Print screen size info\n");
-	fprintf(stderr, "   -o <fname>      Write screen buffer to an output jpg file\n");
-	fprintf(stderr, "   -page N         Display page/screen N of the image\n");
-	fprintf(stderr, "   -scroll         Scroll image\n");
-	fprintf(stderr, "   -stretch        Stretch but dont change aspect ratio\n");
-	fprintf(stderr, "   -xfrac N.NN     Shrink image on the x-axis\n");
-	fprintf(stderr, "   -yfrac N.NN     Shrink image on the y-axis\n");
+	fprintf(stderr, "   -delay NN          Scroll delay in milliseconds\n");
+	fprintf(stderr, "   -effects           Scroll-in effects enabled\n");
+	fprintf(stderr, "   -fullscreen        Stretch image to fill screen\n");
+	fprintf(stderr, "   -info              Print screen size info\n");
+	fprintf(stderr, "   -o <fname>         Write screen buffer to an output jpg file\n");
+	fprintf(stderr, "   -page N            Display page/screen N of the image\n");
+	fprintf(stderr, "   -scroll            Scroll image\n");
+	fprintf(stderr, "   -scroll_y_incr NN  When using -scroll, scroll by this much.\n");
+	fprintf(stderr, "   -stretch           Stretch but dont change aspect ratio\n");
+	fprintf(stderr, "   -xfrac N.NN        Shrink image on the x-axis\n");
+	fprintf(stderr, "   -yfrac N.NN        Shrink image on the y-axis\n");
 
 }
