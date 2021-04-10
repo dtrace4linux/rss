@@ -328,8 +328,11 @@ sub do_status
 	my %stats;
 	my %old_stats;
 	my $fh;
+	my $ss_time = 0;
 
 	my $upd_time = 0;
+
+	mkdir("/tmp/screenshots", 0755);
 
 	while (1) {
 		exit(0) if ! -d "/proc/$ppid";
@@ -424,6 +427,16 @@ sub do_status
 				"-cols $columns -update -random -o $ENV{HOME}/.rss/ticker/stock.log " .
 				join(" ", @{$opts{stocks}});
 			my $str = `$cmd`;
+		}
+
+		###############################################
+		#   Take a period screenshot		      #
+		###############################################
+		if (time() > $ss_time + 500) {
+			$ss_time = time();
+			my $fn = strftime("screenshot-%H%M.jpg", localtime());
+			my $cmd = "$FindBin::RealBin/bin/fb -q -o /tmp/screenshots/$fn";
+			system($cmd);
 		}
 
 		sleep(5);

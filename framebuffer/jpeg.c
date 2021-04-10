@@ -138,7 +138,7 @@ write_jpeg(char *ofname, unsigned char *img, int w, int h, int depth)
 
 	jpeg_set_defaults(&cinfo);
 	/*set the quality [0..100]  */
-	jpeg_set_quality (&cinfo, 100, 1);
+	jpeg_set_quality (&cinfo, 75, 1);
 	jpeg_start_compress(&cinfo, 1);
 
 	JSAMPROW row_pointer;          /* pointer to a single row */
