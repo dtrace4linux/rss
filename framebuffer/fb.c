@@ -32,6 +32,7 @@ int	effects;
 int	scroll = 1;
 int	info;
 int	page = -1;
+char	*ofname;
 long	delay = 100;
 float	xfrac = 1.0;
 float	yfrac = 1.0;
@@ -49,6 +50,7 @@ void fullscreen_display(char *fbp, struct imgRawImage *img, double f);
 void stretch_display(char *fbp, struct imgRawImage *img);
 void put_pixel(char *fbp, int r, int g, int b);
 void	usage(void);
+int	write_jpeg(char *ofname, unsigned char *img, int w, int h, int depth);
 
 int do_switches(int argc, char **argv)
 {	int	i;
@@ -76,6 +78,12 @@ int do_switches(int argc, char **argv)
 			}
 			if (strcmp(cp, "info") == 0) {
 				info = 1;
+				break;
+			}
+			if (strcmp(cp, "o") == 0) {
+				if (++i >= argc)
+					usage();
+				ofname = argv[i];
 				break;
 			}
 			if (strcmp(cp, "page") == 0) {
@@ -126,7 +134,7 @@ int main(int argc, char **argv)
     int	x0, y0;
     int	arg_index = 1;
     char	*fname = NULL;
-    struct imgRawImage *img;
+    struct imgRawImage *img = NULL;
     int	fd;
     char	buf[BUFSIZ];
 
@@ -174,46 +182,49 @@ int main(int argc, char **argv)
     }
 
 
-    if (fname == NULL) {
+    if (fname == NULL && !ofname) {
     	if (info)
 		exit(0);
     	usage();
 	exit(1);
     }
 
-    if ((fd = open(fname, O_RDONLY)) < 0) {
-    	printf("fb: Cannot open %s - %s\n", fname, strerror(errno));
-	exit(1);
-    }
-    if (read(fd, buf, 4) != 4) {
-    	printf("File too short - %s\n", fname);
-	exit(1);
-    }
-    close(fd);
+    if (fname) {
+	    if ((fd = open(fname, O_RDONLY)) < 0) {
+	    	printf("fb: Cannot open %s - %s\n", fname, strerror(errno));
+		exit(1);
+	    }
+	    if (read(fd, buf, 4) != 4) {
+	    	printf("File too short - %s\n", fname);
+		exit(1);
+	    }
+	    close(fd);
 
-    if (memcmp(buf, "\x89PNG", 4) == 0) {
-    	if ((img = read_png_file(fname)) == NULL) {
-    		printf("fb: Failed to load: %s\n", fname);
-		exit(1);
-	}
-    } else if (memcmp(buf, "\xff\xd8\xff", 3) == 0) {
-	if ((img = loadJpegImageFile(fname)) == NULL) {
-    		printf("fb: Failed to load: %s\n", fname);
-		exit(1);
+	    if (memcmp(buf, "\x89PNG", 4) == 0) {
+	    	if ((img = read_png_file(fname)) == NULL) {
+	    		printf("fb: Failed to load: %s\n", fname);
+			exit(1);
 		}
-    } else {
-    	printf("Cannot determine image format\n");
-	exit(1);
-    }
+	    } else if (memcmp(buf, "\xff\xd8\xff", 3) == 0) {
+		if ((img = loadJpegImageFile(fname)) == NULL) {
+	    		printf("fb: Failed to load: %s\n", fname);
+			exit(1);
+			}
+	    } else {
+	    	printf("Cannot determine image format\n");
+		exit(1);
+	    }
 
-    if (info) {
-    	printf("Image: %ldx%ld\n", img->width, img->height);
-    	exit(0);
+	    if (info) {
+	    	printf("Image: %ldx%ld\n", img->width, img->height);
+	    	exit(0);
+	    }
     }
 
     if (!quiet) {
 	    printf("%dx%d, %dbpp\n", vinfo.xres, vinfo.yres, vinfo.bits_per_pixel );
-	    printf("Image: %ldx%ld\n", img->width, img->height);
+	    if (img)
+		    printf("Image: %ldx%ld\n", img->width, img->height);
     }
 
     // Figure out the size of the screen in bytes
@@ -225,6 +236,12 @@ int main(int argc, char **argv)
         printf("Error: failed to map framebuffer device to memory.\n");
         return -4;
     }
+
+    if (ofname) {
+    	write_jpeg(ofname, fbp, vinfo.xres, vinfo.yres, vinfo.bits_per_pixel);
+	exit(0);
+    }
+
 /*
     printf("The framebuffer device was mapped to memory successfully.\n");
 */
@@ -395,6 +412,7 @@ usage()
 	fprintf(stderr, "   -effects        Scroll-in effects enabled\n");
 	fprintf(stderr, "   -fullscreen     Stretch image to fill screen\n");
 	fprintf(stderr, "   -info           Print screen size info\n");
+	fprintf(stderr, "   -o <fname>      Write screen buffer to an output jpg file\n");
 	fprintf(stderr, "   -page N         Display page/screen N of the image\n");
 	fprintf(stderr, "   -scroll         Scroll image\n");
 	fprintf(stderr, "   -stretch        Stretch but dont change aspect ratio\n");

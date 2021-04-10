@@ -107,7 +107,7 @@ sub display_image
 		}
 
 		if ($opts{do_scroll}) {
-			system("$FindBin::RealBin/bin/fb -delay 250 -scroll -q \"$fn\" $opts{x} $opts{y}");
+			system("$FindBin::RealBin/bin/fb -delay 750 -scroll -q \"$fn\" $opts{x} $opts{y}");
 		} elsif ($opts{multimage}) {
 			system("$FindBin::RealBin/bin/fb -effects -q \"$fn\" $opts{x} $opts{y}");
 		} else {

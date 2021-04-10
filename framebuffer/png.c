@@ -48,7 +48,9 @@ read_png_file(char* file_name)
         FILE *fp = fopen(file_name, "rb");
         if (!fp)
                 abort_("[read_png_file] File %s could not be opened for reading", file_name);
-        fread(header, 1, 8, fp);
+        if (fread(header, 1, 8, fp) != 8) {
+                abort_("[read_png_file] File %s is too short", file_name);
+	}
         if (png_sig_cmp(header, 0, 8))
                 abort_("[read_png_file] File %s is not recognized as a PNG file", file_name);
 

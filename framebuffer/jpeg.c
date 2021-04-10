@@ -112,3 +112,79 @@ struct imgRawImage* loadJpegImageFile(char* lpFilename) {
 
 	return lpNewImage;
 }
+
+/**********************************************************************/
+/*   Copy framebuffer to a jpeg file.				      */
+/**********************************************************************/
+int
+write_jpeg(char *ofname, unsigned char *img, int w, int h, int depth)
+{	FILE	*fp;
+	struct jpeg_compress_struct cinfo;
+	struct jpeg_error_mgr       jerr;
+
+	if ((fp = fopen(ofname, "wb")) == NULL) {
+		perror(ofname);
+		return -1;
+	}
+
+	cinfo.err = jpeg_std_error(&jerr);
+	jpeg_create_compress(&cinfo);
+	jpeg_stdio_dest(&cinfo, fp);
+	 
+	cinfo.image_width      = w;
+	cinfo.image_height     = h;
+	cinfo.input_components = 3;
+	cinfo.in_color_space   = JCS_RGB;
+
+	jpeg_set_defaults(&cinfo);
+	/*set the quality [0..100]  */
+	jpeg_set_quality (&cinfo, 100, 1);
+	jpeg_start_compress(&cinfo, 1);
+
+	JSAMPROW row_pointer;          /* pointer to a single row */
+	unsigned char *row = malloc(w * 3 + 1);
+ 
+	while (cinfo.next_scanline < cinfo.image_height) {
+		unsigned char *rp;
+		int	i;
+		rp = row;
+		if (depth == 16) {
+			unsigned short *sp = (unsigned short *) 
+				&img[cinfo.next_scanline * w * (depth >> 3)];
+			for (i = 0; i < w; i++, rp += 3) {
+				unsigned short p = *sp++;
+				rp[0] = ((p >> 11) & 0x1f) << 3;
+				rp[1] = ((p >> 5) & 0x3f) << 2;
+				rp[2] = ((p >> 0) & 0x1f) << 3;
+			}
+		} else {
+			/***********************************************/
+			/*   Assumes 32bpp			       */
+			/***********************************************/
+			unsigned char *sp = (unsigned short *) 
+				&img[cinfo.next_scanline * w * (depth >> 3)];
+			for (i = 0; i < w; i++) {
+				rp[0] = sp[2];
+				rp[1] = sp[1];
+				rp[2] = sp[0];
+				rp += 3;
+				sp += 4;
+			}
+		}
+		/***********************************************/
+		/*   Assemble  RGB  from the underlying frame  */
+		/*   buffer format.			       */
+		/***********************************************/
+		row_pointer = (JSAMPROW) row;
+		jpeg_write_scanlines(&cinfo, &row_pointer, 1);
+	}
+	free(row);
+
+	jpeg_finish_compress(&cinfo);
+	fclose(fp);
+	jpeg_destroy_compress(&cinfo);
+
+	return 0;
+}
+
+

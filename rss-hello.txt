@@ -1,12 +1,21 @@
 :rss news - no adverts
 :news for you
-:no html, no javascript
+:look up!
+:look down!
 :images'r'us
 :have a nice day
 :welcome to me
-:you look beautiful today                                                                             
+:this is tricky!
+:are you working hard?
+:is it time for tea?
+:just a minute!
+:Fine!
+:I am not feeling well!
+:Biscuits!
+:Where is my pizza?
 :it's personal
 :lunchtime yet?
+:Woof!
                                                                              
 Touch the screen, to display the next item.
 https://github.com/dtrace4linux/rss
