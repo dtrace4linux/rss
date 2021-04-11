@@ -25,7 +25,7 @@ my %page_sched = (
 	5  => { freq => 4000, title => "Help"},
 	6  => { freq => 600,  title => "Status" },
 
-	7  => { freq => 1500, title => "News: front page"},
+	7  => { freq => 1000, title => "News: front page"},
 	8  => { freq => 1200, title => "Photos",},
 	9  => { freq => 1200, title => "Images",},
 	10 => { freq => 1200, title => "Album covers",},
@@ -109,7 +109,7 @@ sub display_image
 		}
 
 		if ($opts{do_scroll}) {
-			system("$FindBin::RealBin/bin/fb -delay 1000 -scroll -q \"$fn\" $opts{x} $opts{y}");
+			system("$FindBin::RealBin/bin/fb -delay 100 -scroll -scroll_y_incr 5 -q \"$fn\" $opts{x} $opts{y}");
 		} elsif ($opts{multimage}) {
 			system("$FindBin::RealBin/bin/fb -effects -q \"$fn\" $opts{x} $opts{y}");
 		} else {

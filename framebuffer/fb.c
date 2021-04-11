@@ -29,7 +29,7 @@ int quiet;
 int fullscreen;
 int	stretch;
 int	effects;
-int	scroll = 1;
+int	scroll = 0;
 int	scroll_y_incr = 50;
 int	info;
 int	page = -1;

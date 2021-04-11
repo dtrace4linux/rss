@@ -27,3 +27,10 @@ release:
 	rm -f $(HOME)/release/rss/rss-current.tar.gz ; \
 	ln -s rss-$$label.tar.gz $(HOME)/release/rss/rss-current.tar.gz ;
 	cd $(HOME)/release/rss ; . ; find . | sort > updates.txt
+
+push:
+
+	for host in pi3 pi4news pi4news2a ; do \
+	scp $(HOME)/release/rss/rss-current.tar.gz $$host:/tmp ; \
+	ssh $$host "cd src/rss ; zcat < /tmp/rss-current.tar.gz | tar xf - " ; \
+	done
