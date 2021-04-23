@@ -29,6 +29,8 @@ if [ $get = 0 ]; then
 fi
 date "+%Y%m%d %H:%M:%S New update available"
 scp $host:release/rss/rss-current.tar.gz /tmp
-ssh $host ls -l release/rss
+sync
+ssh $host ls -lrt release/rss | tail
 zcat < /tmp/rss-current.tar.gz | tar xf -
 make
+sync

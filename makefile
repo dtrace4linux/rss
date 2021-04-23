@@ -30,7 +30,7 @@ release:
 
 push:
 
-	for host in pi3 pi4news pi4news2a ; do \
+	for host in pi3 pi4news_a pi4news2 ; do \
 	scp $(HOME)/release/rss/rss-current.tar.gz $$host:/tmp ; \
 	ssh $$host "cd src/rss ; zcat < /tmp/rss-current.tar.gz | tar xf - " ; \
 	done

@@ -22,13 +22,13 @@ my %page_sched = (
 	2  => { freq => 600,  title => "Calendar"},
 	3  => { freq => 1750, title => "Reminder"},
 	4  => { freq => 3600, title => "Hello"},
-	5  => { freq => 4000, title => "Help"},
+	5  => { freq => 8000, title => "Help"},
 	6  => { freq => 600,  title => "Status" },
 
 	7  => { freq => 1000, title => "News: front page"},
 	8  => { freq => 1200, title => "Photos",},
 	9  => { freq => 1200, title => "Images",},
-	10 => { freq => 1200, title => "Album covers",},
+	10 => { freq => 1200, title => "Album/Movies covers",},
 	11 => { freq => 3600, title => "ASCII Art",},
 	);
 my $npages = scalar(keys(%page_sched));
@@ -36,7 +36,9 @@ my $npages = scalar(keys(%page_sched));
 #######################################################################
 #   Command line switches.					      #
 #######################################################################
-my %opts;
+my %opts = (
+	tmp => "/dev/shm",
+	);
 my $columns;
 my $rows;
 my $cur_page = 0;
@@ -104,16 +106,16 @@ sub display_image
 			return;
 		}
 		# Save screen before
-		if ( ! -f "/tmp/screendump" && -e "/dev/fb0") {
-			system("cat /dev/fb0 > /tmp/screendump");
+		if ( ! -f "$opts{tmp}/screendump" && -e "/dev/fb0") {
+			system("cat /dev/fb0 > $opts{tmp}/screendump");
 		}
 
 		if ($opts{do_scroll}) {
-			system("$FindBin::RealBin/bin/fb -delay 100 -scroll -scroll_y_incr 5 -q \"$fn\" $opts{x} $opts{y}");
+			system("$FindBin::RealBin/bin/fb -delay 50 -scroll -scroll_y_incr 3 -q '$fn' $opts{x} $opts{y}");
 		} elsif ($opts{multimage}) {
-			system("$FindBin::RealBin/bin/fb -effects -q \"$fn\" $opts{x} $opts{y}");
+			system("$FindBin::RealBin/bin/fb -effects -q '$fn' $opts{x} $opts{y}");
 		} else {
-			system("$FindBin::RealBin/bin/fb -effects -stretch -q \"$fn\"");
+			system("$FindBin::RealBin/bin/fb -effects -stretch -q '$fn'");
 		}
 
 		my $title = $fn;
@@ -126,14 +128,14 @@ sub display_image
 		# cursor resides - causing 'breakthrough' of the underlying
 		# content, whilst we have the image on display. Move
 		# cursor to (1,1) to avoid this.
-		printf "\033[%d;%dH $title \033[1H", $rows - 1, $c;
+		printf "\033[%d;%dH $title \033[1H\033[?25l", $rows - 1, $c;
 		return;
 	}
 
 	if (-x "/usr/bin/img2txt" && $fn) {
 		my $w = $columns - 1;
 		my $h = $rows - 1;
-		system("/usr/bin/img2txt -W $w -H $h \"$fn\"");
+		system("/usr/bin/img2txt -W $w -H $h '$fn'");
 		return;
 	}
 	pr("(No images found to display)\n");
@@ -334,7 +336,7 @@ sub do_status
 
 	my $upd_time = 0;
 
-	mkdir("/tmp/screenshots", 0755);
+	mkdir("$opts{tmp}/screenshots", 0755);
 
 	while (1) {
 		exit(0) if ! -d "/proc/$ppid";
@@ -441,7 +443,7 @@ sub do_status
 			###############################################
 			$ss_time = time();
 			my $fn = strftime("screenshot-%H%M.jpg", localtime());
-			my $cmd = "$FindBin::RealBin/bin/fb -q -o /tmp/screenshots/$fn";
+			my $cmd = "$FindBin::RealBin/bin/fb -q -o $opts{tmp}/screenshots/$fn";
 			system($cmd);
 		}
 
@@ -536,6 +538,7 @@ sub main
 		'page=s',
 		'ppid=s',
 		'notime',
+		'tmp=s',
 		);
 
 #my $a = read_article("$ENV{HOME}/.rss/articles/art0005921");
@@ -940,7 +943,7 @@ sub do_page2_calendar
 	}
 	pr("\n");
 
-	system("$FindBin::Bin/scripts/weather.pl -daily");
+	system("$FindBin::Bin/scripts/weather.pl");
 
 	exit(0) if $ENV{DOW_EXIT};
 }
@@ -1166,14 +1169,19 @@ sub do_page9_images
 
 sub do_page10_album
 {
-	display_pictures("album");
+	if (int(rand(10)) < 7) {
+		display_pictures("album");
+	} else {
+		display_pictures("movie-posters");
+	}
 }
 
 sub do_page11_ascii_art
 {
-	my @lst = ("ascii-art", "fortune", "pi");
+	my @lst = ("ascii-art.pl", "fortune.pl", "pi.pl",
+		"scrabble.sh");
 	my $n = int(rand(@lst));
-	system("$FindBin::RealBin/scripts/$lst[$n].pl");
+	system("$FindBin::RealBin/scripts/$lst[$n]");
 }
 
 ######################################################################
@@ -1433,9 +1441,10 @@ sub read_sites
 
 sub reset_fb
 {
-	if (-f "/tmp/screendump") {
-		system("cat /tmp/screendump > /dev/fb0");
-		unlink("/tmp/screendump");
+	if (-f "$opts{tmp}/screendump") {
+		system("cat $opts{tmp}/screendump > /dev/fb0");
+		unlink("$opts{tmp}/screendump");
+		printf("\033[?25h");
 	}
 }
 
@@ -1462,6 +1471,8 @@ Usage: ticker.pl
 
 Switches:
 
+  -tmp <dir>    Place to store temp files and screenshots; default 
+                /dev/shm
 EOF
 
 	exit(defined($ret) ? $ret : 1);

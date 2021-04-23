@@ -260,9 +260,9 @@ sub main
 	Getopt::Long::Configure('no_ignore_case');
 	usage() unless GetOptions(\%opts,
 		'help',
-		'daily',
 		'location|l=s',
 		'key=s',
+		'today',
 		'units=s',
 		'v',
 		);
@@ -272,14 +272,14 @@ sub main
 }
 sub get
 {
-	my $api_cmd = $opts{daily} ? 'forecast/daily' : 'weather';
+	my $api_cmd = $opts{today} ? 'weather' : 'forecast/daily';
 
 	my $cmd = "http://api.openweathermap.org/data/2.5/" .
 		"$api_cmd?q=$opts{location}&units=$opts{units}&appid=$opts{key}";
 
 	print $cmd, "\n" if $opts{v};
 
-	my $fn = $opts{daily} ? "/tmp/weather-daily.json" : "/tmp/weather-forecast.json";
+	my $fn = $opts{today} ? "/tmp/weather-forecast.json" : "/tmp/weather-daily.json";
 	my $mtime = (stat($fn))[9];
 	if (!defined($mtime) || $mtime + 1500 < time()) {
 		system("curl -s  -o $fn '$cmd'");
@@ -293,7 +293,7 @@ sub get
 	my $json = JSON->new->allow_nonref;
 	my $info = $json->decode($txt);
 
-	if (!$opts{daily}) {
+	if ($opts{today}) {
 		printf "Temperature: %4d C  %s - %s\n", 
 			$info->{main}{temp},
 			$info->{weather}[0]{main},
@@ -313,22 +313,23 @@ sub get
 	my $r = 0;
 	my $c = 0;
 	foreach my $dt (@{$info->{list}}) {
-		my $s = sprintf("%s %2dC / %-3s  %s - %s\n",
+		my $s = sprintf("%s %2dC/%-3s %-20s %s\n",
 			strftime("%a %b %d", localtime($dt->{dt})),
 			$dt->{temp}{min},
 			sprintf("%dC", $dt->{temp}{max}),
-			$dt->{weather}[0]{main},
+#			$dt->{weather}[0]{main},
 			$dt->{weather}[0]{description},
+			show_temp($dt->{temp}{day}),
 			);
 
 		foreach my $w (qw/morn day eve night/) {
-			$s .= sprintf("  %-6s %3d C %s\n", 
+last;
+			$s .= sprintf("  %-5s %3dC ", 
 				$w, $dt->{temp}{$w},
-				show_temp($dt->{temp}{$w}),
 				);
 		}
 
-		$data{$r}{$c} = $s;
+		$data{$r}{$c} = $s . "\n";
 		if (++$c > 2) {
 			$r++;
 			$c = 0;
@@ -395,7 +396,7 @@ Usage:
 
 Switches:
 
-   -daily     Show daily forecast
+   -today     Show just today's weather
 
 EOF
 

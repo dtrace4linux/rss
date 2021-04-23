@@ -41,6 +41,7 @@ my @pages = (
 #######################################################################
 my %opts = (
 	dir => "$ENV{HOME}/images/news",
+	headless => "/dev/shm/headless",
 	once => 0,
 	sleep => 2700,
 	timeout => 20,
@@ -70,7 +71,7 @@ sub main
 	}
 
 	mkdir($opts{dir}, 0755);
-	mkdir("/tmp/headless", 0755);
+	mkdir($opts{headless}, 0755);
 
 	while (1) {
 		get_pages();
@@ -113,7 +114,7 @@ sub get_pages
 		my $ofn = "$opts{dir}/$fn.png";
 
 		$ENV{HOME} = "/tmp";
-		my $cmd = "timeout $opts{timeout}s firefox --profile /tmp/headless " .
+		my $cmd = "timeout $opts{timeout}s firefox --profile $opts{headless} " .
 			"--window-size $opts{w},$opts{h} " .
 			"-screenshot $ofn.tmp $w >/dev/null 2>&1";
 		print time_string() . "$cmd\n";
