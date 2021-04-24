@@ -492,7 +492,6 @@ sub do_stocks
 {
 	if ($opts{stocks} &&
 	    time() > $stock_time + $opts{stock_time}) {
-	    	reset_fb();
 		$stock_time = time();
 		my $t = strftime("%H:%M ", localtime());
 		my $cmd = "$FindBin::RealBin/scripts/stock.pl " .
@@ -509,7 +508,6 @@ sub do_weather
 {
 	if ($opts{weather} && $opts{weather_location} &&
 	    time() > $weather_time + $opts{weather_time} && -x $opts{weather_app}) {
-	    	reset_fb();
 		$weather_time = time();
 		my $t = strftime("%H:%M ", localtime());
 		my $w = `$opts{weather_app} -l $opts{weather_location} -p false`;
@@ -750,9 +748,6 @@ sub do_ticker
 		} elsif ($page == 11) {
 			do_page11_ascii_art();
 		}
-
-#			do_weather();
-#			do_stocks();
 
 		if (@history > 100) {
 			@history = @history[0..99];
@@ -1169,7 +1164,10 @@ sub do_page9_images
 
 sub do_page10_album
 {
-	if (int(rand(10)) < 7) {
+	my $n = int(rand(10));
+	if ($n == 0) {
+		display_pictures("xkcd");
+	} elsif ($n < 7) {
 		display_pictures("album");
 	} else {
 		display_pictures("movie-posters");
