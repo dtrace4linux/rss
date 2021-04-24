@@ -169,7 +169,7 @@ sub display_pictures
 		index_dir($dir);
 	}
 
-	if (rand(4) == 1 && -x $fb_prog) {
+	if (int(rand(4)) == 1 && -x $fb_prog) {
 		system("$fb_prog -montage -delay 1 -f $dir/index.log -num 200 -rand");
 		return;
 	}
