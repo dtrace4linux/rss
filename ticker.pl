@@ -39,6 +39,8 @@ my $npages = scalar(keys(%page_sched));
 my %opts = (
 	tmp => "/dev/shm",
 	);
+
+my $fb_prog = "$FindBin::RealBin/bin/fb";
 my $columns;
 my $rows;
 my $cur_page = 0;
@@ -100,7 +102,7 @@ sub display_image
 	# Check we are currently the active console.
 	my $vt = `fgconsole 2>/dev/null`;
 	chomp($vt) if defined($vt);
-	if (defined($vt) && $vt ne '' && -x "$FindBin::RealBin/bin/fb") {
+	if (defined($vt) && $vt ne '' && -x "$fb_prog") {
 		if ($vt != 1) {
 			pr("[No image displayed - we lost the console: vt=$vt]\n");
 			return;
@@ -111,11 +113,11 @@ sub display_image
 		}
 
 		if ($opts{do_scroll}) {
-			system("$FindBin::RealBin/bin/fb -delay 50 -scroll -scroll_y_incr 3 -q '$fn' $opts{x} $opts{y}");
+			system("$fb_prog -delay 50 -scroll -scroll_y_incr 3 -q '$fn' $opts{x} $opts{y}");
 		} elsif ($opts{multimage}) {
-			system("$FindBin::RealBin/bin/fb -effects -q '$fn' $opts{x} $opts{y}");
+			system("$fb_prog -effects -q '$fn' $opts{x} $opts{y}");
 		} else {
-			system("$FindBin::RealBin/bin/fb -effects -stretch -q '$fn'");
+			system("$fb_prog -effects -stretch -q '$fn'");
 		}
 
 		my $title = $fn;
@@ -165,6 +167,11 @@ sub display_pictures
 	###############################################
 	if (!$ctime2 || $ctime1 > $ctime2 + 5) {
 		index_dir($dir);
+	}
+
+	if (rand(4) == 1 && -x $fb_prog) {
+		system("$fb_prog -montage -delay 1 -f $dir/index.log -num 200 -rand");
+		return;
 	}
 
 	my $dcnt = scalar(split("/", $dir));
@@ -443,7 +450,7 @@ sub do_status
 			###############################################
 			$ss_time = time();
 			my $fn = strftime("screenshot-%H%M.jpg", localtime());
-			my $cmd = "$FindBin::RealBin/bin/fb -q -o $opts{tmp}/screenshots/$fn";
+			my $cmd = "$fb_prog -q -o $opts{tmp}/screenshots/$fn";
 			system($cmd);
 		}
 
@@ -556,7 +563,7 @@ sub main
 	#   Remember  the  pixel  dimensions  of the  #
 	#   screen.				      #
 	###############################################
-	my $s = `$FindBin::RealBin/bin/fb -info`;
+	my $s = `$fb_prog -info`;
 	chomp($s);
 	$s =~ s/,.*$//;
 	($scr_pix_width, $scr_pix_height) = split(/x/, $s);

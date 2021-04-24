@@ -175,6 +175,7 @@ void write_png_file(char* file_name)
 }
 
 
+# if 0
 void process_file(void)
 {
         if (png_get_color_type(png_ptr, info_ptr) == PNG_COLOR_TYPE_RGB)
@@ -200,7 +201,6 @@ void process_file(void)
 }
 
 
-# if 0
 int main(int argc, char **argv)
 {
         if (argc != 3)

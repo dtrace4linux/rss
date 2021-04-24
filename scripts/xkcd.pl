@@ -22,6 +22,8 @@ my %opts = (
 	);
 
 my %images;
+my @nonex = (404);
+my %nonex;
 
 sub main
 {
@@ -38,6 +40,8 @@ sub main
 
 	mkdir($opts{dir}, 0755);
 
+	$nonex{$_} = 1 foreach @nonex;
+
 	read_index();
 
 	my $num = get_image_count();
@@ -45,6 +49,7 @@ sub main
 
 	my $q = 0;
 	for (my $i = 1; $i < $num; $i++) {
+		next if $nonex{$i};
 		next if defined($images{$i});
 		query($i, "http://xkcd.com/$i/info.0.json");
 		last if $q++ > $opts{n};
@@ -137,7 +142,9 @@ sub save_index
 sub spawn
 {	my $cmd = shift;
 
-	system($cmd);
+	if (system($cmd)) {
+		exit(1);
+	}
 }
 
 #######################################################################
