@@ -119,11 +119,11 @@ sub display_image
 		}
 
 		if ($iopts{do_scroll}) {
-			system("$fb_prog -delay 50 -scroll -scroll_y_incr 3 -q -x $opts{x} -y $opts{y} '$fn2'");
+			spawn("$fb_prog -delay 50 -scroll -scroll_y_incr 3 -q -x $opts{x} -y $opts{y} \"$fn2\"");
 		} elsif ($iopts{multimage}) {
-			system("$fb_prog -effects -q -x $iopts{x} -y $iopts{y} '$fn2'");
+			spawn("$fb_prog -q -x $iopts{x} -y $iopts{y} \"$fn2\"");
 		} else {
-			system("$fb_prog -effects -stretch -q '$fn2'");
+			spawn("$fb_prog -stretch -q \"$fn2\"");
 		}
 
 		my $title = $fn;
@@ -1369,7 +1369,7 @@ sub index_dir
 
 sub quote_fn
 {	my $fn = shift;
-	$fn =~ s/'/\\'/g;
+	$fn =~ s/"/\\"/g;
 
 	return $fn;
 }
@@ -1518,6 +1518,16 @@ sub reset_fb
 		unlink("$opts{tmp}/screendump");
 		printf("\033[?25h");
 	}
+}
+
+sub spawn
+{	my $cmd = shift;
+
+	my $ret = system($cmd);
+	return if $ret == 0;
+
+	print "failed command:\n";
+	print "  $cmd\n"
 }
 
 sub time_string
