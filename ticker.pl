@@ -12,6 +12,8 @@ use IO::File;
 use POSIX;
 use FindBin;
 
+use IO::Socket;
+
 ######################################################################
 #   Array  allowing  us to control the order and frequency of pages  #
 #   (per tick == minute)					     #
@@ -37,6 +39,7 @@ my $npages = scalar(keys(%page_sched));
 #   Command line switches.					      #
 #######################################################################
 my %opts = (
+	port => 22222,
 	tmp => "/dev/shm",
 	);
 
@@ -54,6 +57,7 @@ my $status_pid;
 my $web_pid;
 my $scr_pix_width = 0;
 my $scr_pix_height = 0;
+my $sock;
 
 $SIG{INT} = sub { write_pidfile(1); exit(0); };
 
@@ -97,7 +101,9 @@ sub clean_text
 
 sub display_image
 {	my $fn = shift;
-	my %opts = @_;
+	my %iopts = @_;
+
+	my $fn2 = quote_fn($fn);
 
 	# Check we are currently the active console.
 	my $vt = `fgconsole 2>/dev/null`;
@@ -112,12 +118,12 @@ sub display_image
 			system("cat /dev/fb0 > $opts{tmp}/screendump");
 		}
 
-		if ($opts{do_scroll}) {
-			system("$fb_prog -delay 50 -scroll -scroll_y_incr 3 -q '$fn' $opts{x} $opts{y}");
-		} elsif ($opts{multimage}) {
-			system("$fb_prog -effects -q '$fn' $opts{x} $opts{y}");
+		if ($iopts{do_scroll}) {
+			system("$fb_prog -delay 50 -scroll -scroll_y_incr 3 -q -x $opts{x} -y $opts{y} '$fn2'");
+		} elsif ($iopts{multimage}) {
+			system("$fb_prog -effects -q -x $iopts{x} -y $iopts{y} '$fn2'");
 		} else {
-			system("$fb_prog -effects -stretch -q '$fn'");
+			system("$fb_prog -effects -stretch -q '$fn2'");
 		}
 
 		my $title = $fn;
@@ -137,7 +143,7 @@ sub display_image
 	if (-x "/usr/bin/img2txt" && $fn) {
 		my $w = $columns - 1;
 		my $h = $rows - 1;
-		system("/usr/bin/img2txt -W $w -H $h '$fn'");
+		system("/usr/bin/img2txt -W $w -H $h '$fn2'");
 		return;
 	}
 	pr("(No images found to display)\n");
@@ -170,7 +176,7 @@ sub display_pictures
 	}
 
 	if (int(rand(4)) == 1 && -x $fb_prog) {
-		system("$fb_prog -montage -delay 1 -f $dir/index.log -num 200 -rand");
+		system("$fb_prog -montage -delay 1 -f $dir/index.log -num 300 -rand");
 		return;
 	}
 
@@ -209,6 +215,34 @@ sub display_pictures
 		last if $num == 1;
 		last if do_sleep(10);
 		$iopts{x} += 600; # HACK: should be by img width
+	}
+}
+
+sub do_admin
+{
+	my $client = $sock->accept();
+	return if !$client;
+	my $req = '';
+	eval {
+		local $SIG{ALRM} = sub {};
+		alarm(5);
+		sysread($client, $req, 4096);
+		alarm(0);
+		};
+	if ($@) {
+		my ($hname) = gethostbyaddr($client->peerhost(), AF_INET) || 'unknown';
+		print time_string() . "Connection ",
+			$client->peerhost() . ":" . $client->peerport() . " $hname - timed out reading request\n";
+		return;
+	}
+
+	return if !$req;
+
+	print time_string() . "Admin: $req\n";
+
+	if ($req =~ /^page (\d+)/) {
+		$opts{page} = $1;
+		return;
 	}
 }
 
@@ -541,6 +575,7 @@ sub main
 		'debug',
 		'help',
 		'page=s',
+		'port=s',
 		'ppid=s',
 		'notime',
 		'tmp=s',
@@ -632,6 +667,17 @@ sub do_ticker
 	my %seen_title;
 
 	mkdir("$ENV{HOME}/.rss/ticker", 0755);
+
+	###############################################
+	#   Create listening port if defined.	      #
+	###############################################
+	if ($opts{port}) {
+		$sock = IO::Socket::INET->new (
+		   LocalPort => $opts{port},
+		   Type      => SOCK_STREAM,
+		   ReuseAddr => 1,
+		   Listen    => 10);
+	}
 
 	###############################################
 	#   We  display  other pages, other than raw  #
@@ -791,6 +837,8 @@ sub do_ticker
 			}
 
 			next if $ev == 0;
+
+			$action ||= '';
 
 			if ($action eq 'top-left' || $action eq 'top-right') {
 				do_history(-1);
@@ -1203,7 +1251,7 @@ sub ev_check
 {
 	check_executable();
 
-	return -1 if !$opts{touchpad};
+#	return -1 if !$opts{touchpad};
 
 	###############################################
 	#   Ubuntu 64b edition will have a different  #
@@ -1225,11 +1273,12 @@ sub ev_check
 	if (!$ev_fh) {
 		$ev_fh = new FileHandle($ev_device);
 	}
-	return -1 if !$ev_fh;
+#	return -1 if !$ev_fh;
 
 	my $bits = '';
-	vec($bits, $ev_fh->fileno(), 1) = 1;
+	vec($bits, $ev_fh->fileno(), 1) = 1 if $ev_fh;
 	vec($bits, STDIN->fileno(), 1) = 1;
+	vec($bits, $sock->fileno(), 1) = 1 if $sock;
 
 	my $t = 1;
 	my $x = 0;
@@ -1243,12 +1292,19 @@ sub ev_check
 		return 0 if !$n;
 
 		my $s;
+		if ($sock && vec($rbits, $sock->fileno(), 1)) {
+			do_admin();
+			return 1;
+		}
+
 		if (vec($rbits, STDIN->fileno(), 1)) {
 			if (sysread(STDIN, $s, 1)) {
 				return (1, "enter", 0, 0);
 			}
 			next;
 		}
+
+		next if !$ev_fh;
 
 		$t = 0.1;
 
@@ -1311,6 +1367,13 @@ sub index_dir
 	system("find $dir -follow -type f | sort > $dir/index.log");
 }
 
+sub quote_fn
+{	my $fn = shift;
+	$fn =~ s/'/\\'/g;
+
+	return $fn;
+}
+
 my $output_fh;
 sub pr
 {
@@ -1361,14 +1424,18 @@ sub read_rss_config
 	my $bin = "$FindBin::RealBin";
 	my $fn;
 
-	foreach my $f ("$ENV{HOME}/.rss/rss_config.cfg", "$bin/rss_config.cfg") {
-		if (-f $f) {
-			$fn = $f;
-			last;
-		}
+	foreach my $f (
+		"$bin/rss_config.cfg",
+		"$ENV{HOME}/.rss/rss_config.cfg", 
+		) {
+		read_rss_config2($f);
 	}
+}
+sub read_rss_config2
+{	my $fn = shift;
+
 	if (!$fn) {
-		print "no rss_config.cfg found\n";
+		#print "no rss_config.cfg found\n";
 		return;
 	}
 
