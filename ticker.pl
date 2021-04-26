@@ -244,6 +244,10 @@ sub do_admin
 		$opts{page} = $1;
 		return;
 	}
+	if ($req =~ /^clear$/) {
+		delete($opts{page});
+		return;
+	}
 }
 
 sub do_glob
@@ -1526,8 +1530,7 @@ sub spawn
 	my $ret = system($cmd);
 	return if $ret == 0;
 
-	print "failed command:\n";
-	print "  $cmd\n"
+	pr("failed command: $cmd\n");
 }
 
 sub time_string

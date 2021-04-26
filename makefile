@@ -20,6 +20,7 @@ release:
 	v=`expr $$v + 1` ; \
 	v=`printf %04d $$v` ; \
 	echo $$v > version.txt ; \
+	git commit -m "version $$v" . ; \
 	label=`date +%Y%m%d-$$v` ; \
 	fn=$(HOME)/release/rss/rss-$$label.tar.gz ; \
 	tar czf $$fn --exclude=bin --exclude=.git . ; \
