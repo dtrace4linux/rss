@@ -19,7 +19,7 @@ use IO::Socket;
 #   (per tick == minute)					     #
 ######################################################################
 my %page_sched = (
-	0  => { freq => 0,    title => "News topics"},
+	0  => { freq => 0,    title => "Headlines"},
 	1  => { freq => 60,   title => "Articles"},
 	2  => { freq => 600,  title => "Calendar"},
 	3  => { freq => 1750, title => "Reminder"},
@@ -58,6 +58,7 @@ my $web_pid;
 my $scr_pix_width = 0;
 my $scr_pix_height = 0;
 my $sock;
+my @admin_queue;
 
 $SIG{INT} = sub { write_pidfile(1); exit(0); };
 
@@ -241,14 +242,44 @@ sub do_admin
 
 	print time_string() . "Admin: $req\n";
 
-	if ($req =~ /^page (\d+)/) {
-		$opts{page} = $1;
-		return;
-	}
 	if ($req =~ /^clear$/) {
+		@admin_queue = ();
 		delete($opts{page});
 		return;
 	}
+	my %info;
+	if ($req =~ /^page (\d+)/) {
+		$info{cmd} = 'page';
+		$info{n} = $1;
+		push @admin_queue, \%info;
+		return;
+	}
+
+	if ($req =~ /^ppage (\d+)/) {
+		$opts{page} = $1;
+		return;
+	}
+
+	if ($req =~ /^next/) {
+		return;
+	}
+
+	$req = (split(" ", $req))[0];
+	return if !$req;
+	foreach my $t (keys(%page_sched)) {
+		my $t1 = $page_sched{$t}->{title};
+		foreach my $w (split(/[:\/ ]+/, $t1)) {
+			if (lc($req) eq lc($w)) {
+				$info{cmd} = 'page';
+				$info{n} = $t;
+				print "Matched: '$req' with: $t1\n";
+				push @admin_queue, \%info;
+				return;
+			}
+		}
+	}
+
+	print $sock "Command '$req' not understood\n";
 }
 
 sub do_glob
@@ -644,6 +675,11 @@ sub sched_page
 		return $cur_page;
 	}
 
+	if (defined($admin_queue[0]) && $admin_queue[0]->{cmd} eq 'page') {
+		my $info = shift @admin_queue;
+		return $info->{n};
+	}
+
 	for (my $i = $npages - 1; $i > 0; $i--) {
 		if (!defined($page_sched{$i}{last_time})) {
 			$page_sched{$i}{last_time} = time();
@@ -795,7 +831,7 @@ sub do_ticker
 			do_page5_help();
 		} elsif ($page == 6) {
 			do_page6_status();
-		} elsif ($page == 7 && !$opts{enable_news_scraping}) {
+		} elsif ($page == 7 && $opts{enable_news_scraping}) {
 			do_page7_news();
 		} elsif ($page == 8) {
 			do_page8_photos();
