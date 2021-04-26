@@ -39,6 +39,7 @@ int	scroll_y_incr = 50;
 int	info;
 int	num;
 int	page = -1;
+int	seq_flag;
 char	*ofname;
 long	delay = 100;
 float	xfrac = 1.0;
@@ -130,10 +131,19 @@ display_file(char *fname, int do_wait)
 	} else if (fullscreen) {
 		fullscreen_display(fbp, img, 1.0);
 	} else if (montage) {
+static int x, y;
 		x_arg = (rand() / (float) RAND_MAX) * vinfo.xres;
 		y_arg = (rand() / (float) RAND_MAX) * vinfo.yres;
 		w_arg = (rand() / (float) RAND_MAX) * 80 + 10;
 		h_arg = (rand() / (float) RAND_MAX) * 80 + 10;
+		if (seq_flag) {
+			x_arg = x;
+			y_arg = y;
+			if ((x += w_arg) >= vinfo.xres) {
+				x = 0;
+				y += 30;
+			}
+		}
 		shrink_display(fbp, img);
 	} else if (shrink) {
 		shrink_display(fbp, img);
@@ -231,6 +241,10 @@ do_switches(int argc, char **argv)
 			}
 			if (strcmp(cp, "rand") == 0) {
 				rand_flag = 1;
+				break;
+			}
+			if (strcmp(cp, "seq") == 0) {
+				seq_flag = 1;
 				break;
 			}
 			if (strcmp(cp, "shrink") == 0) {
@@ -595,6 +609,7 @@ usage()
 	fprintf(stderr, "   -rand              Randomize files\n");
 	fprintf(stderr, "   -scroll            Scroll image\n");
 	fprintf(stderr, "   -scroll_y_incr NN  When using -scroll, scroll by this much.\n");
+	fprintf(stderr, "   -seq               When doing montage, display l->r\n");
 	fprintf(stderr, "   -stretch           Stretch but dont change aspect ratio\n");
 	fprintf(stderr, "   -xfrac N.NN        Shrink image on the x-axis\n");
 	fprintf(stderr, "   -yfrac N.NN        Shrink image on the y-axis\n");

@@ -176,7 +176,8 @@ sub display_pictures
 	}
 
 	if (int(rand(4)) == 1 && -x $fb_prog) {
-		system("$fb_prog -montage -delay 1 -f $dir/index.log -num 300 -rand");
+		my $seq = int(rand(2)) == 0 ? "-seq" : "";
+		system("$fb_prog -montage $seq -f $dir/index.log -num 300 -rand");
 		return;
 	}
 
