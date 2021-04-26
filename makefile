@@ -21,6 +21,7 @@ release:
 	v=`printf %04d $$v` ; \
 	echo $$v > version.txt ; \
 	git commit -m "version $$v" . ; \
+	git tag "version-$$v" ; \
 	label=`date +%Y%m%d-$$v` ; \
 	fn=$(HOME)/release/rss/rss-$$label.tar.gz ; \
 	tar czf $$fn --exclude=bin --exclude=.git . ; \
