@@ -372,6 +372,13 @@ int main(int argc, char **argv)
         return -4;
     }
 
+    /***********************************************/
+    /*   Clear screen if doing montage.		   */
+    /***********************************************/
+    if (montage) {
+    	memset(fbp, 0x00, screensize);
+    }
+
     if (f_flag) {
     	process_file();
     } else {
