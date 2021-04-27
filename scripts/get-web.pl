@@ -85,7 +85,7 @@ sub main
 		get_pages();
 		last if $opts{once};
 
-		print time_string() . "Sleeping for $opts{sleep}s...\n";
+		print time_string() . "[$$] Sleeping for $opts{sleep}s...\n";
 
 		for (my $i = 0; $i < $opts{sleep}; $i++) {
 			exit(0) if $opts{ppid} && ! -d "/proc/$opts{ppid}";
