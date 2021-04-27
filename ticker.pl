@@ -642,6 +642,7 @@ sub main
 	if (!defined($opts{page})) {
 		if (($web_pid = fork()) == 0) {
 			open(STDOUT, ">>/tmp/get-web.log");
+			open(STDERR, ">>&STDOUT");
 			exec "$FindBin::RealBin/scripts/get-web.pl -w $scr_pix_width " .
 				"-ppid $pid";
 			exit(0);

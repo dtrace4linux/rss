@@ -49,6 +49,14 @@ my %opts = (
 	h => 1600,
 	);
 
+sub check_parent
+{
+	if ($opts{ppid} && ! -d "/proc/$opts{ppid}") {
+		print time_string() . "Parent died .. terminating\n";
+		exit(0);
+	}
+}
+
 sub main
 {
 	Getopt::Long::Configure('require_order');
@@ -65,7 +73,9 @@ sub main
 
 	usage(0) if $opts{help};
 
-	my $cmd = shift @ARGV;
+	delete($ENV{DISPLAY});
+
+	my $cmd = shift @ARGV || '';
 	if ($cmd eq 'reap') {
 		reap_orphans();
 		exit(0);
@@ -88,7 +98,7 @@ sub main
 		print time_string() . "[$$] Sleeping for $opts{sleep}s...\n";
 
 		for (my $i = 0; $i < $opts{sleep}; $i++) {
-			exit(0) if $opts{ppid} && ! -d "/proc/$opts{ppid}";
+			check_parent();
 			sleep(1);
 		}
 
@@ -117,25 +127,28 @@ sub do_clean
 sub get_pages
 {
 	foreach my $w (@pages) {
+		check_parent();
+
 		my $fn = site_to_fn($w);
 
 		my $ofn = "$opts{dir}/$fn.png";
 
 		$ENV{HOME} = "/tmp";
-		my $cmd = "timeout $opts{timeout}s firefox --profile $opts{headless} " .
+		my $cmd = "timeout $opts{timeout}s firefox " .
 			"--window-size $opts{w},$opts{h} " .
-			"-screenshot $ofn.tmp $w >/dev/null 2>&1";
+			"--screenshot $ofn.tmp $w";
 		print time_string() . "$cmd\n";
 		system($cmd);
-		if (-f "$ofn.tmp") {
-			my $d = strftime("%Y.%m", localtime());
-			mkdir("$opts{dir}/$d", 0755);
-			my $fn1 = strftime("%Y%m%d-%H-$fn", localtime());
-			rename($ofn, "$opts{dir}/$d/$fn1.png");
-			rename("$ofn.tmp", $ofn);
+		if (! -f "$ofn.tmp") {
+			print time_string() . "Failed to get: $ofn.tmp\n";
+			next;
 		}
 
-
+		my $d = strftime("%Y.%m", localtime());
+		mkdir("$opts{dir}/$d", 0755);
+		my $fn1 = strftime("%Y%m%d-%H-$fn", localtime());
+		rename($ofn, "$opts{dir}/$d/$fn1.png");
+		rename("$ofn.tmp", $ofn);
 	}
 }
 
@@ -143,6 +156,8 @@ sub reap_orphans
 {
 	foreach my $p (glob("/proc/[1-9]*/status")) {
 		my $fh = new FileHandle("$p");
+		next if !$fh;
+
 		my $name = <$fh>;
 		chomp($name);
 		$name =~ s/^Name:\s*//;
@@ -188,9 +203,15 @@ sub usage
 
 	print $msg if $msg;
 
+	my $p = "  " . join("\n    ", @pages);
+
 	print <<EOF;
-get-web.pl - use headless browser to capture certain web sites
+get-web.pl - use headless browser to capture web sites
 Usage:
+
+  The following web sites are screenshotted:
+
+  $p
 
 Switches:
 
