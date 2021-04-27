@@ -178,7 +178,7 @@ sub display_pictures
 
 	if (int(rand(4)) == 1 && -x $fb_prog) {
 		my $seq = int(rand(2)) == 0 ? "-seq" : "";
-		system("$fb_prog -montage $seq -f $dir/index.log -num 300 -rand");
+		spawn("$fb_prog -montage $seq -f $dir/index.log -num 300 -rand");
 		return;
 	}
 
@@ -864,7 +864,7 @@ sub do_ticker
 		rename("$fn.tmp", $fn);
 
 		if (time() > $t_copy + 180 && $opts{copy_script}) {
-			system("$opts{copy_script} $fn");
+			spawn("$opts{copy_script} $fn");
 			$t_copy = time();
 		}
 
@@ -1034,7 +1034,7 @@ sub do_page2_calendar
 	}
 	pr("\n");
 
-	system("$FindBin::Bin/scripts/weather.pl");
+	spawn("$FindBin::Bin/scripts/weather.pl");
 
 	exit(0) if $ENV{DOW_EXIT};
 }
@@ -1062,7 +1062,7 @@ sub do_page4_hello
 		}
 	}
 	my $m = $msg[rand(scalar(@msg))];
-	system("toilet -t --gay $m");
+	spawn("toilet -t --gay $m");
 	print $txt;
 
 }
