@@ -1420,12 +1420,18 @@ sub pr
 {
 	my $str = join("", @_);
 
+	pr2($str);
+	print $output_fh $str;
+}
+sub pr2
+{
+	my $str = join("", @_);
+
 	if (!$output_fh) {
 		$output_fh = new FileHandle(">>/tmp/rss_console.log");
 		$output_fh->autoflush();
 	}
 
-	print $str;
 	print $output_fh $str;
 }
 sub read_article
@@ -1564,6 +1570,7 @@ sub reset_fb
 sub spawn
 {	my $cmd = shift;
 
+	pr("exec: $cmd\n");
 	my $ret = system($cmd);
 	return if $ret == 0;
 
