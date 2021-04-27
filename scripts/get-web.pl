@@ -65,6 +65,12 @@ sub main
 
 	usage(0) if $opts{help};
 
+	my $cmd = shift @ARGV;
+	if ($cmd eq 'reap') {
+		reap_orphans();
+		exit(0);
+	}
+
 	if ($opts{clean}) {
 		do_clean();
 		exit(0);
@@ -72,6 +78,8 @@ sub main
 
 	mkdir($opts{dir}, 0755);
 	mkdir($opts{headless}, 0755);
+
+	reap_orphans();
 
 	while (1) {
 		get_pages();
@@ -128,6 +136,30 @@ sub get_pages
 		}
 
 
+	}
+}
+
+sub reap_orphans
+{
+	foreach my $p (glob("/proc/[1-9]*/status")) {
+		my $fh = new FileHandle("$p");
+		my $name = <$fh>;
+		chomp($name);
+		$name =~ s/^Name:\s*//;
+		next if $name !~ /firefox/;
+
+		while (<$fh>) {
+			chomp;
+			next if !/^PPid:\s*(\d+)/;
+			my $ppid = $1;
+
+			last if $ppid ne 1;
+
+			my $pid = (split("/", $p))[2];
+			print time_string() . "Killing orphan firefox: $pid ppid=$ppid\n";
+			kill('KILL', $pid);
+			last;
+		}
 	}
 }
 

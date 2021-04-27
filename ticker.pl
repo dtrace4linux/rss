@@ -115,9 +115,7 @@ sub display_image
 			return;
 		}
 		# Save screen before
-		if ( ! -f "$opts{tmp}/screendump" && -e "/dev/fb0") {
-			system("cat /dev/fb0 > $opts{tmp}/screendump");
-		}
+		save_screendump();
 
 		if ($iopts{do_scroll}) {
 			spawn("$fb_prog -delay 50 -scroll -scroll_y_incr 3 -q -x $opts{x} -y $opts{y} \"$fn2\"");
@@ -178,6 +176,7 @@ sub display_pictures
 
 	if (int(rand(4)) == 1 && -x $fb_prog) {
 		my $seq = int(rand(2)) == 0 ? "-seq" : "";
+		save_screendump();
 		spawn("$fb_prog -montage $seq -f $dir/index.log -num 300 -rand");
 		return;
 	}
@@ -642,8 +641,9 @@ sub main
 	my $pid = $$;
 	if (!defined($opts{page})) {
 		if (($web_pid = fork()) == 0) {
+			open(STDOUT, ">>/tmp/get-web.log");
 			exec "$FindBin::RealBin/scripts/get-web.pl -w $scr_pix_width " .
-				"-ppid $pid >/tmp/get-web.log";
+				"-ppid $pid";
 			exit(0);
 		}
 	}
@@ -1566,6 +1566,12 @@ sub reset_fb
 		system("cat $opts{tmp}/screendump > /dev/fb0");
 		unlink("$opts{tmp}/screendump");
 		printf("\033[?25h");
+	}
+}
+sub save_screendump
+{
+	if ( ! -f "$opts{tmp}/screendump" && -e "/dev/fb0") {
+		system("cat /dev/fb0 > $opts{tmp}/screendump");
 	}
 }
 
