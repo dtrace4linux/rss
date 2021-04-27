@@ -1275,7 +1275,7 @@ sub do_page11_ascii_art
 	my @lst = ("ascii-art.pl", "fortune.pl", "pi.pl",
 		"scrabble.sh");
 	my $n = int(rand(@lst));
-	system("$FindBin::RealBin/scripts/$lst[$n]");
+	spawn("$FindBin::RealBin/scripts/$lst[$n]");
 }
 
 ######################################################################
