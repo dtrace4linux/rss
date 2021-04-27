@@ -1421,7 +1421,7 @@ sub pr
 	my $str = join("", @_);
 
 	pr2($str);
-	print $output_fh $str;
+	print $str;
 }
 sub pr2
 {
@@ -1570,7 +1570,7 @@ sub reset_fb
 sub spawn
 {	my $cmd = shift;
 
-	pr("exec: $cmd\n");
+	pr2("exec: $cmd\n");
 	my $ret = system($cmd);
 	return if $ret == 0;
 
