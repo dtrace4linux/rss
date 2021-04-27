@@ -25,7 +25,7 @@ my %page_sched = (
 	3  => { freq => 1750, title => "Reminder"},
 	4  => { freq => 3600, title => "Hello"},
 	5  => { freq => 8000, title => "Help"},
-	6  => { freq => 600,  title => "Status" },
+	6  => { freq => 3600,  title => "Status" },
 
 	7  => { freq => 1000, title => "News: front page"},
 	8  => { freq => 1200, title => "Photos",},
@@ -1191,6 +1191,8 @@ sub do_page6_status
 			$iface{$n}{ip} || "(noip)");
 	}
 	pr("$s\n");
+
+	pr("\n");
 
 	pr("Sites:\n");
 
