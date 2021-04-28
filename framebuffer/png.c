@@ -116,6 +116,8 @@ read_png_file(char* file_name)
 	}
 	free(row_pointers);
 
+	png_destroy_info_struct(png_ptr, &info_ptr);
+
 	return lpNewImage;
 }
 
@@ -167,6 +169,8 @@ void write_png_file(char* file_name)
                 abort_("[write_png_file] Error during end of write");
 
         png_write_end(png_ptr, NULL);
+
+	png_destroy_info_struct(png_ptr, &info_ptr);
 
         /* cleanup heap allocation */
         for (y=0; y<height; y++)

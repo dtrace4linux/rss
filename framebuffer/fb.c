@@ -26,8 +26,16 @@ https://github.com/godspeed1989/fbv/blob/master/main.c
 #include <time.h>
 #include "fb.h"
 
+enum ctypes { C_NONE, C_DELAY, C_EXIT };
+
+typedef struct cmd_t {
+	int	type;
+	int	x, y, w, h;
+	} cmd_t;
+
 int quiet;
 char	*f_flag;
+char	*script_file;
 int fullscreen;
 int	rand_flag;
 int	stretch;
@@ -41,7 +49,7 @@ int	num;
 int	page = -1;
 int	seq_flag;
 char	*ofname;
-long	delay = 100;
+long	delay = 1000;
 float	xfrac = 1.0;
 float	yfrac = 1.0;
 int	x_arg = 0, y_arg = 0;
@@ -56,9 +64,10 @@ long int screensize = 0;
 /**********************************************************************/
 /*   Prototypes.						      */
 /**********************************************************************/
+cmd_t	*next_script_cmd(void);
 void process_file(void);
 void shrink_display(char *fbp, struct imgRawImage *img);
-void display_file(char *fname, int do_wait);
+int	display_file(char *fname, int do_wait);
 void normal_display(char *fbp, struct imgRawImage *img, int x, int y, int w, int h, int x1, int y1);
 void fullscreen_display(char *fbp, struct imgRawImage *img, double f);
 void stretch_display(char *fbp, struct imgRawImage *img);
@@ -66,7 +75,7 @@ void put_pixel(char *fbp, int r, int g, int b);
 void	usage(void);
 int	write_jpeg(char *ofname, unsigned char *img, int w, int h, int depth);
 
-void
+int
 display_file(char *fname, int do_wait)
 {	int	fd;
 	char	buf[BUFSIZ];
@@ -74,11 +83,11 @@ display_file(char *fname, int do_wait)
 
 	if ((fd = open(fname, O_RDONLY)) < 0) {
 		printf("fb: Cannot open %s - %s\n", fname, strerror(errno));
-		return;
+		return 1;
 	}
 	if (read(fd, buf, 4) != 4) {
 		printf("File too short - %s\n", fname);
-		return;
+		return 1;
 	}
 	close(fd);
 
@@ -93,14 +102,14 @@ display_file(char *fname, int do_wait)
 			exit(1);
 		}
 	} else {
-		return;
+		return 1;
 //		printf("Cannot determine image format: %s\n", fname);
 //		exit(1);
 	}
 
 	if (info) {
 		printf("Image: %ldx%ld\n", img->width, img->height);
-		return;
+		return 1;
 	}
 
     if (ofname) {
@@ -130,6 +139,19 @@ display_file(char *fname, int do_wait)
 		}
 	} else if (fullscreen) {
 		fullscreen_display(fbp, img, 1.0);
+	} else if (script_file) {
+		cmd_t *cmdp;
+
+		if ((cmdp = next_script_cmd()) != NULL) {
+			if (cmdp->type == C_EXIT)
+				return 0;
+
+			x_arg = cmdp->x;
+			y_arg = cmdp->y;
+			w_arg = cmdp->w;
+			h_arg = cmdp->h;
+			shrink_display(fbp, img);
+		}
 	} else if (montage) {
 static int x, y;
 		x_arg = (rand() / (float) RAND_MAX) * vinfo.xres;
@@ -139,7 +161,7 @@ static int x, y;
 		if (seq_flag) {
 			x_arg = x;
 			y_arg = y;
-			if ((x += w_arg) >= vinfo.xres) {
+			if ((x += w_arg) >= (int) vinfo.xres) {
 				x = 0;
 				y += 30;
 			}
@@ -169,16 +191,14 @@ static int x, y;
 	free(img);
 
 	if (!do_wait)
-		return;
+		return 1;
 
     	struct timeval tval;
 	tval.tv_sec = 0;
 	tval.tv_usec = 0;
-	if (montage)
-		tval.tv_usec = delay * 1000;
-	else
-		tval.tv_sec = 1;
+	tval.tv_usec = delay * 1000;
 	select(0, NULL, NULL, NULL, &tval);
+	return 1;
 }
 
 int 
@@ -241,6 +261,12 @@ do_switches(int argc, char **argv)
 			}
 			if (strcmp(cp, "rand") == 0) {
 				rand_flag = 1;
+				break;
+			}
+			if (strcmp(cp, "script") == 0) {
+				if (++i >= argc)
+					usage();
+				script_file = argv[i];
 				break;
 			}
 			if (strcmp(cp, "seq") == 0) {
@@ -406,10 +432,10 @@ fullscreen_display(char *fbp, struct imgRawImage *img, double f)
 	float yfrac = vinfo.yres / (float) img->height;
 //printf("frac=%f %f\n", xfrac, yfrac);
 
-	for (y = 0; y < vinfo.yres; y++) {
+	for (y = 0; y < (int) vinfo.yres; y++) {
 	        location = (vinfo.yoffset + y) * finfo.line_length +
 			vinfo.xoffset * (vinfo.bits_per_pixel / 8);
-		for (x = 0; x < vinfo.xres; x++) {
+		for (x = 0; x < (int) vinfo.xres; x++) {
 			unsigned char *data = &img->lpData[
 				(int) (y / yfrac) * img->width * 3 +
 				(int) (x / xfrac) * 3];
@@ -417,6 +443,76 @@ fullscreen_display(char *fbp, struct imgRawImage *img, double f)
 			put_pixel(fbp, data[0] * f, data[1] * f, data[2] * f);
 		}
 	}
+}
+
+cmd_t *
+next_script_cmd()
+{	static cmd_t c;
+static FILE *fp;
+	char	buf[BUFSIZ];
+# define MAX_ARGS 16
+	char	*args[MAX_ARGS];
+	char	*cp;
+static int line = 0;
+
+	if (fp == NULL) {
+		if ((fp = fopen(script_file, "r")) == NULL) {
+			perror(script_file);
+			exit(1);
+		}
+	}
+
+	while (1) {
+		int	a = 0;
+
+		line++;
+		if (fgets(buf, sizeof buf, fp) == NULL) {
+			printf("[EOF]\n");
+			c.type = C_EXIT;
+			return &c;
+		}
+		printf("%s", buf);
+		if (*buf && buf[strlen(buf) - 1] == '\n') {
+			buf[strlen(buf) - 1] = '\0';
+		}
+
+		if (*buf == '\0' || *buf == ' ' || *buf == '#' || *buf == '\n')
+			continue;
+
+		for (cp = strtok(buf, " "); cp; cp = strtok(NULL, " ")) {
+			if (a < MAX_ARGS) {
+				args[a++] = cp;
+			}
+		}
+		if (strcmp(args[0], "draw") == 0 && a >= 5) {
+			c.x = atoi(args[1]);
+			c.y = atoi(args[2]);
+			c.w = atoi(args[3]);
+			c.h = atoi(args[4]);
+			return &c;
+		}
+		if (strcmp(args[0], "clear") == 0) {
+		    	memset(fbp, 0x00, screensize);
+			continue;
+		}
+		if (strcmp(args[0], "delay") == 0 && a >= 1) {
+			delay = atoi(args[1]);
+			continue;
+		}
+		if (strcmp(args[0], "number") == 0 && a >= 1) {
+		    	num = atoi(argv[1]);
+			continue;
+		}
+		if (strcmp(args[0], "sleep") == 0 && a >= 1) {
+			sleep(atoi(args[1]));
+			continue;
+		}
+
+		printf("%s:%d: bad command - not recognized '%s'\n",
+			script_file, line, args[0]);
+	}
+
+	return &c;
 }
 
 void 
@@ -431,7 +527,7 @@ normal_display(char *fbp, struct imgRawImage *img, int x, int y, int w, int h, i
 //printf("%d %d w=%d h=%d\n", x, y, w, h);
 
 	for (y0 = y; y0 < y + h; y0++) {
-		if (y0 - y >= img->height)
+		if (y0 - y >= (int) img->height)
 			break;
 
 	        location = 
@@ -440,7 +536,7 @@ normal_display(char *fbp, struct imgRawImage *img, int x, int y, int w, int h, i
 
 		unsigned char *data = &img_data[((y0-y) * img->width + x) * 3];
 	        for (x0 = x; x0 < x + w; x0++) {
-		    if (x0 - x >= img->width) {
+		    if (x0 - x >= (int) img->width) {
 			break;
 		    }
 		    if (location >= screensize) {
@@ -490,7 +586,9 @@ process_file()
 
 	for (i = 0; i < n; i++) {
 
-		display_file(names[i], 1);
+		if (display_file(names[i], 1) == 0)
+			break;
+
 		free(names[i]);
 		if (num && --num == 0)
 			break;
@@ -508,8 +606,8 @@ shrink_display(char *fbp, struct imgRawImage *img)
 
 	width *= xfrac;
 
-	int vwidth = w_arg < vinfo.xres ? w_arg : vinfo.xres;
-	int vheight = h_arg < vinfo.yres ? h_arg : vinfo.yres;
+	int vwidth = w_arg < (int) vinfo.xres ? w_arg : (int) vinfo.xres;
+	int vheight = h_arg < (int) vinfo.yres ? h_arg : (int) vinfo.yres;
 
 	xfrac = img->width / (float) vwidth;
 	yfrac = img->height / (float) vheight;
@@ -525,7 +623,7 @@ shrink_display(char *fbp, struct imgRawImage *img)
 	        location = (y_arg + vinfo.yoffset + y) * finfo.line_length +
 			(x_arg + vinfo.xoffset) * (vinfo.bits_per_pixel / 8);
 		for (x = 0; x < vwidth; x++) {
-			if (x > vinfo.xres || location >= screensize)
+			if (x > (int) vinfo.xres || location >= screensize)
 				break; 
 			if (x < x0 || x > x0 + width)
 				put_pixel(fbp, 0, 0, 0);
@@ -557,10 +655,10 @@ stretch_display(char *fbp, struct imgRawImage *img)
 //printf("frac=%f %f\n", xfrac, yfrac);
 //printf("x0=%d xfrac=%.2f yfrac=%.2f\n", x0, xfrac, yfrac);
 
-	for (y = 0; y < vinfo.yres; y++) {
+	for (y = 0; y < (int) vinfo.yres; y++) {
 	        location = (vinfo.yoffset + y) * finfo.line_length +
 			vinfo.xoffset * (vinfo.bits_per_pixel / 8);
-		for (x = 0; x < vinfo.xres; x++) {
+		for (x = 0; x < (int) vinfo.xres; x++) {
 			if (x < x0 || x > x0 + width)
 				put_pixel(fbp, 0, 0, 0);
 			else {
@@ -614,6 +712,7 @@ usage()
 	fprintf(stderr, "   -num NN            Only process first NN images\n");
 	fprintf(stderr, "   -page N            Display page/screen N of the image\n");
 	fprintf(stderr, "   -rand              Randomize files\n");
+	fprintf(stderr, "   -script <file>     Script file to do complex layouts\n");
 	fprintf(stderr, "   -scroll            Scroll image\n");
 	fprintf(stderr, "   -scroll_y_incr NN  When using -scroll, scroll by this much.\n");
 	fprintf(stderr, "   -seq               When doing montage, display l->r\n");
