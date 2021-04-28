@@ -323,7 +323,7 @@ sub do_status_line
 	my $fh = new FileHandle("/proc/loadavg");
 	my $avg = <$fh>;
 	$avg =~ s/ .*//;
-	my $s = sprintf "\033[1;%dH", $columns - 20;
+	my $s = sprintf "\033[1;%dH", $columns - 18;
 
 	my $c;
 	if ($avg >= 1) {
@@ -372,7 +372,7 @@ sub do_status_line
 
 	$s .= " $info{temp}" if defined($info{temp});
 
-	$s .= sprintf("\033[$row;%dH", $columns - 18);
+	$s .= sprintf("\033[$row;%dH", $columns - 20);
 	if (!$info{gw}) {
 		$s .= sprintf("\033[1;41;37m Net ");
 	} else {
