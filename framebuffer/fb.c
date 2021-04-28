@@ -500,7 +500,7 @@ static int line = 0;
 			continue;
 		}
 		if (strcmp(args[0], "number") == 0 && a >= 1) {
-		    	num = atoi(argv[1]);
+		    	num = atoi(args[1]);
 			continue;
 		}
 		if (strcmp(args[0], "sleep") == 0 && a >= 1) {
