@@ -372,7 +372,7 @@ sub do_status_line
 
 	$s .= " $info{temp}" if defined($info{temp});
 
-	$s .= sprintf("\033[$row;%dH", $columns - 20);
+	$s .= sprintf("\033[$row;%dH", $columns - 18);
 	if (!$info{gw}) {
 		$s .= sprintf("\033[1;41;37m Net ");
 	} else {
