@@ -112,7 +112,9 @@ read_png_file(char* file_name)
 			*dp++ = *sp++;
 			*sp++;
 		}
+		free(row_pointers[y]);
 	}
+	free(row_pointers);
 
 	return lpNewImage;
 }
