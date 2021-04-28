@@ -483,6 +483,7 @@ sub do_status
 		if ( -x "/usr/bin/vcgencmd") {
 			my $t = `/usr/bin/vcgencmd measure_temp`;
 			chomp($t);
+			$t =~ s/^temp=//;
 			$stats{temp} = $t;
 		}
 
