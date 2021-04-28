@@ -480,8 +480,8 @@ sub do_status
 		###############################################
 		#   Check temperature.			      #
 		###############################################
-		if ( -x "/usr/bin/vgencmd") {
-			my $t = `/usr/bin/vgencmd measure_temp`;
+		if ( -x "/usr/bin/vcgencmd") {
+			my $t = `/usr/bin/vcgencmd measure_temp`;
 			chomp($t);
 			$stats{temp} = $t;
 		}
