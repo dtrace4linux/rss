@@ -370,6 +370,8 @@ sub do_status_line
 		$if_string .= "/$iface{$i}{ssid}" if $iface{$i}{ssid};
 	}
 
+	$s .= " $info{temp}" if defined($info{temp});
+
 	$s .= sprintf("\033[$row;%dH", $columns - 20);
 	if (!$info{gw}) {
 		$s .= sprintf("\033[1;41;37m Net ");
@@ -473,6 +475,15 @@ sub do_status
 			if (/^([^ ]*) .*ESSID:"([^"]*)"/) {
 				$stats{"ssid_$1"} = $2;
 			}
+		}
+
+		###############################################
+		#   Check temperature.			      #
+		###############################################
+		if ( -x "/usr/bin/vgencmd") {
+			my $t = `/usr/bin/vgencmd measure_temp`;
+			chomp($t);
+			$stats{temp} = $t;
 		}
 
 		###############################################
