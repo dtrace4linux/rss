@@ -10,6 +10,7 @@ use FileHandle;
 use Getopt::Long;
 use IO::File;
 use POSIX;
+use FindBin;
 
 #######################################################################
 #   Command line switches.					      #
@@ -18,6 +19,8 @@ my %opts = (
 	dir => "data",
 	);
 my @font;
+my $swidth;
+my $sheight;
 
 sub main
 {
@@ -36,6 +39,13 @@ sub main
 	}
 	$| = 1;
 
+	###############################################
+	#   Get  screen  dimensions  so we can scale  #
+	#   the drawing.			      #
+	###############################################
+	my $s = `$FindBin::Bin/../bin/fb -info`;
+	($swidth, $sheight) = split(/[x,]/, $s);
+
 	if ($opts{test}) {
 		test($opts{test});
 		exit(0);
@@ -46,8 +56,11 @@ sub main
 	gen("draw2.txt", \&gen2);
 
 	# Bogus - we need to find a better way to get pixel fonts
-	read_font("/home/fox/3rd/linux/linux-4.9.9/lib/fonts/font_pearl_8x8.c");
-	gen("draw3.txt", \&gen3);
+	my $ffile = "/home/fox/3rd/linux/linux-4.9.9/lib/fonts/font_pearl_8x8.c";
+	if (-f $ffile) {
+		read_font($ffile);
+		gen("draw3.txt", \&gen3);
+	}
 	gen("draw4.txt", \&gen4);
 	gen("draw5.txt", \&gen5);
 }
@@ -73,8 +86,8 @@ sub gen0
 
 	for (my $sz = 100; $sz < 400; $sz += 50) {
 		print $fh "clear\n";
-		for (my $y = 0; $y < 800; $y += $sz + 10) {
-			for (my $x = 0; $x < 800; $x += $sz + 10) {
+		for (my $y = 0; $y < $sheight; $y += $sz + 10) {
+			for (my $x = 0; $x < $swidth; $x += $sz + 10) {
 				print $fh "draw $x $y $sz $sz\n";
 			}
 		}

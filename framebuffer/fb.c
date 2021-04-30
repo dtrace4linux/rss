@@ -631,7 +631,7 @@ shrink_display(char *fbp, struct imgRawImage *img)
 	        location = (y_arg + vinfo.yoffset + y) * finfo.line_length +
 			(x_arg + vinfo.xoffset) * (vinfo.bits_per_pixel / 8);
 		for (x = 0; x < vwidth; x++) {
-			if (x > (int) vinfo.xres || location >= screensize)
+			if (x + x_arg > (int) vinfo.xres || location >= screensize)
 				break; 
 			if (x < x0 || x > x0 + width)
 				put_pixel(fbp, 0, 0, 0);
