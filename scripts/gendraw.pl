@@ -100,11 +100,14 @@ sub gen1
 
 	for (my $sz = 10; $sz < 400; $sz += 10) {
 		print $fh "clear\n";
-		for (my $x = 0; $x < 800; $x += $sz + 10) {
-			my $fx = ($x / 800.) * 3.14 * 8;
-			my $y = 240 + int(240 * sin($fx));
+		my $n = 0;
+		for (my $x = 0; $x < $swidth; $x += $sz + 10) {
+			my $fx = ($x / $swidth) * 3.14 * 8;
+			my $y = $sheight/2 + int($sheight/2 * sin($fx));
 			print $fh "draw $x $y $sz $sz\n";
+			$n++;
 		}
+		last if $n++ < 4;
 		print $fh "sleep 5\n";
 	}
 }
@@ -116,8 +119,8 @@ sub gen2
 		print $fh "clear\n";
 		my $th = 3.14159 / 8;
 		for (my $i = 0; $i < 16; $i++) {
-			my $x1 = int(150 * cos($i * $th)) + 400;
-			my $y1 = int(150 * sin($i * $th)) + 300;
+			my $x1 = int(150 * cos($i * $th)) + $swidth/2;
+			my $y1 = int(150 * sin($i * $th)) + $sheight/2;
 			print $fh "draw $x1 $y1 $sz $sz\n";
 		}
 		print $fh "sleep 5\n";
