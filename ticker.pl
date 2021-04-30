@@ -182,7 +182,7 @@ sub display_pictures
 		return;
 	}
 	if ($r == 2 && -x $fb_prog) {
-		my @dlst = glob("$FindBin::RealBin/data/data*.txt");
+		my @dlst = glob("$FindBin::RealBin/data/draw*.txt");
 		my $sfile = $dlst[rand(@dlst)];
 		save_screendump();
 		spawn("$fb_prog -script $sfile -f $dir/index.log -rand");
