@@ -54,6 +54,7 @@ float	xfrac = 1.0;
 float	yfrac = 1.0;
 int	x_arg = 0, y_arg = 0;
 int	w_arg = -1, h_arg = -1;
+int	v_flag;
 
 char *fbp = 0;
 struct fb_var_screeninfo vinfo;
@@ -332,6 +333,9 @@ do_switches(int argc, char **argv)
 			  case 'q':
 			  	quiet = 1;
 				break;
+			  case 'v':
+			  	v_flag = 1;
+				break;
 			  default:
 			  	usage();
 				exit(0);
@@ -467,11 +471,15 @@ static int line = 0;
 
 		line++;
 		if (fgets(buf, sizeof buf, fp) == NULL) {
-			printf("[EOF]\n");
+			if (v_flag)
+				printf("[EOF]\n");
 			c.type = C_EXIT;
 			return &c;
 		}
-		printf("%s", buf);
+		if (v_flag) {
+			printf("%s", buf);
+		}
+
 		if (*buf && buf[strlen(buf) - 1] == '\n') {
 			buf[strlen(buf) - 1] = '\0';
 		}
@@ -722,7 +730,7 @@ usage()
 	fprintf(stderr, "   -x NN              Set co-ordinate\n");
 	fprintf(stderr, "   -y NN              Set co-ordinate\n");
 	fprintf(stderr, "   -w NN              Set co-ordinate\n");
-	fprintf(stderr, "   -h NN              Set co-ordinate\n");
+	fprintf(stderr, "   -v                 Verbose; list lines in script files\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Examples:\n");
 	fprintf(stderr, "\n");
