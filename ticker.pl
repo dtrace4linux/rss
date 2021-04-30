@@ -174,10 +174,18 @@ sub display_pictures
 		index_dir($dir);
 	}
 
-	if (int(rand(4)) == 1 && -x $fb_prog) {
+	my $r = int(rand(4));
+	if ($r == 1 && -x $fb_prog) {
 		my $seq = int(rand(2)) == 0 ? "-seq" : "";
 		save_screendump();
 		spawn("$fb_prog -montage $seq -f $dir/index.log -num 300 -rand");
+		return;
+	}
+	if ($r == 2 && -x $fb_prog) {
+		my @dlst = glob("$FindBin::RealBin/data/data*.txt");
+		my $sfile = $dlst[rand(@dlst)];
+		save_screendump();
+		spawn("$fb_prog -script $sfile -f $dir/index.log -rand");
 		return;
 	}
 
