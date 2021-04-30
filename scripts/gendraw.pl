@@ -119,8 +119,8 @@ sub gen2
 		print $fh "clear\n";
 		my $th = 3.14159 / 8;
 		for (my $i = 0; $i < 16; $i++) {
-			my $x1 = int(150 * cos($i * $th)) + $swidth/2;
-			my $y1 = int(150 * sin($i * $th)) + $sheight/2;
+			my $x1 = int($sheight/4 * cos($i * $th)) + $swidth/2;
+			my $y1 = int($sheight/4 * sin($i * $th)) + $sheight/2;
 			print $fh "draw $x1 $y1 $sz $sz\n";
 		}
 		print $fh "sleep 5\n";
@@ -156,21 +156,27 @@ sub gen3
 sub gen4
 {	my $fh = shift;
 
-	for (my $x = 0; $x < 800; $x += 100) {
+	my $right;
+
+	for (my $x = 0; $x < $swidth-100; $x += 100) {
 		print $fh "draw $x 50 50 50\n";
+		$right = $x;
 	}
-	for (my $y = 150; $y < 350; $y += 120) {
+	for (my $y = 150; $y < $sheight-120; $y += 120) {
 		print $fh "draw 0 $y 50 50\n";
 	}
 
-	print $fh "draw 125 125 250 250\n";
-	print $fh "draw 425 125 250 250\n";
-
-	for (my $x = 0; $x < 800; $x += 100) {
-		print $fh "draw $x 400 50 50\n";
+	for (my $y = 125; $y < $sheight-250; $y += 300) {
+		for (my $x = 125; $x +250 < $right; $x += 300) {
+			print $fh "draw $x $y 250 250\n";
+		}
 	}
-	for (my $y = 150; $y < 350; $y += 120) {
-		print $fh "draw 700 $y 50 50\n";
+
+	for (my $x = 0; $x < $swidth-100; $x += 100) {
+		printf $fh "draw $x %d 50 50\n", $sheight - 120;
+	}
+	for (my $y = 150; $y < $sheight-120; $y += 120) {
+		print $fh "draw $right $y 50 50\n";
 	}
 
 }
@@ -178,11 +184,10 @@ sub gen4
 sub gen5
 {	my $fh = shift;
 
-	for (my $sz = 50, my $x = 0; $x + $sz < 480; $x += 30, $sz += 20) {
-		print $fh "draw $x $x $sz $sz\n";
-	}
-	for (my $sz = 50, my $x = 0; $x + $sz < 480; $x += 30, $sz += 20) {
-		printf $fh "draw %d $x $sz $sz\n", $x + 200;
+	for (my $inc = 0; $inc < $swidth - 300; $inc += 300) {
+		for (my $sz = 50, my $x = 0; $x + $sz < $sheight; $x += 30, $sz += 20) {
+			printf $fh "draw %d $x $sz $sz\n", $x + $inc;
+		}
 	}
 }
 sub read_font
