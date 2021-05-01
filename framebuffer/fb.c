@@ -49,7 +49,7 @@ int	num;
 int	page = -1;
 int	seq_flag;
 char	*ofname;
-long	delay = 1000;
+long	delay = 500;
 float	xfrac = 1.0;
 float	yfrac = 1.0;
 int	x_arg = 0, y_arg = 0;
@@ -402,6 +402,11 @@ int main(int argc, char **argv)
         return -4;
     }
 
+    if (ofname) {
+    	write_jpeg(ofname, fbp, vinfo.xres, vinfo.yres, vinfo.bits_per_pixel);
+	exit(0);
+    }
+
     /***********************************************/
     /*   Clear screen if doing montage.		   */
     /***********************************************/
@@ -735,5 +740,5 @@ usage()
 	fprintf(stderr, "Examples:\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "  $ fb -montage -delay 1 -rand -f index.log -num 30\n");
-
+	exit(1);
 }
