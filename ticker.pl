@@ -174,16 +174,16 @@ sub display_pictures
 		index_dir($dir);
 	}
 
-	my $r = int(rand(4));
+	my $r = get_rand("pictures", 4);
 	if ($r == 1 && -x $fb_prog) {
-		my $seq = int(rand(2)) == 0 ? "-seq" : "";
+		my $seq = get_rand("pictures-seq", 2) == 0 ? "-seq" : "";
 		save_screendump();
 		spawn("$fb_prog -montage $seq -f $dir/index.log -num 300 -rand");
 		return;
 	}
 	if ($r == 2 && -x $fb_prog) {
 		my @dlst = glob("$FindBin::RealBin/data/draw*.txt");
-		my $sfile = $dlst[rand(@dlst)];
+		my $sfile = $dlst[get_rand("drawings", scalar(@dlst))];
 		save_screendump();
 		spawn("$fb_prog -script $sfile -f $dir/index.log -rand");
 		return;
@@ -615,6 +615,18 @@ sub do_weather
 	}
 }
 
+sub get_rand
+{	my $name = shift;
+	my $n = shift;
+
+	my $r = int(rand($n));
+
+	my $fh = new FileHandle(">>/tmp/random.log");
+	print $fh time_string() . "Rand: $name $n -> $r\n";
+
+	return $r;
+}
+
 sub get_tty_size
 {
 	my $s = `stty -a | grep columns`;
@@ -839,7 +851,7 @@ sub do_ticker
 		if ($page == 0) {
 			pr($con_txt);
 		} elsif ($page == 1) {
-			my $fn = $files[rand(@files)];
+			my $fn = $files[get_rand("titles", scalar(@files))];
 
 			do_page1($fn);
 		} elsif ($page == 2) {
@@ -998,9 +1010,9 @@ sub do_page2_calendar
 	#   Get the time, for the margin.	      #
 	###############################################
 	my $tstr;
-	if (int(rand(2)) == 0) {
+	if (get_rand("calendar", 2) == 0) {
 		my $t = strftime("%H:%M", localtime($time));
-		my $opt = int(rand(2)) == 0 ? " --gay" : "";
+		my $opt = get_rand("calendar_style", 2) == 0 ? " --gay" : "";
 		$tstr = `toilet -t $opt $t`;
 	} else {
 		my $t = strftime("%H:%M", localtime($time));
@@ -1082,7 +1094,7 @@ sub do_page4_hello
 			$txt .= "$_\n";
 		}
 	}
-	my $m = $msg[rand(scalar(@msg))];
+	my $m = $msg[get_rand("one-liner", scalar(@msg))];
 	spawn("toilet -t --gay $m");
 	print $txt;
 
@@ -1283,7 +1295,7 @@ sub do_page9_images
 
 sub do_page10_album
 {
-	my $n = int(rand(10));
+	my $n = get_rand("image-selection", 10);
 	if ($n == 0) {
 		display_pictures("xkcd");
 	} elsif ($n < 7) {
@@ -1297,7 +1309,7 @@ sub do_page11_ascii_art
 {
 	my @lst = ("ascii-art.pl", "fortune.pl", "pi.pl",
 		"scrabble.sh");
-	my $n = int(rand(@lst));
+	my $n = get_rand("ascii_art", scalar(@lst));
 	spawn("$FindBin::RealBin/scripts/$lst[$n]");
 }
 
