@@ -103,21 +103,22 @@ read_png_file(char* file_name)
 	lpNewImage->height = height;
 	lpNewImage->lpData = malloc(width * height * 3 + 1);
 
-//printf("png: %dx%d depth=%d\n", width, height, bit_depth);
+//printf("png: %s\n    %dx%d depth=%d color_type=%d\n", file_name, width, height, bit_depth, color_type);
 	for (y = 0; y < height; y++) {
 		unsigned char *dp = &lpNewImage->lpData[y * width * 3];
 		unsigned char *sp = row_pointers[y];
 		for (x = 0; x < width; x++) {
-			if (bit_depth == 8) {
+			if (color_type == PNG_COLOR_TYPE_GRAY) { // 0
 				*dp++ = *sp;
 				*dp++ = *sp;
 				*dp++ = *sp;
 				*sp++;
 			} else {
-				*dp++ = *sp++;
-				*dp++ = *sp++;
-				*dp++ = *sp++;
-				*sp++;
+				dp[0] = sp[2];
+				dp[1] = sp[1];
+				dp[2] = sp[0];
+				dp += 3;
+				sp += 4;
 			}
 		}
 		free(row_pointers[y]);

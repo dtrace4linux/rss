@@ -1,6 +1,5 @@
 delay 0
 clear
-clear
 draw 1310 530 20 20
 draw 1282 667 20 20
 draw 1204 784 20 20

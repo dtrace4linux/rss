@@ -1,6 +1,5 @@
 delay 0
 clear
-clear
 draw 0 0 100 100
 draw 110 0 100 100
 draw 220 0 100 100
