@@ -116,13 +116,18 @@ sub gen2
 {	my $fh = shift;
 
 	for (my $sz = 20; $sz < 400; $sz += 20) {
+		my $n = $sz < 200 ? 16 : 8;
 		print $fh "clear\n";
-		my $th = 3.14159 / 8;
-		for (my $i = 0; $i < 16; $i++) {
-			my $x1 = int($sheight/4 * cos($i * $th)) + $swidth/2;
-			my $y1 = int($sheight/4 * sin($i * $th)) + $sheight/2;
+		my $th = (3.14159 * 2) / $n;
+		for (my $i = 0; $i < $n; $i++) {
+			my $x1 = int($sheight/3 * cos($i * $th)) + $swidth/2 - $sz/2;
+			my $y1 = int($sheight/3 * sin($i * $th)) + $sheight/2 - $sz/2;
 			print $fh "draw $x1 $y1 $sz $sz\n";
 		}
+		printf $fh "draw %d %d %d %d\n",
+			($swidth-250) / 2,
+			($sheight-250) / 2,
+			250, 250;
 		print $fh "sleep 5\n";
 	}
 }
