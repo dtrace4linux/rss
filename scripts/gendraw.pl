@@ -42,6 +42,8 @@ sub main
 	###############################################
 	#   Get  screen  dimensions  so we can scale  #
 	#   the drawing.			      #
+	#   This  is  ugly  really,  because we want  #
+	#   screen independent draw files.	      #
 	###############################################
 	my $s = `$FindBin::Bin/../bin/fb -info`;
 	($swidth, $sheight) = split(/[x,]/, $s);

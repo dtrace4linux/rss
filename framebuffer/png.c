@@ -114,9 +114,9 @@ read_png_file(char* file_name)
 				*dp++ = *sp;
 				*sp++;
 			} else {
-				dp[0] = sp[2];
+				dp[0] = sp[0];
 				dp[1] = sp[1];
-				dp[2] = sp[0];
+				dp[2] = sp[2];
 				dp += 3;
 				sp += 4;
 			}
