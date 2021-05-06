@@ -192,14 +192,14 @@ printf("converting\n");
 static int x, y;
 		x_arg = (rand() / (float) RAND_MAX) * vinfo.xres;
 		y_arg = (rand() / (float) RAND_MAX) * vinfo.yres;
-		w_arg = (rand() / (float) RAND_MAX) * 80 + 10;
-		h_arg = (rand() / (float) RAND_MAX) * 80 + 10;
+		w_arg = (rand() / (float) RAND_MAX) * 80 + 20;
+		h_arg = (rand() / (float) RAND_MAX) * 80 + 20;
 		if (seq_flag) {
 			x_arg = x;
 			y_arg = y;
 			if ((x += w_arg) >= (int) vinfo.xres) {
 				x = 0;
-				y += 30;
+				y += 40;
 			}
 		}
 		shrink_display(fbp, img);
