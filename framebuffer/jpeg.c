@@ -1,6 +1,7 @@
 // https://www.tspi.at/2020/03/20/libjpegexample.html
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <malloc.h>
 #include <jpeglib.h>
 #include <jerror.h>
@@ -90,7 +91,8 @@ struct imgRawImage* loadJpegImageFile(char* lpFilename) {
 	lpData = (unsigned char*)malloc(sizeof(unsigned char)*dwBufferBytes);
 
 	lpNewImage = (struct imgRawImage*)malloc(sizeof(struct imgRawImage));
-	lpNewImage->numComponents = numComponents;
+	lpNewImage->numComponents = numComponents * 8;
+printf("numCom=%d\n", numComponents);
 	lpNewImage->width = imgWidth;
 	lpNewImage->height = imgHeight;
 	lpNewImage->lpData = lpData;
@@ -148,7 +150,9 @@ write_jpeg(char *ofname, unsigned char *img, int w, int h, int depth)
 		unsigned char *rp;
 		int	i;
 		rp = row;
-		if (depth == 16) {
+
+		switch (depth) {
+		  case 16: {
 			unsigned short *sp = (unsigned short *) 
 				&img[cinfo.next_scanline * w * (depth >> 3)];
 			for (i = 0; i < w; i++, rp += 3) {
@@ -157,7 +161,25 @@ write_jpeg(char *ofname, unsigned char *img, int w, int h, int depth)
 				rp[1] = ((p >> 5) & 0x3f) << 2;
 				rp[2] = ((p >> 0) & 0x1f) << 3;
 			}
-		} else {
+			break;
+			}
+
+		  case 24: {
+			/***********************************************/
+			/*   R,G,B				       */
+			/***********************************************/
+			unsigned char *sp = (unsigned char *) 
+				&img[cinfo.next_scanline * w * (depth >> 3)];
+			for (i = 0; i < w; i++) {
+				rp[0] = sp[2];
+				rp[1] = sp[1];
+				rp[2] = sp[0];
+				rp += 3;
+				sp += 3;
+			}
+			break;
+			}
+		  case 32: {
 			/***********************************************/
 			/*   Assumes 32bpp			       */
 			/***********************************************/
@@ -170,6 +192,12 @@ write_jpeg(char *ofname, unsigned char *img, int w, int h, int depth)
 				rp += 3;
 				sp += 4;
 			}
+			break;
+			}
+
+		  default:
+		  	printf("jpeg: write_jpeg: Unsupported depth=%d\n", depth);
+			exit(1);
 		}
 		/***********************************************/
 		/*   Assemble  RGB  from the underlying frame  */

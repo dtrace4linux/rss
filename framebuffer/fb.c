@@ -48,6 +48,7 @@ int	info;
 int	num;
 int	page = -1;
 int	seq_flag;
+char	*cvt_ofname;
 char	*ofname;
 long	delay = 500;
 float	xfrac = 1.0;
@@ -113,10 +114,44 @@ display_file(char *fname, int do_wait)
 		return 1;
 	}
 
-    if (ofname) {
-    	write_jpeg(ofname, fbp, vinfo.xres, vinfo.yres, vinfo.bits_per_pixel);
-	exit(0);
-    }
+//printf("num=%d\n", img->numComponents);
+
+# if 0
+	if (img->numComponents == 81) {
+		/***********************************************/
+		/*   Convert mono to RGB/24 bit		       */
+		/***********************************************/
+		unsigned char *newimg = malloc(img->width * img->height * 4 + 1);
+		unsigned x, y;
+printf("converting\n");
+
+		for (y = 0; y < img->height; y++) {
+			char *sp = img->lpData + y * img->width * 3;
+			char *dp = newimg + y * img->width * 4;
+			for (x = 0; x < img->width; x++) {
+				*dp++ = *sp;
+				*dp++ = *sp;
+				*dp++ = *sp;
+				*dp++ = 0;
+				sp++;
+			}
+		}
+		free(img->lpData);
+		img->lpData = newimg;
+		img->numComponents = 32;
+	}
+# endif
+
+	if (cvt_ofname) {
+		write_jpeg(cvt_ofname, img->lpData, 
+			img->width, img->height, img->numComponents);
+		exit(0);
+	}
+
+	if (ofname) {
+		write_jpeg(ofname, fbp, vinfo.xres, vinfo.yres, vinfo.bits_per_pixel);
+		exit(0);
+	}
 
 /*
     printf("The framebuffer device was mapped to memory successfully.\n");
@@ -213,6 +248,12 @@ do_switches(int argc, char **argv)
 			break;
 
 		while (*cp) {
+			if (strcmp(cp, "cvt") == 0) {
+				if (++i >= argc)
+					usage();
+				cvt_ofname = argv[i];
+				break;
+			}
 			if (strcmp(cp, "delay") == 0) {
 				if (++i >= argc)
 					usage();
@@ -715,6 +756,7 @@ usage()
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Switches:\n");
 	fprintf(stderr, "\n");
+	fprintf(stderr, "   -cvt <fname>       Write loaded image to file.\n");
 	fprintf(stderr, "   -delay NN          Scroll delay in milliseconds\n");
 	fprintf(stderr, "   -effects           Scroll-in effects enabled\n");
 	fprintf(stderr, "   -f <file>          Get filenames from specified file.\n");

@@ -139,6 +139,8 @@ sub gen3
 	my $x = 100;
 	my $y = 100;
 
+	my $sz = 40;
+
 	foreach my $ch (split(//, $txt)) {
 		my $f = $font[ord($ch)];
 		for (my $y1 = 0; $y1 < @{$f}; $y1++) {
@@ -146,15 +148,15 @@ sub gen3
 			for (my $x1 = 0; $x1 < 8; $x1++) {
 				my $b = $row & (1 << (8-$x1));
 				if ($b) {
-					printf $fh "draw %d %d 20 20\n",
-						$x + $x1 * 12,
-						$y + $y1 * 30;
+					printf $fh "draw %d %d $sz $sz\n",
+						$x + $x1 * $sz * 1,
+						$y + $y1 * $sz * 1.2;
 				}
 			}
 #			$y += 30;
 		}
 
-		$x += 8 * 15;
+		$x += 8 * $sz + 10;
 	}
 }
 

@@ -98,19 +98,27 @@ read_png_file(char* file_name)
 	/*   Now convert into a standard format.       */
 	/***********************************************/
 	lpNewImage = (struct imgRawImage*)malloc(sizeof(struct imgRawImage));
-	lpNewImage->numComponents = bit_depth;
+	lpNewImage->numComponents = 24; //bit_depth;
 	lpNewImage->width = width;
 	lpNewImage->height = height;
-	lpNewImage->lpData = malloc(width * height * 3);
+	lpNewImage->lpData = malloc(width * height * 3 + 1);
 
+//printf("png: %dx%d depth=%d\n", width, height, bit_depth);
 	for (y = 0; y < height; y++) {
 		unsigned char *dp = &lpNewImage->lpData[y * width * 3];
 		unsigned char *sp = row_pointers[y];
 		for (x = 0; x < width; x++) {
-			*dp++ = *sp++;
-			*dp++ = *sp++;
-			*dp++ = *sp++;
-			*sp++;
+			if (bit_depth == 8) {
+				*dp++ = *sp;
+				*dp++ = *sp;
+				*dp++ = *sp;
+				*sp++;
+			} else {
+				*dp++ = *sp++;
+				*dp++ = *sp++;
+				*dp++ = *sp++;
+				*sp++;
+			}
 		}
 		free(row_pointers[y]);
 	}
