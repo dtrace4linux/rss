@@ -92,7 +92,7 @@ struct imgRawImage* loadJpegImageFile(char* lpFilename) {
 
 	lpNewImage = (struct imgRawImage*)malloc(sizeof(struct imgRawImage));
 	lpNewImage->numComponents = numComponents * 8;
-printf("numCom=%d\n", numComponents);
+//printf("numCom=%d\n", numComponents);
 	lpNewImage->width = imgWidth;
 	lpNewImage->height = imgHeight;
 	lpNewImage->lpData = lpData;
