@@ -568,6 +568,10 @@ static int swidth, sheight;
 		    	memset(fbp, 0x00, screensize);
 			continue;
 		}
+		if (strcmp(args[0], "sleep") == 0 && a >= 1) {
+			do_sleep(atoi(args[1]));
+			continue;
+		}
 		if (strcmp(args[0], "screensize") == 0 && a >= 1) {
 			swidth = atoi(args[1]);
 			sheight = atoi(args[2]);
