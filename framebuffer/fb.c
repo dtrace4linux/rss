@@ -192,8 +192,8 @@ printf("converting\n");
 static int x, y;
 		x_arg = (rand() / (float) RAND_MAX) * vinfo.xres;
 		y_arg = (rand() / (float) RAND_MAX) * vinfo.yres;
-		w_arg = (rand() / (float) RAND_MAX) * 80 + 20;
-		h_arg = (rand() / (float) RAND_MAX) * 80 + 20;
+		w_arg = (rand() / (float) RAND_MAX) * 90 + 30;
+		h_arg = (rand() / (float) RAND_MAX) * 90 + 30;
 		if (seq_flag) {
 			x_arg = x;
 			y_arg = y;

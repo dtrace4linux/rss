@@ -118,7 +118,7 @@ sub gen1
 {	my $fh = shift;
 
 	my $s = '';
-	for (my $sz = 10; $sz < 400; $sz += 10) {
+	for (my $sz = 20; $sz < 400; $sz += 10) {
 		$s .= "clear\n" if $s;
 		my $n = 0;
 		for (my $x = 0; $x < $swidth; $x += $sz + 10) {
