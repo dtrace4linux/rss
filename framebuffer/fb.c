@@ -569,7 +569,7 @@ static int swidth, sheight;
 			continue;
 		}
 		if (strcmp(args[0], "sleep") == 0 && a >= 1) {
-			do_sleep(atoi(args[1]));
+			sleep(atoi(args[1]));
 			continue;
 		}
 		if (strcmp(args[0], "screensize") == 0 && a >= 1) {
