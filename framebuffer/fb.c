@@ -504,6 +504,7 @@ static FILE *fp;
 	char	*args[MAX_ARGS];
 	char	*cp;
 static int line = 0;
+static int swidth, sheight;
 
 	if (fp == NULL) {
 		if ((fp = fopen(script_file, "r")) == NULL) {
@@ -543,6 +544,12 @@ static int line = 0;
 			c.y = atoi(args[2]);
 			c.w = atoi(args[3]);
 			c.h = atoi(args[4]);
+
+			c.x *= vinfo.xres / (float) swidth;
+			c.y *= vinfo.yres / (float) sheight;
+			c.w *= vinfo.xres / (float) swidth;
+			c.h *= vinfo.yres / (float) sheight;
+
 			return &c;
 		}
 		if (strcmp(args[0], "clear") == 0) {
@@ -557,8 +564,13 @@ static int line = 0;
 		    	num = atoi(args[1]);
 			continue;
 		}
-		if (strcmp(args[0], "sleep") == 0 && a >= 1) {
-			sleep(atoi(args[1]));
+		if (strcmp(args[0], "clear") == 0) {
+		    	memset(fbp, 0x00, screensize);
+			continue;
+		}
+		if (strcmp(args[0], "screensize") == 0 && a >= 1) {
+			swidth = atoi(args[1]);
+			sheight = atoi(args[2]);
 			continue;
 		}
 

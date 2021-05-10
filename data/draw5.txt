@@ -1,3 +1,4 @@
+screensize 1920 1080
 delay 0
 clear
 draw 0 0 50 50

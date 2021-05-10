@@ -19,8 +19,12 @@ my %opts = (
 	dir => "data",
 	);
 my @font;
-my $swidth;
-my $sheight;
+
+######################################################################
+#   Use a virtual screen size, but scale in framebuffer/fb	     #
+######################################################################
+my $swidth = 1920;
+my $sheight = 1080;
 
 sub main
 {
@@ -45,8 +49,8 @@ sub main
 	#   This  is  ugly  really,  because we want  #
 	#   screen independent draw files.	      #
 	###############################################
-	my $s = `$FindBin::Bin/../bin/fb -info`;
-	($swidth, $sheight) = split(/[x,]/, $s);
+#	my $s = `$FindBin::Bin/../bin/fb -info`;
+#	($swidth, $sheight) = split(/[x,]/, $s);
 
 	if ($opts{test}) {
 		test($opts{test});
@@ -82,6 +86,7 @@ sub gen
 
 	my $s = $func->($fh);
 	$s = "delay 0\nclear\n" . $s;
+	$s = "screensize $swidth $sheight\n" . $s;
 
 	return if $s eq $old;
 

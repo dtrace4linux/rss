@@ -154,9 +154,9 @@ sub display_image
 ######################################################################
 sub display_pictures
 {	my $dir = shift;
-	my $num = shift || 1;
-	my $toplevel = shift || 0;
-	my $do_scroll = shift || 0;
+	my %args = @_;
+
+	$args{num} ||= 1;
 
 	$opts{image_dir} =~ s/\$HOME/$ENV{HOME}/;
 	$dir = "$opts{image_dir}/$dir";
@@ -196,7 +196,7 @@ sub display_pictures
 		my $f = $_;
 		next if $f =~ /.old$/;
 		next if $f !~ /jpg|jpeg|png/i;
-		if ($toplevel &&
+		if ($args{toplevel} &&
 			scalar(split("/", $f)) > $dcnt + 1) {
 			next;
 		}
@@ -209,19 +209,20 @@ sub display_pictures
 		return;
 	}
 
-	for (my $i = 0; $i < $num; $i++) {
+	for (my $i = 0; $i < $args{num}; $i++) {
 		my $n = rand(@img);
 		($img[$i], $img[$n]) = ($img[$n], $img[$i]);
 	}
 
 	my %iopts = ( x => 0, y => 0);
-	$iopts{multimage} = 1 if $num > 1;
-	$iopts{do_scroll} = $do_scroll;
-	for (my $i = 0; $i < $num; $i++) {
+	$iopts{multimage} = 1 if $args{num} > 1;
+	$iopts{do_scroll} = $args{do_scroll} || 0;
+	$iopts{timestamp} = $args{timestamp};
+	for (my $i = 0; $i < $args{num}; $i++) {
 		pr(time_string() . "[img: $img[$i]]\n");
 
 		display_image($img[$i], %iopts);
-		last if $num == 1;
+		last if $args{num} == 1;
 		last if do_sleep(10);
 		$iopts{x} += 600; # HACK: should be by img width
 	}
@@ -1277,7 +1278,11 @@ sub do_page6_status
 
 sub do_page7_news
 {
-	display_pictures("news", 2, 1, 1);
+	display_pictures("news", 
+		num => 2,
+		toplevel => 1,
+		do_scroll => 1,
+		timestamp => 1);
 }
 
 sub do_page8_photos
