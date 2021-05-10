@@ -50,7 +50,7 @@ int	page = -1;
 int	seq_flag;
 char	*cvt_ofname;
 char	*ofname;
-long	delay = 500;
+long	delay = 250;
 float	xfrac = 1.0;
 float	yfrac = 1.0;
 int	x_arg = 0, y_arg = 0;
