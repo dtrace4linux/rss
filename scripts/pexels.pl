@@ -42,20 +42,31 @@ sub main
 	query("search?query=art&per_page=15"); # max 80, default 15
 	query("search?query=abstract&per_page=15"); # max 80, default 15
 	query("search?query=sky&per_page=15"); # max 80, default 15
+
+	query("search?query=beautiful%20scenery&per_page=80", "scenery"); # max 80, default 15
 }
 
 sub query
 {	my $url = shift;
+	my $subdir = shift || "images";
 
 	my $cmd = "curl --silent -H \'Authorization: $api\' " .
 		"'https://api.pexels.com/v1/$url'";
 #	print $cmd, "\n";
 	my $txt = `$cmd`;
-	print "$txt\n" if $opts{v};
+	if ($opts{v}) {
+		print "$txt\n";
+	}
 	my $json = JSON->new->allow_nonref;
+	if ($txt eq '') {
+		print $cmd, "\n";
+		print "empty response to query\n";
+		exit(1);
+	}
 	my $info = $json->decode($txt);
 
-	my $dir = "$ENV{HOME}/images/images";
+	my $dir = "$ENV{HOME}/images/$subdir";
+	mkdir($dir, 0755);
 
 	foreach my $p (@{$info->{photos}}) {
 		# tiny
