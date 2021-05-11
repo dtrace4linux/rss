@@ -31,6 +31,7 @@ enum ctypes { C_NONE, C_DELAY, C_EXIT };
 typedef struct cmd_t {
 	int	type;
 	int	x, y, w, h;
+	unsigned long rgb;
 	} cmd_t;
 
 int quiet;
@@ -235,6 +236,21 @@ static int x, y;
 	tval.tv_usec = delay * 1000;
 	select(0, NULL, NULL, NULL, &tval);
 	return 1;
+}
+
+int
+draw_rectangle(cmd_t *cp)
+{	int	x, y;
+
+	int r = cp->rgb >> 16;
+	int g = (cp->rgb >> 8) & 0xff;
+	int b = (cp->rgb >> 0) & 0x00;
+
+	for (y = cp->y; y < cp->y + cp->h; y++) {
+		for (x = cp->x; x < cp->x + cp->w; x++) {
+			put_pixel(fbp, r, g, b);
+		}
+	}
 }
 
 int 
@@ -566,6 +582,22 @@ static int swidth, sheight;
 		}
 		if (strcmp(args[0], "clear") == 0) {
 		    	memset(fbp, 0x00, screensize);
+			continue;
+		}
+		if (strcmp(args[0], "rectangle") == 0 && a >= 5) {
+			c.x = atoi(args[1]);
+			c.y = atoi(args[2]);
+			c.w = atoi(args[3]);
+			c.h = atoi(args[4]);
+			c.rgb = strtol(args[5], NULL, 16);
+
+			c.x *= vinfo.xres / (float) swidth;
+			c.y *= vinfo.yres / (float) sheight;
+			c.w *= vinfo.xres / (float) swidth;
+			c.h *= vinfo.yres / (float) sheight;
+
+			draw_rectangle(&c);
+
 			continue;
 		}
 		if (strcmp(args[0], "sleep") == 0 && a >= 1) {

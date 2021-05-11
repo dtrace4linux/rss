@@ -102,14 +102,14 @@ sub gen0
 {	my $fh = shift;
 
 	my $s = '';
-	for (my $sz = 100; $sz < 600; $sz += 50) {
+	for (my $sz = 100; $sz < 500; $sz += 50) {
 		$s .= "clear\n" if $s;
 		for (my $y = 0; $y < $sheight; $y += $sz + 10) {
 			for (my $x = 0; $x < $swidth; $x += $sz + 10) {
 				$s .= "draw $x $y $sz $sz\n";
 			}
 		}
-		$s .= "sleep 5\n";
+		$s .= "sleep 6\n";
 	}
 	return $s;
 }
