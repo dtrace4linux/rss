@@ -69,6 +69,8 @@ sub main
 	}
 	gen("draw4.txt", \&gen4);
 	gen("draw5.txt", \&gen5);
+
+	gen("draw6.txt", \&gen6);
 }
 
 sub gen
@@ -226,6 +228,24 @@ sub gen5
 	}
 	return $s;
 }
+
+sub gen6
+{	my $fh = shift;
+
+	my $s = '';
+	for (my $i = 0; $i < 100; $i++) {
+		$s .= "clear\n" if $s;
+		my $x = int(rand($swidth));
+		my $y = int(rand($sheight));
+		my $w = int(rand($swidth - $x));
+		my $h = int(rand($sheight - $y));
+		my $rgb = int(rand(0xffffff));
+		$s .= "rectangle $x $y $w $h $rgb\n";
+		$s .= "sleep 1\n";
+	}
+	return $s;
+}
+
 sub read_font
 {	my $fn = shift;
 
