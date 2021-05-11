@@ -249,7 +249,7 @@ draw_rectangle(cmd_t *cp)
 	for (y = cp->y; y < cp->y + cp->h; y++) {
 	        location = 
 		    	(y+vinfo.yoffset) * finfo.line_length +
-			(0+vinfo.xoffset) * (vinfo.bits_per_pixel/8);
+			(cp->x+vinfo.xoffset) * (vinfo.bits_per_pixel/8);
 		for (x = cp->x; x < cp->x + cp->w; x++) {
 			put_pixel(fbp, r, g, b);
 		}
