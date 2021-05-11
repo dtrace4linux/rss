@@ -234,15 +234,14 @@ sub gen6
 
 	my $s = '';
 	for (my $i = 0; $i < 100; $i++) {
-		$s .= "clear\n" if $s;
 		my $x = int(rand($swidth));
 		my $y = int(rand($sheight));
 		my $w = int(rand($swidth - $x));
 		my $h = int(rand($sheight - $y));
 		my $rgb = int(rand(0xffffff));
 		$s .= "rectangle $x $y $w $h $rgb\n";
-		$s .= "sleep 1\n";
 	}
+	$s .= "sleep 10\n";
 	return $s;
 }
 
