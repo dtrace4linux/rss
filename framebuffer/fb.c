@@ -89,7 +89,13 @@ display_file(char *fname, int do_wait)
 		return 1;
 	}
 	if (read(fd, buf, 4) != 4) {
+		FILE	*fp;
+
 		printf("File too short - %s\n", fname);
+		if ((fp = fopen("/tmp/fb.log", "a")) != NULL) {
+			fprintf(fp, "File too short - %s\n", fname);
+			fclose(fp);
+		}
 		return 1;
 	}
 	close(fd);

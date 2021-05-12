@@ -1303,6 +1303,8 @@ sub do_page10_album
 	my $n = get_rand("image-selection", 10);
 	if ($n == 0) {
 		display_pictures("xkcd");
+	} elsif ($n == 4) {
+		display_pictures("stained-glass");
 	} elsif ($n == 5) {
 		display_pictures("scenery");
 	} elsif ($n == 6) {
