@@ -457,9 +457,11 @@ int main(int argc, char **argv)
 	exit(1);
     }
 
+/*
     if (!quiet) {
 	    printf("%dx%d, %dbpp\n", vinfo.xres, vinfo.yres, vinfo.bits_per_pixel );
     }
+*/
 
     // Map the device to memory
     fbp = (char *)mmap(0, screensize, PROT_READ | PROT_WRITE, MAP_SHARED, fbfd, 0);

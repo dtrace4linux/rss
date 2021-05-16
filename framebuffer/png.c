@@ -103,22 +103,39 @@ read_png_file(char* file_name)
 	lpNewImage->height = height;
 	lpNewImage->lpData = malloc(width * height * 3 + 1);
 
-//printf("png: %s\n    %dx%d depth=%d color_type=%d\n", file_name, width, height, bit_depth, color_type);
+	if (getenv("FB_PNG_DEBUG")) {
+		printf("png: %s\n    %dx%d depth=%d color_type=%d\n", file_name, width, height, bit_depth, color_type);
+	}
+
 	for (y = 0; y < height; y++) {
 		unsigned char *dp = &lpNewImage->lpData[y * width * 3];
 		unsigned char *sp = row_pointers[y];
 		for (x = 0; x < width; x++) {
-			if (color_type == PNG_COLOR_TYPE_GRAY) { // 0
+			// PNG_COLOR_TYPE_RGBA == 6
+			switch (color_type) {
+			  case PNG_COLOR_TYPE_GRAY: // 0
 				*dp++ = *sp;
 				*dp++ = *sp;
 				*dp++ = *sp;
 				*sp++;
-			} else {
+				break;
+
+			  case PNG_COLOR_TYPE_RGB: // 2
+				dp[0] = sp[0];
+				dp[1] = sp[1];
+				dp[2] = sp[2];
+				dp += 3;
+				sp += 3;
+				break;
+
+			  default:
+			  case PNG_COLOR_TYPE_RGBA:
 				dp[0] = sp[0];
 				dp[1] = sp[1];
 				dp[2] = sp[2];
 				dp += 3;
 				sp += 4;
+				break;
 			}
 		}
 		free(row_pointers[y]);
