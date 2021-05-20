@@ -649,7 +649,7 @@ normal_display(char *fbp, struct imgRawImage *img, int x, int y, int w, int h, i
 
 		unsigned char *data = &img_data[((y0-y) * img->width + x) * 3];
 	        for (x0 = x; x0 < x + w; x0++) {
-		    if (x0 - x >= (int) img->width) {
+		    if (x0 - x >= (int) img->width || x0 >= vinfo.xres) {
 			break;
 		    }
 		    if (location >= screensize) {
