@@ -71,6 +71,8 @@ sub main
 	gen("draw5.txt", \&gen5);
 
 	gen("draw6.txt", \&gen6);
+	gen("draw7.txt", \&gen7);
+	gen("draw8.txt", \&gen8);
 }
 
 sub gen
@@ -240,6 +242,32 @@ sub gen6
 		my $h = int(rand($sheight - $y));
 		my $rgb = int(rand(0xffffff));
 		$s .= "rectangle $x $y $w $h $rgb\n";
+	}
+	$s .= "sleep 10\n";
+	return $s;
+}
+
+sub gen7
+{	my $fh = shift;
+
+	my $s = '';
+	$s .= "draw 100 100 250 250\n";
+	$s .= "draw 400 100 250 250\n";
+	$s .= "draw 100 450 250 250\n";
+	$s .= "draw 400 450 250 250\n";
+	return $s;
+}
+
+sub gen8
+{	my $fh = shift;
+
+	my $s = '';
+	for (my $i = 0; $i < 100; $i++) {
+		my $x = int(rand($swidth));
+		my $y = int(rand($sheight));
+		my $r = int(rand($swidth - $x));
+		my $rgb = int(rand(0xffffff));
+		$s .= "circle $x $y $r $rgb\n";
 	}
 	$s .= "sleep 10\n";
 	return $s;
