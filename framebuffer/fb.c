@@ -496,7 +496,7 @@ map_rand(char *cp)
 		return cp;
 
 	cp1 = rand_buf + strlen(rand_buf) + 1;
-	strcpy(cp1, cp);
+	strcpy(cp1, buf);
 	return cp1;
 }
 
