@@ -237,12 +237,7 @@ sub gen6
 
 	my $s = '';
 	for (my $i = 0; $i < 100; $i++) {
-		my $x = int(rand($swidth));
-		my $y = int(rand($sheight));
-		my $w = int(rand($swidth - $x));
-		my $h = int(rand($sheight - $y));
-		my $rgb = int(rand(0xffffff));
-		$s .= "rectangle $x $y $w $h $rgb\n";
+		$s .= "rectangle rand_x rand_y rand_w rand_h rand_rgb\n";
 	}
 	$s .= "sleep 10\n";
 	return $s;
@@ -264,11 +259,7 @@ sub gen8
 
 	my $s = '';
 	for (my $i = 0; $i < 100; $i++) {
-		my $x = int(rand($swidth));
-		my $y = int(rand($sheight));
-		my $r = int(rand($swidth - $x));
-		my $rgb = int(rand(0xffffff));
-		$s .= "circle $x $y $r $rgb\n";
+		$s .= "circle rand_x rand_y rand_rgb\n";
 	}
 	$s .= "sleep 10\n";
 	return $s;

@@ -30,7 +30,7 @@ draw_circle(cmd_t *cp)
 {
 	int r = cp->rgb >> 16;
 	int g = (cp->rgb >> 8) & 0xff;
-	int b = (cp->rgb >> 0) & 0x00;
+	int b = (cp->rgb >> 0) & 0xff;
 
 	int f = 1 - cp->radius;
 	int ddF_x = 0;
@@ -74,9 +74,9 @@ draw_line(cmd_t *cp)
 	int y0 = cp->y;
 	int y1 = cp->y1;
 
-	int r = cp->rgb >> 16;
+	int r = (cp->rgb >> 16) & 0xff;
 	int g = (cp->rgb >> 8) & 0xff;
-	int b = (cp->rgb >> 0) & 0x00;
+	int b = (cp->rgb >> 0) & 0xff;
 
 	int dx = abs(x1-x0), sx = x0<x1 ? 1 : -1;
 	int dy = abs(y1-y0), sy = y0<y1 ? 1 : -1; 
@@ -97,7 +97,7 @@ draw_rectangle(cmd_t *cp)
 
 	int r = cp->rgb >> 16;
 	int g = (cp->rgb >> 8) & 0xff;
-	int b = (cp->rgb >> 0) & 0x00;
+	int b = (cp->rgb >> 0) & 0xff;
 
 	for (y = cp->y; y < cp->y + cp->h; y++) {
 		set_location(cp->x, y);
