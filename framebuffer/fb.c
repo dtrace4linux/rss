@@ -49,6 +49,7 @@ float	yfrac = 1.0;
 int	x_arg = 0, y_arg = 0;
 int	w_arg = -1, h_arg = -1;
 int	v_flag;
+char	rand_buf[1024];
 
 char *fbp = 0;
 struct fb_var_screeninfo vinfo;
@@ -478,6 +479,27 @@ int main(int argc, char **argv)
 }
 
 
+char *
+map_rand(char *cp)
+{	char	buf[BUFSIZ];
+	char	*cp1;
+
+	if (strcmp(cp, "rand_x") == 0)
+		snprintf(buf, sizeof buf, "%d", (int) ((rand() / (float) RAND_MAX) * vinfo.xres));
+	else if (strcmp(cp, "rand_y") == 0)
+		snprintf(buf, sizeof buf, "%d", (int) ((rand() / (float) RAND_MAX) * vinfo.yres));
+	else if (strcmp(cp, "rand_x") == 0)
+		snprintf(buf, sizeof buf, "%ld", (long) ((rand() / (float) RAND_MAX) * 0xffffff));
+	else
+		return cp;
+	if (strlen(rand_buf) + strlen(buf) >= sizeof rand_buf - 1)
+		return cp;
+
+	cp1 = rand_buf + strlen(rand_buf) + 1;
+	strcpy(cp1, cp);
+	return cp1;
+}
+
 void
 fullscreen_display(char *fbp, struct imgRawImage *img, double f)
 {
@@ -538,8 +560,10 @@ static int swidth, sheight;
 		if (*buf == '\0' || *buf == ' ' || *buf == '#' || *buf == '\n')
 			continue;
 
+		rand_buf[0] = '\0';
 		for (cp = strtok(buf, " "); cp; cp = strtok(NULL, " ")) {
 			if (a < MAX_ARGS) {
+				cp = map_rand(cp);
 				args[a++] = cp;
 			}
 		}

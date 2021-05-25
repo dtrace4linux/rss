@@ -279,13 +279,7 @@ sub gen9
 
 	my $s = '';
 	for (my $i = 0; $i < 300; $i++) {
-		my $rgb = int(rand(0xffffff));
-		$s .= sprintf("line %d %d %d %d %d\n",
-			int(rand($swidth)), 
-			int(rand($sheight)), 
-			int(rand($swidth)), 
-			int(rand($sheight)), 
-			$rgb);
+		$s .= "line rand_x rand_y rand_x rand_y rand_rgb\n";
 	}
 	return $s;
 }
