@@ -206,7 +206,10 @@ static int x, y;
 			y_arg = y;
 			if ((x += w_arg) >= (int) vinfo.xres) {
 				x = 0;
-				y += 40;
+				y += 80 + (rand() / (float) RAND_MAX) * 20;
+			}
+			if (y_arg + h_arg >= (int) vinfo.yres) {
+				exit(0);
 			}
 		}
 		shrink_display(fbp, img);
@@ -649,7 +652,7 @@ normal_display(char *fbp, struct imgRawImage *img, int x, int y, int w, int h, i
 
 		unsigned char *data = &img_data[((y0-y) * img->width + x) * 3];
 	        for (x0 = x; x0 < x + w; x0++) {
-		    if (x0 - x >= (int) img->width || x0 >= vinfo.xres) {
+		    if (x0 - x >= (int) img->width || x0 >= (int) vinfo.xres) {
 			break;
 		    }
 		    if (location >= screensize) {
