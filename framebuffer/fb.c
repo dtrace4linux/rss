@@ -496,7 +496,7 @@ map_rand(char *cp)
 		return cp;
 
 	cp1 = rand_buf + strlen(rand_buf) + 1;
-printf("%s -> %s\n", cp, rand_buf);
+printf("%s -> %s\n", cp, buf);
 	strcpy(cp1, buf);
 	return cp1;
 }
