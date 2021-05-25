@@ -1319,7 +1319,7 @@ sub do_page10_album
 sub do_page11_ascii_art
 {
 	my @lst = ("ascii-art.pl", "fortune.pl", "pi.pl",
-		"scrabble.sh");
+		"scrabble.sh", "life.pl");
 	my $n = get_rand("ascii_art", scalar(@lst));
 	spawn("$FindBin::RealBin/scripts/$lst[$n]");
 }
