@@ -102,7 +102,7 @@ draw_rectangle(cmd_t *cp)
 	for (y = cp->y; y < cp->y + cp->h; y++) {
 		set_location(cp->x, y);
 		for (x = cp->x; x < cp->x + cp->w; x++) {
-			put_pixel(fbp, r, g, b);
+			do_plot(x, y, r, g, b);
 		}
 	}
 }
