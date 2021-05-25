@@ -54,7 +54,9 @@ sub nexgen {
    }
    return @new;
 }
- 
+
+my $bg = 45;
+
 sub printlife {
    my @life = @_;
    if ($printed) {
@@ -62,11 +64,12 @@ sub printlife {
 	print "\e[1A" x $height;
    }
    $printed = 1;
+   $bg = 41 if int(rand(5)) == 0 && ++$bg == 48;
    foreach my $row ( 0 .. $height - 1 ) {
        foreach my $col ( 0 .. $width - 1 ) {
            print($life[$row][$col]
-             ? "\e[33;45;1m \e[0m"
-             : "\e[1;34;1m \e[0m");
+             ? "\e[33;$bg;1m \e[0m"
+             : "\e[34;1m \e[0m");
        }
        print "\n";
    }

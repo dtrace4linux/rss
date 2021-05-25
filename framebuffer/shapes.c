@@ -8,10 +8,15 @@
 
 extern char *fbp;
 
+# define set_location(x, y) \
+	        location =  \
+		    	(y+vinfo.yoffset) * finfo.line_length + \
+			(x+vinfo.xoffset) * (vinfo.bits_per_pixel/8);
+
 static void
 do_plot(int x, int y, int r, int g, int b)
 {
-	if (x < 0 || y < 0 || x >= vinfo.xres || y >= vinfo.yres)
+	if (x < 0 || y < 0 || x >= (int) vinfo.xres || y >= (int) vinfo.yres)
 		return;
 
         location = 
@@ -61,6 +66,32 @@ draw_circle(cmd_t *cp)
 }
 
 int
+draw_line(cmd_t *cp)
+{	int	x, y;
+
+	int x0 = cp->x;
+	int x1 = cp->x1;
+	int y0 = cp->y;
+	int y1 = cp->y1;
+
+	int r = cp->rgb >> 16;
+	int g = (cp->rgb >> 8) & 0xff;
+	int b = (cp->rgb >> 0) & 0x00;
+
+	int dx = abs(x1-x0), sx = x0<x1 ? 1 : -1;
+	int dy = abs(y1-y0), sy = y0<y1 ? 1 : -1; 
+	int err = (dx>dy ? dx : -dy)/2, e2;
+
+	for(;;) {
+		plot(x0,y0);
+		if (x0==x1 && y0==y1) break;
+		e2 = err;
+		if (e2 >-dx) { err -= dy; x0 += sx; }
+		if (e2 < dy) { err += dx; y0 += sy; }
+	}
+}
+
+int
 draw_rectangle(cmd_t *cp)
 {	int	x, y;
 
@@ -69,13 +100,10 @@ draw_rectangle(cmd_t *cp)
 	int b = (cp->rgb >> 0) & 0x00;
 
 	for (y = cp->y; y < cp->y + cp->h; y++) {
-	        location = 
-		    	(y+vinfo.yoffset) * finfo.line_length +
-			(cp->x+vinfo.xoffset) * (vinfo.bits_per_pixel/8);
+		set_location(cp->x, y);
 		for (x = cp->x; x < cp->x + cp->w; x++) {
 			put_pixel(fbp, r, g, b);
 		}
 	}
 }
-
 

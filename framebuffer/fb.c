@@ -586,6 +586,22 @@ static int swidth, sheight;
 
 			continue;
 		}
+		if (strcmp(args[0], "line") == 0 && a >= 6) {
+			c.x = atoi(args[1]);
+			c.y = atoi(args[2]);
+			c.x1 = atoi(args[3]);
+			c.y1 = atoi(args[4]);
+			c.rgb = strtol(args[5], NULL, 16);
+
+			c.x *= vinfo.xres / (float) swidth;
+			c.y *= vinfo.yres / (float) sheight;
+			c.x1 *= vinfo.xres / (float) swidth;
+			c.y1 *= vinfo.yres / (float) sheight;
+
+			draw_line(&c);
+
+			continue;
+		}
 		if (strcmp(args[0], "rectangle") == 0 && a >= 5) {
 			c.x = atoi(args[1]);
 			c.y = atoi(args[2]);

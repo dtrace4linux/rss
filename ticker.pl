@@ -1318,8 +1318,15 @@ sub do_page10_album
 
 sub do_page11_ascii_art
 {
-	my @lst = ("ascii-art.pl", "fortune.pl", "pi.pl",
-		"scrabble.sh", "life.pl");
+	my @lst = ("ascii-art.pl", 
+		"chaos.pl", 
+		"fortune.pl", 
+		"galton.pl",
+		"life.pl",
+		"pi.pl",
+		"scrabble.sh", 
+		"sierpinksi.pl",
+		);
 	my $n = get_rand("ascii_art", scalar(@lst));
 	spawn("$FindBin::RealBin/scripts/$lst[$n]");
 }

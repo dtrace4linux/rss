@@ -73,6 +73,7 @@ sub main
 	gen("draw6.txt", \&gen6);
 	gen("draw7.txt", \&gen7);
 	gen("draw8.txt", \&gen8);
+	gen("draw9.txt", \&gen9);
 }
 
 sub gen
@@ -270,6 +271,22 @@ sub gen8
 		$s .= "circle $x $y $r $rgb\n";
 	}
 	$s .= "sleep 10\n";
+	return $s;
+}
+
+sub gen9
+{	my $fh = shift;
+
+	my $s = '';
+	for (my $i = 0; $i < 300; $i++) {
+		my $rgb = int(rand(0xffffff));
+		$s .= sprintf("line %d %d %d %d %d\n",
+			int(rand($swidth)), 
+			int(rand($sheight)), 
+			int(rand($swidth)), 
+			int(rand($sheight)), 
+			$rgb);
+	}
 	return $s;
 }
 

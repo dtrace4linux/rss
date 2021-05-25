@@ -12,11 +12,13 @@ enum ctypes { C_NONE, C_DELAY, C_EXIT };
 typedef struct cmd_t {
 	int	type;
 	int	x, y, w, h;
+	int	x1, y1;
 	int	radius;
 	unsigned long rgb;
 	} cmd_t;
 
 int	draw_circle(cmd_t *);
+int	draw_line(cmd_t *);
 int	draw_rectangle(cmd_t *);
 void put_pixel(char *fbp, int r, int g, int b);
 
