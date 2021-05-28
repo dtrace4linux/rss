@@ -3,7 +3,9 @@
 https://github.com/bvdberg/code/blob/master/linux/framebuffer/fb-example.c
 
 Tool based on above example code to write a JPG to the console frame
-buffer.
+buffer. Originally the tool simply could display a JPG or PNG
+file on the screen frame buffer. It is evolving more into a scripting
+language to handle the console.
 
 Date: Feb 2021
 Author: Paul Fox (modifications/enhancements)
@@ -49,8 +51,6 @@ float	yfrac = 1.0;
 int	x_arg = 0, y_arg = 0;
 int	w_arg = -1, h_arg = -1;
 int	v_flag;
-char	rand_buf[1024];
-int	rand_idx;
 
 char *fbp = 0;
 struct fb_var_screeninfo vinfo;
@@ -480,34 +480,6 @@ int main(int argc, char **argv)
 }
 
 
-char *
-map_rand(char *cp)
-{	char	buf[BUFSIZ];
-	char	*cp1;
-
-	if (strcmp(cp, "rand_x") == 0)
-		snprintf(buf, sizeof buf, "%d", (int) ((rand() / (float) RAND_MAX) * 1920));
-	else if (strcmp(cp, "rand_y") == 0)
-		snprintf(buf, sizeof buf, "%d", (int) ((rand() / (float) RAND_MAX) * 1080));
-	else if (strcmp(cp, "rand_w") == 0)
-		snprintf(buf, sizeof buf, "%d", (int) ((rand() / (float) RAND_MAX) * 1920));
-	else if (strcmp(cp, "rand_h") == 0)
-		snprintf(buf, sizeof buf, "%d", (int) ((rand() / (float) RAND_MAX) * 1080));
-	else if (strcmp(cp, "rand_rgb") == 0) {
-		snprintf(buf, sizeof buf, "%ld", (long) ((rand() / (float) RAND_MAX) * 0xffffff));
-		}
-	else
-		return cp;
-	if (rand_idx + strlen(buf) >= sizeof rand_buf - 1)
-		return cp;
-
-	cp1 = rand_buf + rand_idx;
-	strcpy(rand_buf + rand_idx, buf);
-	rand_idx += strlen(buf) + 1;
-//printf("%s -> %s\n", cp, cp1);
-	return cp1;
-}
-
 void
 fullscreen_display(char *fbp, struct imgRawImage *img, double f)
 {
@@ -527,144 +499,6 @@ fullscreen_display(char *fbp, struct imgRawImage *img, double f)
 			put_pixel(fbp, data[0] * f, data[1] * f, data[2] * f);
 		}
 	}
-}
-
-cmd_t *
-next_script_cmd()
-{	static cmd_t c;
-static FILE *fp;
-	char	buf[BUFSIZ];
-# define MAX_ARGS 16
-	char	*args[MAX_ARGS];
-	char	*cp;
-static int line = 0;
-static int swidth, sheight;
-
-	if (fp == NULL) {
-		if ((fp = fopen(script_file, "r")) == NULL) {
-			perror(script_file);
-			exit(1);
-		}
-	}
-
-	while (1) {
-		int	a = 0;
-
-		line++;
-		if (fgets(buf, sizeof buf, fp) == NULL) {
-			if (v_flag)
-				printf("[EOF]\n");
-			c.type = C_EXIT;
-			return &c;
-		}
-		if (v_flag) {
-			printf("%s", buf);
-		}
-
-		if (*buf && buf[strlen(buf) - 1] == '\n') {
-			buf[strlen(buf) - 1] = '\0';
-		}
-
-		if (*buf == '\0' || *buf == ' ' || *buf == '#' || *buf == '\n')
-			continue;
-
-		rand_idx = 0;
-		for (cp = strtok(buf, " "); cp; cp = strtok(NULL, " ")) {
-			if (a < MAX_ARGS) {
-				cp = map_rand(cp);
-				args[a++] = cp;
-			}
-		}
-		if (strcmp(args[0], "draw") == 0 && a >= 5) {
-			c.x = atoi(args[1]);
-			c.y = atoi(args[2]);
-			c.w = atoi(args[3]);
-			c.h = atoi(args[4]);
-
-			c.x *= vinfo.xres / (float) swidth;
-			c.y *= vinfo.yres / (float) sheight;
-			c.w *= vinfo.xres / (float) swidth;
-			c.h *= vinfo.yres / (float) sheight;
-
-			return &c;
-		}
-		if (strcmp(args[0], "clear") == 0) {
-		    	memset(fbp, 0x00, screensize);
-			continue;
-		}
-		if (strcmp(args[0], "delay") == 0 && a >= 1) {
-			delay = atoi(args[1]);
-			continue;
-		}
-		if (strcmp(args[0], "number") == 0 && a >= 1) {
-		    	num = atoi(args[1]);
-			continue;
-		}
-		if (strcmp(args[0], "clear") == 0) {
-		    	memset(fbp, 0x00, screensize);
-			continue;
-		}
-		if (strcmp(args[0], "circle") == 0 && a >= 4) {
-			c.x = atoi(args[1]);
-			c.y = atoi(args[2]);
-			c.radius = atoi(args[3]);
-			c.rgb = strtol(args[4], NULL, 16);
-
-			c.x *= vinfo.xres / (float) swidth;
-			c.y *= vinfo.yres / (float) sheight;
-			c.radius *= vinfo.xres / (float) swidth;
-
-			draw_circle(&c);
-
-			continue;
-		}
-		if (strcmp(args[0], "line") == 0 && a >= 6) {
-			c.x = atoi(args[1]);
-			c.y = atoi(args[2]);
-			c.x1 = atoi(args[3]);
-			c.y1 = atoi(args[4]);
-			c.rgb = strtol(args[5], NULL, 16);
-
-			c.x *= vinfo.xres / (float) swidth;
-			c.y *= vinfo.yres / (float) sheight;
-			c.x1 *= vinfo.xres / (float) swidth;
-			c.y1 *= vinfo.yres / (float) sheight;
-
-			draw_line(&c);
-
-			continue;
-		}
-		if (strcmp(args[0], "rectangle") == 0 && a >= 5) {
-			c.x = atoi(args[1]);
-			c.y = atoi(args[2]);
-			c.w = atoi(args[3]);
-			c.h = atoi(args[4]);
-			c.rgb = strtol(args[5], NULL, 16);
-
-			c.x *= vinfo.xres / (float) swidth;
-			c.y *= vinfo.yres / (float) sheight;
-			c.w *= vinfo.xres / (float) swidth;
-			c.h *= vinfo.yres / (float) sheight;
-
-			draw_rectangle(&c);
-
-			continue;
-		}
-		if (strcmp(args[0], "sleep") == 0 && a >= 1) {
-			sleep(atoi(args[1]));
-			continue;
-		}
-		if (strcmp(args[0], "screensize") == 0 && a >= 1) {
-			swidth = atoi(args[1]);
-			sheight = atoi(args[2]);
-			continue;
-		}
-
-		printf("%s:%d: bad command - not recognized '%s'\n",
-			script_file, line, args[0]);
-	}
-
-	return &c;
 }
 
 void 

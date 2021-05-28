@@ -1340,6 +1340,8 @@ my $ABS_Y = 0x01;
 my $ABS_MT_TRACKING_ID = 0x39;
 my $is_64bit;
 my $ev_device = "/dev/input/event0";
+my $stdin_disabled;
+my $num_eofs = 0;
 
 sub ev_check
 {
@@ -1371,7 +1373,7 @@ sub ev_check
 
 	my $bits = '';
 	vec($bits, $ev_fh->fileno(), 1) = 1 if $ev_fh;
-	vec($bits, STDIN->fileno(), 1) = 1;
+	vec($bits, STDIN->fileno(), 1) = 1 if !$stdin_disabled;
 	vec($bits, $sock->fileno(), 1) = 1 if $sock;
 
 	my $t = 1;
@@ -1394,6 +1396,9 @@ sub ev_check
 		if (vec($rbits, STDIN->fileno(), 1)) {
 			if (sysread(STDIN, $s, 1)) {
 				return (1, "enter", 0, 0);
+			}
+			if ($num_eofs++ > 1000) {
+				$stdin_disabled = 1;
 			}
 			next;
 		}

@@ -247,10 +247,10 @@ sub gen7
 {	my $fh = shift;
 
 	my $s = '';
-	$s .= "draw 100 100 250 250\n";
-	$s .= "draw 400 100 250 250\n";
-	$s .= "draw 100 450 250 250\n";
-	$s .= "draw 400 450 250 250\n";
+	$s .= "draw 100  100 800 550\n";
+	$s .= "draw 1000 100 800 550\n";
+	$s .= "draw 100  600 800 550\n";
+	$s .= "draw 1000 600 800 550\n";
 	return $s;
 }
 
@@ -259,7 +259,7 @@ sub gen8
 
 	my $s = '';
 	for (my $i = 0; $i < 100; $i++) {
-		$s .= "circle rand_x rand_y rand_rgb\n";
+		$s .= "circle rand_x rand_y rand_x rand_rgb\n";
 	}
 	$s .= "sleep 10\n";
 	return $s;

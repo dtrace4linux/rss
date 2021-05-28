@@ -66,6 +66,39 @@ draw_circle(cmd_t *cp)
 }
 
 int
+draw_clear(cmd_t *cp)
+{
+	memset(fbp, 0x00, screensize);
+	return 0;
+}
+
+int
+draw_dot(cmd_t *cp)
+{
+	int r = cp->rgb >> 16;
+	int g = (cp->rgb >> 8) & 0xff;
+	int b = (cp->rgb >> 0) & 0xff;
+
+	plot(cp->x, cp->y);
+}
+
+int
+draw_filled_rectangle(cmd_t *cp)
+{	int	x, y;
+
+	int r = cp->rgb >> 16;
+	int g = (cp->rgb >> 8) & 0xff;
+	int b = (cp->rgb >> 0) & 0xff;
+
+	for (y = cp->y; y < cp->y + cp->h; y++) {
+		set_location(cp->x, y);
+		for (x = cp->x; x < cp->x + cp->w; x++) {
+			do_plot(x, y, r, g, b);
+		}
+	}
+}
+
+int
 draw_line(cmd_t *cp)
 {	int	x, y;
 
@@ -99,10 +132,16 @@ draw_rectangle(cmd_t *cp)
 	int g = (cp->rgb >> 8) & 0xff;
 	int b = (cp->rgb >> 0) & 0xff;
 
+	
 	for (y = cp->y; y < cp->y + cp->h; y++) {
 		set_location(cp->x, y);
-		for (x = cp->x; x < cp->x + cp->w; x++) {
-			do_plot(x, y, r, g, b);
+		if (y == cp->y || y == cp->y + cp->h -1) {
+			for (x = cp->x; x < cp->x + cp->w; x++) {
+				do_plot(x, y, r, g, b);
+			}
+		} else {
+			do_plot(cp->x, y, r, g, b);
+			do_plot(cp->x + cp->w - 1, y, r, g, b);
 		}
 	}
 }
