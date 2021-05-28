@@ -596,7 +596,7 @@ shrink_display(char *fbp, struct imgRawImage *img)
 	xfrac = img->width / (float) vwidth;
 	yfrac = img->height / (float) vheight;
 
-printf("%f %f imgw=%d imgh=%d vw=%d vh=%d\n", xfrac, yfrac, img->width, img->height, vwidth, vheight);
+//printf("%f %f imgw=%d imgh=%d vw=%d vh=%d\n", xfrac, yfrac, img->width, img->height, vwidth, vheight);
 //printf("frac=%f %f [img: %dx%d] %d,%d\n", xfrac, yfrac, img->width, img->height, x_arg, y_arg);
 //printf("x0=%d xfrac=%.2f yfrac=%.2f\n", x0, xfrac, yfrac);
 
