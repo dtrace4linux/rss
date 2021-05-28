@@ -590,33 +590,34 @@ shrink_display(char *fbp, struct imgRawImage *img)
 	float yfrac = 1;
 	int	width = img->width;
 
-	width *= xfrac;
-
 	int vwidth = w_arg < (int) vinfo.xres ? w_arg : (int) vinfo.xres;
 	int vheight = h_arg < (int) vinfo.yres ? h_arg : (int) vinfo.yres;
 
 	xfrac = img->width / (float) vwidth;
 	yfrac = img->height / (float) vheight;
 
-	int	x0 = 0;
+printf("%f %f imgw=%d imgh=%d vw=%d vh=%d\n", xfrac, yfrac, img->width, img->height, vwidth, vheight);
 //printf("frac=%f %f [img: %dx%d] %d,%d\n", xfrac, yfrac, img->width, img->height, x_arg, y_arg);
 //printf("x0=%d xfrac=%.2f yfrac=%.2f\n", x0, xfrac, yfrac);
 
 	for (y = 0; y < vheight; y++) {
+		int loc_end;
+
 		if (y_arg + vinfo.yoffset > vinfo.yres)
 			break;
 
 	        location = (y_arg + vinfo.yoffset + y) * finfo.line_length +
 			(x_arg + vinfo.xoffset) * (vinfo.bits_per_pixel / 8);
+	        loc_end = (y_arg + vinfo.yoffset + y + 1) * finfo.line_length;
 		for (x = 0; x < vwidth; x++) {
-			if (x + x_arg > (int) vinfo.xres || location >= screensize)
+			if (location >= loc_end || location >= screensize)
 				break; 
-			if (x < x0 || x > x0 + width)
+			if (x * xfrac > width)
 				put_pixel(fbp, 0, 0, 0);
 			else {
 				unsigned char *data = &img->lpData[
 					(int) (y * yfrac) * img->width * 3 +
-					(int) ((x - x0) * xfrac) * 3];
+					(int) (x * xfrac) * 3];
 
 				put_pixel(fbp, data[0], data[1], data[2]);
 			}
