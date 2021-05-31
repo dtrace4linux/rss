@@ -53,7 +53,7 @@ static FILE *fp;
 	char	buf[BUFSIZ];
 	char	*cp;
 static int line = 0;
-static int swidth, sheight;
+static int swidth = 1920, sheight = 1020;
 
 	if (fp == NULL) {
 		if ((fp = fopen(script_file, "r")) == NULL) {
@@ -121,7 +121,8 @@ static int swidth, sheight;
 		    	num = cmdp->args[1];
 			continue;
 		}
-		if (strcmp(cname, "circle") == 0 && cmdp->argc >= 4) {
+		if ((strcmp(cname, "circle") == 0 ||
+		    strcmp(cname, "filled_circle") == 0) && cmdp->argc >= 4) {
 			cmdp->type   = C_CIRCLE;
 			cmdp->x      = cmdp->args[1];
 			cmdp->y      = cmdp->args[2];
@@ -134,7 +135,10 @@ static int swidth, sheight;
 			cmdp->y *= vinfo.yres / (float) sheight;
 			cmdp->radius *= vinfo.xres / (float) swidth;
 
-			draw_circle(cmdp);
+			if (strcmp(cname, "circle") == 0)
+				draw_circle(cmdp);
+			else
+				draw_filled_circle(cmdp);
 
 			continue;
 		}

@@ -24,6 +24,7 @@ typedef struct cmd_t {
 	} cmd_t;
 
 int	draw_circle(cmd_t *);
+int	draw_filled_circle(cmd_t *);
 int	draw_clear(cmd_t *);
 int	draw_dot(cmd_t *);
 int	draw_filled_rectangle(cmd_t *);

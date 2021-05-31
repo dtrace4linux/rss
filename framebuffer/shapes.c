@@ -12,6 +12,7 @@ extern char *fbp;
 	        location =  \
 		    	(y+vinfo.yoffset) * finfo.line_length + \
 			(x+vinfo.xoffset) * (vinfo.bits_per_pixel/8);
+# define plot(x, y) do_plot(x, y, r, g, b)
 
 static void
 do_plot(int x, int y, int r, int g, int b)
@@ -37,8 +38,6 @@ draw_circle(cmd_t *cp)
 	int ddF_y = -2 * cp->radius;
 	int x = 0;
 	int y = cp->radius;
-
-# define plot(x, y) do_plot(x, y, r, g, b)
 
 	plot(cp->x, cp->y + cp->radius);
 	plot(cp->x, cp->y - cp->radius);
@@ -82,6 +81,41 @@ draw_dot(cmd_t *cp)
 	plot(cp->x, cp->y);
 }
 
+void
+draw__line(cmd_t *cp, int x1, int y1, int x2, int y2)
+{
+	cp->x = x1;
+	cp->y = y1;
+	cp->x1 = x2;
+	cp->y1 = y2;
+	draw_line(cp);
+}
+int
+draw_filled_circle(cmd_t *cp)
+{
+
+	int	x0 = cp->x;
+	int	y0 = cp->y;
+
+	int	d = 3 - (2 * cp->radius);
+	int x = 0;
+	int y = cp->radius;
+
+	while (x <= y) {
+		draw__line(cp, x0 + x, y0 + y, x0 + y, y0 + x);
+		draw__line(cp, x0 - x, y0 + y, x0 + y, y0 - x);
+		draw__line(cp, x0 - x, y0 - y, x0 - y, y0 - x);
+		draw__line(cp, x0 + x, y0 - y, x0 - y, y0 + x);
+		if (d < 0)
+			d += 4 * x + 6;
+		else {
+			d += 4*(x-y) + 10;
+			y--;
+		}
+		x++;
+	}
+}
+
 int
 draw_filled_rectangle(cmd_t *cp)
 {	int	x, y;
@@ -96,6 +130,7 @@ draw_filled_rectangle(cmd_t *cp)
 			do_plot(x, y, r, g, b);
 		}
 	}
+	return 0;
 }
 
 int

@@ -74,6 +74,7 @@ sub main
 	gen("draw7.txt", \&gen7);
 	gen("draw8.txt", \&gen8);
 	gen("draw9.txt", \&gen9);
+	gen("draw10.txt", \&gen10);
 }
 
 sub gen
@@ -272,6 +273,17 @@ sub gen9
 	for (my $i = 0; $i < 300; $i++) {
 		$s .= "line rand_x rand_y rand_x rand_y rand_rgb\n";
 	}
+	return $s;
+}
+
+sub gen10
+{	my $fh = shift;
+
+	my $s = '';
+	for (my $i = 0; $i < 100; $i++) {
+		$s .= "filled_circle rand_x rand_y rand_x rand_rgb\n";
+	}
+	$s .= "sleep 10\n";
 	return $s;
 }
 
