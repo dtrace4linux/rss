@@ -143,6 +143,7 @@ read_png_file(char* file_name)
 	free(row_pointers);
 
 	png_destroy_info_struct(png_ptr, &info_ptr);
+	png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
 
 	return lpNewImage;
 }
