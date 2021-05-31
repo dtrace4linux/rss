@@ -7,15 +7,30 @@ struct imgRawImage {
 struct imgRawImage* loadJpegImageFile(char* lpFilename);
 struct imgRawImage* read_png_file(char *lpFilename);
 
-enum ctypes { C_NONE, C_CIRCLE, C_CLEAR, C_DELAY, C_DOT, C_EXIT, 
-	C_FILLED_RECTANGLE, C_LINE, C_NUMBER, C_RECTANGLE, 
-	C_SCREENSIZE, C_SLEEP };
+enum ctypes { 
+	C_NONE, 
+	C_CIRCLE, 
+	C_CLEAR, 
+	C_DELAY, 
+	C_DOT, 
+	C_DRAW,
+	C_EXIT, 
+	C_FILLED_CIRCLE, 
+	C_FILLED_RECTANGLE, 
+	C_LINE, 
+	C_NUMBER, 
+	C_RECTANGLE, 
+	C_REPEAT, 
+	C_SCREENSIZE, 
+	C_SLEEP,
+	 };
 # define MAX_ARGS 16
 
 typedef struct cmd_t {
 	int	type;
 	int	x, y, w, h;
 	int	x1, y1;
+	int	count;
 	int	radius;
 	unsigned long rgb;
 	int	argc;

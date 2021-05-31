@@ -11,8 +11,36 @@
 #include <linux/fb.h>
 #include "fb.h"
 
-char	rand_buf[1024];
-int	rand_idx;
+static char	rand_buf[1024];
+static int	rand_idx;
+static cmd_t	*script;
+static int	script_used;
+static int	script_len;
+static int sp;
+
+static int swidth = 1920, sheight = 1020;
+
+static cmd_t * read_script_cmd(cmd_t *cmdp);
+static cmd_t *script_exec();
+static int debug;
+
+static char *cmds[] = {
+	"C_NONE", 
+	"C_CIRCLE", 
+	"C_CLEAR", 
+	"C_DELAY", 
+	"C_DOT", 
+	"C_DRAW",
+	"C_EXIT", 
+	"C_FILLED_CIRCLE", 
+	"C_FILLED_RECTANGLE", 
+	"C_LINE", 
+	"C_NUMBER", 
+	"C_RECTANGLE", 
+	"C_REPEAT", 
+	"C_SCREENSIZE", 
+	"C_SLEEP",
+	};
 
 /**********************************************************************/
 /*   We  dont  want  to  randomize  in the script itself, since that  */
@@ -48,12 +76,123 @@ map_rand(char *cp)
 
 cmd_t *
 next_script_cmd()
-{	cmd_t *cmdp = NULL;
+{
+	if (script == NULL) {
+		char *cp;
+		if ((cp = getenv("DEBUG")) != NULL) {
+			debug = atoi(cp);
+		}
+
+		script_len += 32;
+		script = calloc(sizeof *script, script_len);
+
+		while (1) {
+			memset(&script[script_used], 0, sizeof *script);
+			if (read_script_cmd(&script[script_used]) == NULL)
+				break;
+
+			if (script[script_used++].type == C_EXIT)
+				break;
+
+			if (script_used >= script_len) {
+				script_len += 128;
+				script = realloc(script, script_len * sizeof *script);
+			}
+		}
+	}
+
+	while (sp < script_used) {
+		cmd_t *cmdp = script_exec();
+		if (cmdp)
+			return cmdp;
+	}
+
+	return NULL;
+}
+static cmd_t *
+script_exec()
+{
+	cmd_t *cmdp = &script[sp++];
+
+	if (debug)
+		printf("exec: 0x%04x: %s 0x%02x\n", sp-1, cmds[cmdp->type], cmdp->type);
+
+	switch (cmdp->type) {
+	  case C_CIRCLE:
+		draw_circle(cmdp);
+	  	break;
+
+	  case C_CLEAR:
+		draw_clear(cmdp);
+		break;
+
+	  case C_DELAY:
+		delay = cmdp->args[1];
+		break;
+
+	  case C_DOT:
+		draw_dot(cmdp);
+	  	break;
+
+	  case C_DRAW:
+	  	return cmdp;
+
+	  case C_EXIT:
+	  	return cmdp;
+
+	  case C_FILLED_CIRCLE:
+		draw_filled_circle(cmdp);
+		break;
+
+	  case C_FILLED_RECTANGLE:
+		draw_filled_rectangle(cmdp);
+		break;
+
+	  case C_LINE:
+		draw_line(cmdp);
+	  	break;
+
+	  case C_NUMBER:
+	  	num = cmdp->args[1];
+		break;
+
+	  case C_RECTANGLE:
+		draw_rectangle(cmdp);
+	  	break;
+
+	  case C_REPEAT:
+	  	if (cmdp->count >= cmdp->args[1]) {
+			sp++;
+			break;
+		}
+		cmdp->count++;
+	  	break;
+
+	  case C_SLEEP:
+		sleep(cmdp->args[1]);
+	  	break;
+
+	  case C_SCREENSIZE:
+		swidth = cmdp->args[1];
+		sheight = cmdp->args[2];
+	  	break;
+
+	  default:
+		printf("script_exec: error, 0x%04x: %s '%d' is unhandled\n", 
+			sp-1, cmds[cmdp->type], cmdp->type);
+		exit(0);
+	  }
+
+	return NULL;
+}
+
+static cmd_t *
+read_script_cmd(cmd_t *cmdp)
+{
 static FILE *fp;
 	char	buf[BUFSIZ];
 	char	*cp;
 static int line = 0;
-static int swidth = 1920, sheight = 1020;
 
 	if (fp == NULL) {
 		if ((fp = fopen(script_file, "r")) == NULL) {
@@ -63,8 +202,6 @@ static int swidth = 1920, sheight = 1020;
 	}
 
 	while (1) {
-		cmdp = calloc(sizeof *cmdp, 1);
-
 		line++;
 		if (fgets(buf, sizeof buf, fp) == NULL) {
 			if (v_flag)
@@ -96,6 +233,7 @@ static int swidth = 1920, sheight = 1020;
 		char *cname = cmdp->raw_args[0];
 
 		if (strcmp(cname, "draw") == 0 && cmdp->argc >= 5) {
+			cmdp->type = C_DRAW;
 			cmdp->x = cmdp->args[1];
 			cmdp->y = cmdp->args[2];
 			cmdp->w = cmdp->args[3];
@@ -109,17 +247,17 @@ static int swidth = 1920, sheight = 1020;
 			return cmdp;
 		}
 		if (strcmp(cname, "clear") == 0) {
-			draw_clear(cmdp);
-			continue;
+			cmdp->type = C_CLEAR;
+			return cmdp;
 		}
 		if (strcmp(cname, "delay") == 0 && cmdp->argc >= 1) {
-			delay = cmdp->args[1];
-			continue;
+			cmdp->type = C_DELAY;
+			return cmdp;
 		}
 		if (strcmp(cname, "number") == 0 && cmdp->argc >= 1) {
 			cmdp->type = C_NUMBER;
 		    	num = cmdp->args[1];
-			continue;
+			return cmdp;
 		}
 		if ((strcmp(cname, "circle") == 0 ||
 		    strcmp(cname, "filled_circle") == 0) && cmdp->argc >= 4) {
@@ -135,12 +273,10 @@ static int swidth = 1920, sheight = 1020;
 			cmdp->y *= vinfo.yres / (float) sheight;
 			cmdp->radius *= vinfo.xres / (float) swidth;
 
-			if (strcmp(cname, "circle") == 0)
-				draw_circle(cmdp);
-			else
-				draw_filled_circle(cmdp);
+			if (strcmp(cname, "filled_circle") == 0)
+		       		cmdp->type   = C_FILLED_CIRCLE;
 
-			continue;
+			return cmdp;
 		}
 		if (strcmp(cname, "dot") == 0 && cmdp->argc >= 4) {
 			cmdp->type = C_DOT;
@@ -149,9 +285,7 @@ static int swidth = 1920, sheight = 1020;
 			cmdp->x *= vinfo.xres / (float) swidth;
 			cmdp->y *= vinfo.yres / (float) sheight;
 
-			draw_dot(cmdp);
-
-			continue;
+			return cmdp;
 		}
 		if (strcmp(cname, "line") == 0 && cmdp->argc >= 6) {
 			cmdp->type = C_LINE;
@@ -166,9 +300,7 @@ static int swidth = 1920, sheight = 1020;
 			cmdp->x1 *= vinfo.xres / (float) swidth;
 			cmdp->y1 *= vinfo.yres / (float) sheight;
 
-			draw_line(cmdp);
-
-			continue;
+			return cmdp;
 		}
 		if ((strcmp(cname, "rectangle") == 0 ||
 		    strcmp(cname, "filled_rectangle") == 0) && cmdp->argc >= 5) {
@@ -185,25 +317,24 @@ static int swidth = 1920, sheight = 1020;
 
 			if (strcmp(cname, "rectangle") == 0) {
 				cmdp->type = C_RECTANGLE;
-				draw_rectangle(cmdp);
 				}
 			else {
 				cmdp->type = C_FILLED_RECTANGLE;
-				draw_filled_rectangle(cmdp);
 				}
 
-			continue;
+			return cmdp;
+		}
+		if (strcmp(cname, "repeat") == 0 && cmdp->argc >= 1) {
+			cmdp->type = C_REPEAT;
+			return cmdp;
 		}
 		if (strcmp(cname, "sleep") == 0 && cmdp->argc >= 1) {
 			cmdp->type = C_SLEEP;
-			sleep(cmdp->args[1]);
-			continue;
+			return cmdp;
 		}
 		if (strcmp(cname, "screensize") == 0 && cmdp->argc >= 1) {
 			cmdp->type = C_SCREENSIZE;
-			swidth = cmdp->args[1];
-			sheight = cmdp->args[2];
-			continue;
+			return cmdp;
 		}
 
 		printf("%s:%d: bad command - not recognized '%s'\n",
