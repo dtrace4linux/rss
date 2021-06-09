@@ -447,11 +447,6 @@ int main(int argc, char **argv)
 		memset(scrp->s_mem, 0x00, scrp->s_screensize);
 	}
 
-	if (script_file) {
-		do_script();
-		exit(0);
-	}
-
 
 	if (f_flag) {
 		process_file();
@@ -459,6 +454,11 @@ int main(int argc, char **argv)
 		filenames_list = argv + arg_index;
 		num_filenames = argc - arg_index;
 		do_free_filenames = 0;
+	}
+
+	if (script_file) {
+		do_script();
+		exit(0);
 	}
 
 	for (i = 0; i < num_filenames; i++) {
