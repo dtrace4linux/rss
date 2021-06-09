@@ -6,24 +6,22 @@
 #include <linux/fb.h>
 #include "fb.h"
 
-extern char *fbp;
-
 # define set_location(x, y) \
-	        location =  \
-		    	(y+vinfo.yoffset) * finfo.line_length + \
-			(x+vinfo.xoffset) * (vinfo.bits_per_pixel/8);
+	        scrp->s_location =  \
+		    	(y+scrp->s_yoffset) * scrp->s_line_length + \
+			(x+scrp->s_xoffset) * (scrp->s_bpp/8);
 # define plot(x, y) do_plot(x, y, r, g, b)
 
 static void
 do_plot(int x, int y, int r, int g, int b)
 {
-	if (x < 0 || y < 0 || x >= (int) vinfo.xres || y >= (int) vinfo.yres)
+	if (x < 0 || y < 0 || x >= (int) scrp->s_width || y >= (int) scrp->s_height)
 		return;
 
-        location = 
-	    	(y+vinfo.yoffset) * finfo.line_length +
-		(x+vinfo.xoffset) * (vinfo.bits_per_pixel/8);
-	put_pixel(fbp, r, g, b);
+        scrp->s_location = 
+	    	(y+scrp->s_yoffset) * scrp->s_line_length +
+		(x+scrp->s_xoffset) * (scrp->s_bpp/8);
+	put_pixel(scrp, r, g, b);
 }
 
 int
@@ -67,7 +65,7 @@ draw_circle(cmd_t *cp)
 int
 draw_clear(cmd_t *cp)
 {
-	memset(fbp, 0x00, screensize);
+	memset(scrp->s_mem, 0x00, scrp->s_screensize);
 	return 0;
 }
 

@@ -1,0 +1,67 @@
+fb -- tool to display JPG images on the framebuffer
+Usage: fb [switches] <file1> <file2> ...
+
+Description:
+
+  "fb" started as a simple tool to display JPG or PNG files
+  on the Linux console framebuffer. This allows displaying of 
+  graphics in a non-X Windows environment.
+
+  It has continued to evolve to be a tool to display
+  graphic images, and drawing structures, along with simple
+  scripting mechanisms, allowing a broad variety of drawing
+  mechanics, and designed for eye-candy style displays.
+
+  For example, one can display a sequence of images according
+  to a pattern or a mathematical formula, either by a simple
+  generator script, or via support within the scripting language.
+
+  Whilst fb can write to the frame buffer, it can also write
+  to a virtual frame buffer (allowing compositing style experiments,
+  but also to allow easy capture or running, even inside an X
+  window environment)
+
+  There are many command line options, designed to handle specific
+  rendering scenarios, but more of these switches are being
+  migrated to the scripting language.
+
+Montage mode:
+
+  Montage mode is designed to allow display of a number of images, 
+  in a random manner - designed to fill the screen, but each image
+  is a tiny thumbnail - randomly placed. (Typically, random 
+  placement is done top-to-bottom/left-to-right).
+
+Switches:
+
+   -cvt <fname>       Write loaded image to file.
+   -delay NN          Scroll delay in milliseconds
+   -effects           Scroll-in effects enabled
+   -f <file>          Get filenames from specified file.
+   -framebuffer <fname>
+                      Use virtual framebuffer
+   -framebuffer_size <width>x<height>
+                      Specify size of the virtual frame buffer
+   -fullscreen        Stretch image to fill screen
+   -info              Print screen size info
+   -o <fname>         Write screen buffer to an output jpg file
+   -montage           Display images as thumbnails
+   -num NN            Only process first NN images
+   -page N            Display page/screen N of the image
+   -rand              Randomize files
+   -script <file>     Script file to do complex layouts
+   -scroll            Scroll image
+   -scroll_y_incr NN  When using -scroll, scroll by this much.
+   -seq               When doing montage, display l->r
+   -stretch           Stretch but dont change aspect ratio
+   -xfrac N.NN        Shrink image on the x-axis
+   -yfrac N.NN        Shrink image on the y-axis
+   -x NN              Set co-ordinate
+   -y NN              Set co-ordinate
+   -w NN              Set co-ordinate
+   -v                 Verbose; list lines in script files
+
+Examples:
+
+  $ fb -montage -delay 1 -rand -f index.log -num 30
+

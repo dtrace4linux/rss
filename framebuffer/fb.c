@@ -24,6 +24,7 @@ https://github.com/godspeed1989/fbv/blob/master/main.c
 #include <linux/fb.h>
 #include <sys/mman.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
 #include <errno.h>
 #include <time.h>
 #include "fb.h"
@@ -51,36 +52,53 @@ float	yfrac = 1.0;
 int	x_arg = 0, y_arg = 0;
 int	w_arg = -1, h_arg = -1;
 int	v_flag;
+char	*framebuffer_name;
+int	framebuffer_w = 1920;
+int	framebuffer_h = 1080;
 
-char *fbp = 0;
-struct fb_var_screeninfo vinfo;
-struct fb_fix_screeninfo finfo;
-long location = 0;
-long screensize = 0;
+screen_t	*scrp;
+
+char	**filenames_list;
+int	num_filenames;
+int	do_free_filenames;
 
 /**********************************************************************/
 /*   Prototypes.						      */
 /**********************************************************************/
-cmd_t	*next_script_cmd(void);
+screen_t	*open_framebuffer(void);
+void	close_framebuffer(screen_t *);
+void draw_image(struct imgRawImage *img);
 void process_file(void);
-void shrink_display(char *fbp, struct imgRawImage *img);
-int	display_file(char *fname, int do_wait);
-void normal_display(char *fbp, struct imgRawImage *img, int x, int y, int w, int h, int x1, int y1);
-void fullscreen_display(char *fbp, struct imgRawImage *img, double f);
-void stretch_display(char *fbp, struct imgRawImage *img);
-void put_pixel(char *fbp, int r, int g, int b);
+void free_filenames(void);
+struct imgRawImage *open_image(char *fname);
+void normal_display(screen_t *, struct imgRawImage *img, int x, int y, int w, int h, int x1, int y1);
+void fullscreen_display(screen_t *, struct imgRawImage *img, double f);
+void stretch_display(screen_t *, struct imgRawImage *img);
 void	usage(void);
-int	write_jpeg(char *ofname, unsigned char *img, int w, int h, int depth);
+int	write_jpeg(char *ofname, screen_t *, int depth);
 
-int
-display_file(char *fname, int do_wait)
+struct imgRawImage *
+next_image()
+{	struct imgRawImage *img;
+static int	i;
+
+	while (i < num_filenames) {
+		img = open_image(filenames_list[i++]);
+		if (img)
+			return img;
+	}
+	return NULL;
+}
+
+struct imgRawImage *
+open_image(char *fname)
 {	int	fd;
 	char	buf[BUFSIZ];
 	struct imgRawImage *img = NULL;
 
 	if ((fd = open(fname, O_RDONLY)) < 0) {
 		printf("fb: Cannot open %s - %s\n", fname, strerror(errno));
-		return 1;
+		return NULL;
 	}
 	if (read(fd, buf, 4) != 4) {
 		FILE	*fp;
@@ -90,7 +108,7 @@ display_file(char *fname, int do_wait)
 			fprintf(fp, "File too short - %s\n", fname);
 			fclose(fp);
 		}
-		return 1;
+		return NULL;
 	}
 	close(fd);
 
@@ -105,140 +123,39 @@ display_file(char *fname, int do_wait)
 			exit(1);
 		}
 	} else {
-		return 1;
-//		printf("Cannot determine image format: %s\n", fname);
-//		exit(1);
+		return NULL;
 	}
 
 	if (info) {
 		printf("Image: %ldx%ld\n", img->width, img->height);
-		return 1;
+		return NULL;
 	}
-
-//printf("num=%d\n", img->numComponents);
-
-# if 0
-	if (img->numComponents == 81) {
-		/***********************************************/
-		/*   Convert mono to RGB/24 bit		       */
-		/***********************************************/
-		unsigned char *newimg = malloc(img->width * img->height * 4 + 1);
-		unsigned x, y;
-printf("converting\n");
-
-		for (y = 0; y < img->height; y++) {
-			char *sp = img->lpData + y * img->width * 3;
-			char *dp = newimg + y * img->width * 4;
-			for (x = 0; x < img->width; x++) {
-				*dp++ = *sp;
-				*dp++ = *sp;
-				*dp++ = *sp;
-				*dp++ = 0;
-				sp++;
-			}
-		}
-		free(img->lpData);
-		img->lpData = newimg;
-		img->numComponents = 32;
-	}
-# endif
 
 	if (cvt_ofname) {
-		write_jpeg(cvt_ofname, img->lpData, 
-			img->width, img->height, img->numComponents);
+		screen_t s;
+		s.s_mem = img->lpData;
+		s.s_width = img->width;
+		s.s_height = img->height;
+		write_jpeg(cvt_ofname, &s, img->numComponents);
 		exit(0);
 	}
 
 	if (ofname) {
-		write_jpeg(ofname, fbp, vinfo.xres, vinfo.yres, vinfo.bits_per_pixel);
+		write_jpeg(ofname, scrp, scrp->s_bpp);
 		exit(0);
 	}
 
-/*
-    printf("The framebuffer device was mapped to memory successfully.\n");
-*/
+	return img;
+}
 
-	if (w_arg < 0)
-		w_arg = img->width;
-	if (h_arg < 0)
-		h_arg = img->height;
-
-	if (effects) {
-		int i;
-		double f = 0;
-		struct timeval tv;
-		for (i = 0; i < 10; i++) {
-			fullscreen_display(fbp, img, f);
-			f += 0.1;
-			tv.tv_sec = 0;
-			tv.tv_usec = 100000;
-			select(0, NULL, NULL, NULL, &tv);
-		}
-	} else if (fullscreen) {
-		fullscreen_display(fbp, img, 1.0);
-	} else if (script_file) {
-		cmd_t *cmdp;
-
-		if ((cmdp = next_script_cmd()) != NULL) {
-			if (cmdp->type == C_EXIT)
-				return 0;
-
-			x_arg = cmdp->x;
-			y_arg = cmdp->y;
-			w_arg = cmdp->w;
-			h_arg = cmdp->h;
-			shrink_display(fbp, img);
-		}
-	} else if (montage) {
-static int x, y;
-		x_arg = (rand() / (float) RAND_MAX) * vinfo.xres;
-		y_arg = (rand() / (float) RAND_MAX) * vinfo.yres;
-		w_arg = (rand() / (float) RAND_MAX) * 90 + 30;
-		h_arg = (rand() / (float) RAND_MAX) * 90 + 30;
-		if (seq_flag) {
-			x_arg = x;
-			y_arg = y;
-			if ((x += w_arg) >= (int) vinfo.xres) {
-				x = 0;
-				y += 80 + (rand() / (float) RAND_MAX) * 20;
-			}
-			if (y_arg + h_arg >= (int) vinfo.yres) {
-				exit(0);
-			}
-		}
-		shrink_display(fbp, img);
-	} else if (shrink) {
-		shrink_display(fbp, img);
-	} else if (stretch) {
-		stretch_display(fbp, img);
-	} else if (scroll) {
-		int i;
-		int	x1 = 0;
-		int	y1 = 0;
-		struct timeval tv;
-		while (y1 + vinfo.yres < img->height) {
-			normal_display(fbp, img, x_arg, y_arg, w_arg, h_arg, x1, y1);
-			tv.tv_sec = delay / 1000;
-			tv.tv_usec = (delay % 1000) * 1000;
-			y1 += scroll_y_incr;
-			select(0, NULL, NULL, NULL, &tv);
-		}
-	} else {
-		normal_display(fbp, img, x_arg, y_arg, w_arg, h_arg, 0, 0);
-	}
-
-	free(img->lpData);
-	free(img);
-
-	if (!do_wait)
-		return 1;
-
+void
+do_sleep()
+{
     	struct timeval tval;
 	tval.tv_sec = 0;
 	tval.tv_usec = 0;
 	tval.tv_usec = delay * 1000;
 	select(0, NULL, NULL, NULL, &tval);
-	return 1;
 }
 
 int 
@@ -264,14 +181,29 @@ do_switches(int argc, char **argv)
 				delay = atol(argv[i]);
 				break;
 			}
+			if (strcmp(cp, "effects") == 0) {
+				effects = 1;
+				break;
+			}
+			if (strcmp(cp, "framebuffer") == 0) {
+				if (++i >= argc)
+					usage();
+				framebuffer_name = argv[i];
+				break;
+			}
+			if (strcmp(cp, "framebuffer_size") == 0) {
+				if (++i >= argc)
+					usage();
+				if (sscanf(argv[i], "%dx%d", &framebuffer_w, &framebuffer_h) != 2) {
+					fprintf(stderr, "argument has usage: -framebuffer_size <width>x<height>\n");
+					exit(1);
+				}
+				break;
+			}
 			if (strcmp(cp, "f") == 0) {
 				if (++i >= argc)
 					usage();
 				f_flag = argv[i];
-				break;
-			}
-			if (strcmp(cp, "effects") == 0) {
-				effects = 1;
 				break;
 			}
 			if (strcmp(cp, "fullscreen") == 0) {
@@ -390,153 +322,323 @@ do_switches(int argc, char **argv)
 
 	return i;
 }
+
+void
+draw_image(struct imgRawImage *img)
+{
+	if (img == NULL)
+		return;
+
+	if (w_arg < 0)
+		w_arg = img->width;
+	if (h_arg < 0)
+		h_arg = img->height;
+
+	if (effects) {
+		int i;
+		double f = 0;
+		struct timeval tv;
+		for (i = 0; i < 10; i++) {
+			fullscreen_display(scrp, img, f);
+			f += 0.1;
+			tv.tv_sec = 0;
+			tv.tv_usec = 100000;
+			select(0, NULL, NULL, NULL, &tv);
+		}
+	} else if (fullscreen) {
+		fullscreen_display(scrp, img, 1.0);
+	} else if (script_file) {
+		cmd_t *cmdp;
+
+		if ((cmdp = next_script_cmd()) != NULL) {
+			if (cmdp->type == C_EXIT)
+				return;
+
+			x_arg = cmdp->x;
+			y_arg = cmdp->y;
+			w_arg = cmdp->w;
+			h_arg = cmdp->h;
+			shrink_display(scrp, img);
+		}
+	} else if (montage) {
+static int x, y;
+		x_arg = (rand() / (float) RAND_MAX) * scrp->s_width;
+		y_arg = (rand() / (float) RAND_MAX) * scrp->s_height;
+		w_arg = (rand() / (float) RAND_MAX) * 90 + 30;
+		h_arg = (rand() / (float) RAND_MAX) * 90 + 30;
+		if (seq_flag) {
+			x_arg = x;
+			y_arg = y;
+			if ((x += w_arg) >= (int) scrp->s_width) {
+				x = 0;
+				y += 80 + (rand() / (float) RAND_MAX) * 20;
+			}
+			if (y_arg + h_arg >= (int) scrp->s_height) {
+				exit(0);
+			}
+		}
+		shrink_display(scrp, img);
+	} else if (shrink) {
+		shrink_display(scrp, img);
+	} else if (stretch) {
+		stretch_display(scrp, img);
+	} else if (scroll) {
+		int i;
+		int	x1 = 0;
+		int	y1 = 0;
+		struct timeval tv;
+		while (y1 + scrp->s_height < img->height) {
+			normal_display(scrp, img, x_arg, y_arg, w_arg, h_arg, x1, y1);
+			tv.tv_sec = delay / 1000;
+			tv.tv_usec = (delay % 1000) * 1000;
+			y1 += scroll_y_incr;
+			select(0, NULL, NULL, NULL, &tv);
+		}
+	} else {
+		normal_display(scrp, img, x_arg, y_arg, w_arg, h_arg, 0, 0);
+	}
+
+	free(img->lpData);
+	free(img);
+}
+
 int main(int argc, char **argv)
 {
-    int	x0, y0;
-    int	arg_index = 1;
-    char	*fname = NULL;
-    int	fd;
+	int	x0, y0;
+	int	arg_index = 1;
+	char	*fname = NULL;
+	int	fd;
+	int	i;
 
-    arg_index = do_switches(argc, argv);
+	arg_index = do_switches(argc, argv);
 
-    srand(time(NULL));
+	srand(time(NULL));
 
-    int fbfd = open("/dev/fb0", O_RDWR);
-    if (fbfd == -1) {
-        perror("opening /dev/fb0");
-        return -1;
-    }
+	scrp = open_framebuffer();
 
-    // Get fixed screen information
-    if (ioctl(fbfd, FBIOGET_FSCREENINFO, &finfo)) {
-        printf("Error reading fixed information.\n");
-        return -2;
-    }
-
-    // Get variable screen information
-    if (ioctl(fbfd, FBIOGET_VSCREENINFO, &vinfo)) {
-        printf("Error reading variable information.\n");
-        return -3;
-    }
-
-    // Figure out the size of the screen in bytes
-    screensize = vinfo.xres * vinfo.yres * vinfo.bits_per_pixel / 8;
-
-    if (info) {
-	    printf("%dx%d, %dbpp\n", vinfo.xres, vinfo.yres, vinfo.bits_per_pixel );
-	    printf("xres_virtual=%d yres_virtual=%d\n",
-	    	vinfo.xres_virtual, vinfo.yres_virtual);
-    }
+	if (info) {
+		printf("%dx%d, %dbpp\n", scrp->s_width, scrp->s_height, scrp->s_bpp );
+//		printf("xres_virtual=%d yres_virtual=%d\n",
+//			scrp->s_width_virtual, scrp->s_height_virtual);
+	}
 
 
-    if (arg_index >= argc && !ofname && !f_flag) {
-    	if (info)
-		exit(0);
-    	usage();
-	exit(1);
-    }
+	if (arg_index >= argc && !ofname && !f_flag) {
+		if (info)
+			exit(0);
+		usage();
+		exit(1);
+	}
 
 /*
     if (!quiet) {
-	    printf("%dx%d, %dbpp\n", vinfo.xres, vinfo.yres, vinfo.bits_per_pixel );
+	    printf("%dx%d, %dbpp\n", scrp->s_width, scrp->s_height, vinfo.bits_per_pixel );
     }
 */
-
-    // Map the device to memory
-    fbp = (char *)mmap(0, screensize, PROT_READ | PROT_WRITE, MAP_SHARED, fbfd, 0);
-    if (fbp == (char *) -1) {
-        printf("Error: failed to map framebuffer device to memory.\n");
-        return -4;
-    }
-
-    if (ofname) {
-    	write_jpeg(ofname, fbp, vinfo.xres, vinfo.yres, vinfo.bits_per_pixel);
-	exit(0);
-    }
-
-    /***********************************************/
-    /*   Clear screen if doing montage.		   */
-    /***********************************************/
-    if (montage) {
-    	memset(fbp, 0x00, screensize);
-    }
-
-    if (f_flag) {
-    	process_file();
-    } else {
-
-	    while (arg_index < argc) {
-
-	    	fname = argv[arg_index++];
-		display_file(fname, arg_index >= argc ? 0 : 1);
-		if (arg_index >= argc)
-			break;
-
-	    }
+	if (ofname) {
+		write_jpeg(ofname, scrp, scrp->s_bpp);
+		exit(0);
 	}
 
-    munmap(fbp, screensize);
-    close(fbfd);
+	/***********************************************/
+	/*   Clear screen if doing montage.	       */
+	/***********************************************/
+	if (montage) {
+		memset(scrp->s_mem, 0x00, scrp->s_screensize);
+	}
+
+	if (script_file) {
+		do_script();
+		exit(0);
+	}
+
+
+	if (f_flag) {
+		process_file();
+	} else {
+		filenames_list = argv + arg_index;
+		num_filenames = argc - arg_index;
+		do_free_filenames = 0;
+	}
+
+	for (i = 0; i < num_filenames; i++) {
+		struct imgRawImage *img;
+
+	    	fname = filenames_list[i];
+		img = open_image(fname);
+		draw_image(img);
+
+		if (num_filenames> 1) {
+			do_sleep();
+		}
+	}
+
+	free_filenames();
+	close_framebuffer(scrp);
 }
 
+void
+free_filenames()
+{	int	i;
+
+	if (!do_free_filenames)
+		return;
+
+	for (i = 0; i < num_filenames; i++)
+		free(filenames_list[i]);
+	free(filenames_list);
+}
 
 void
-fullscreen_display(char *fbp, struct imgRawImage *img, double f)
+fullscreen_display(screen_t *scrp, struct imgRawImage *img, double f)
 {
 	int	x, y;
-	float xfrac = vinfo.xres / (float) img->width;
-	float yfrac = vinfo.yres / (float) img->height;
+	float xfrac = scrp->s_width / (float) img->width;
+	float yfrac = scrp->s_height / (float) img->height;
 //printf("frac=%f %f\n", xfrac, yfrac);
 
-	for (y = 0; y < (int) vinfo.yres; y++) {
-	        location = (vinfo.yoffset + y) * finfo.line_length +
-			vinfo.xoffset * (vinfo.bits_per_pixel / 8);
-		for (x = 0; x < (int) vinfo.xres; x++) {
+	for (y = 0; y < (int) scrp->s_height; y++) {
+	        scrp->s_location = (scrp->s_yoffset + y) * scrp->s_line_length +
+			scrp->s_xoffset * (scrp->s_bpp / 8);
+		for (x = 0; x < (int) scrp->s_width; x++) {
 			unsigned char *data = &img->lpData[
 				(int) (y / yfrac) * img->width * 3 +
 				(int) (x / xfrac) * 3];
 
-			put_pixel(fbp, data[0] * f, data[1] * f, data[2] * f);
+			put_pixel(scrp, data[0] * f, data[1] * f, data[2] * f);
 		}
 	}
 }
 
 void 
-normal_display(char *fbp, struct imgRawImage *img, int x, int y, int w, int h, int x_off, int y_off)
+normal_display(screen_t *scrp, struct imgRawImage *img, int x, int y, int w, int h, int x_off, int y_off)
 {	int	x0, y0;
 	unsigned char *img_data = img->lpData;
 
 	img_data += y_off * 3 * img->width;
 
 	if (page > 0)
-		img_data += img->width * 3 * page * vinfo.yres;
+		img_data += img->width * 3 * page * scrp->s_height;
 //printf("%d %d w=%d h=%d\n", x, y, w, h);
 
 	for (y0 = y; y0 < y + h; y0++) {
 		if (y0 - y >= (int) img->height)
 			break;
 
-	        location = 
-		    	(y0+vinfo.yoffset) * finfo.line_length +
-			(x+vinfo.xoffset) * (vinfo.bits_per_pixel/8);
+	        scrp->s_location = 
+		    	(y0+scrp->s_yoffset) * scrp->s_line_length +
+			(x+scrp->s_xoffset) * (scrp->s_bpp/8);
 
 		unsigned char *data = &img_data[((y0-y) * img->width + x) * 3];
 	        for (x0 = x; x0 < x + w; x0++) {
-		    if (x0 - x >= (int) img->width || x0 >= (int) vinfo.xres) {
+		    if (x0 - x >= (int) img->width || x0 >= (int) scrp->s_width) {
 			break;
 		    }
-		    if (location >= screensize) {
-	//	    	printf("loc=0x%04x screensize=%04x\n", location, screensize);
+		    if (scrp->s_location >= scrp->s_screensize) {
+	//	    	printf("loc=0x%04x screensize=%04x\n", scrp->s_location, screensize);
 		    	break;
 		    }
 
-		    put_pixel(fbp, data[0], data[1], data[2]);
+		    put_pixel(scrp, data[0], data[1], data[2]);
 		    data += 3;
 
 	        }
     }
 }
 
+void
+close_framebuffer(screen_t *scrp)
+{
+	munmap(scrp->s_mem, scrp->s_screensize);
+	free(scrp);
+}
+/**********************************************************************/
+/*   Open  the  frame  buffer, and memory map it. User can specify a  */
+/*   virtual frame buffer via "-framebuffer <fname>"		      */
+/**********************************************************************/
+screen_t *
+open_framebuffer()
+{	char	*fbname = "/dev/fb0";
+	screen_t *scrp = calloc(sizeof(screen_t), 1);
+	struct fb_var_screeninfo vinfo;
+	struct fb_fix_screeninfo finfo;
+	int	fbfd;
+
+	if (framebuffer_name) {
+		struct stat sbuf;
+		char	*cp;
+
+		if ((fbfd = open(framebuffer_name, O_RDWR | O_CREAT, 0644)) < 0) {
+			perror(framebuffer_name);
+			exit(1);
+		}
+		if (fstat(fbfd, &sbuf) < 0) {
+			perror("fstat");
+			exit(1);
+		}
+		scrp->s_width = framebuffer_w;
+		scrp->s_height = framebuffer_h;
+		scrp->s_screensize = scrp->s_width * scrp->s_height * 3;
+		scrp->s_bpp = 24;
+		scrp->s_line_length = scrp->s_bpp / 8 * scrp->s_width;
+		if (sbuf.st_size < scrp->s_screensize) {
+			int	ret;
+
+			cp = calloc(scrp->s_screensize, 1);
+			if ((ret = write(fbfd, cp, scrp->s_screensize)) != scrp->s_screensize) {
+				fprintf(stderr, "write error - wrote %d, returned %d\n", scrp->s_screensize, ret);
+				exit(1);
+			}
+			free(cp);
+		}
+		scrp->s_mem = (char *)mmap(0, scrp->s_screensize, PROT_READ | PROT_WRITE, MAP_SHARED, fbfd, 0);
+		if (scrp->s_mem == (char *) -1) {
+			printf("Error: failed to map framebuffer device to memory.\n");
+			exit(1);
+		}
+		close(fbfd);
+		return scrp;
+	}
+
+	fbfd = open(fbname, O_RDWR);
+	if (fbfd == -1) {
+		fprintf(stderr, "Error opening %s - %s\n",
+			fbname, strerror(errno));
+		exit(1);
+	}
+
+	// Get fixed screen information
+	if (ioctl(fbfd, FBIOGET_FSCREENINFO, &finfo)) {
+		fprintf(stderr, "%s: Error reading fixed information.\n", fbname);
+		exit(1);
+	}
+
+	// Get variable screen information
+	if (ioctl(fbfd, FBIOGET_VSCREENINFO, &vinfo)) {
+		fprintf(stderr, "%s: Error reading variable information.\n", fbname);
+		exit(1);
+	}
+
+	scrp->s_location = 0;
+	scrp->s_line_length = finfo.line_length;
+	scrp->s_width = vinfo.xres;
+	scrp->s_height = vinfo.yres;
+	scrp->s_bpp = vinfo.bits_per_pixel;
+	scrp->s_yoffset = vinfo.yoffset;
+	scrp->s_xoffset = vinfo.xoffset;
+	// Figure out the size of the screen in bytes
+	scrp->s_screensize = scrp->s_width * scrp->s_height * vinfo.bits_per_pixel / 8;
+
+	// Map the device to memory
+	scrp->s_mem = (char *)mmap(0, scrp->s_screensize, PROT_READ | PROT_WRITE, MAP_SHARED, fbfd, 0);
+	if (scrp->s_mem == (char *) -1) {
+		printf("Error: failed to map framebuffer device to memory.\n");
+		exit(1);
+	}
+	close(fbfd);
+
+	return scrp;
+}
 /**********************************************************************/
 /*   Read image names from a file. Allow us to randomize them.	      */
 /**********************************************************************/
@@ -570,28 +672,21 @@ process_file()
 		}
 	}
 
-	for (i = 0; i < n; i++) {
-
-		if (display_file(names[i], 1) == 0)
-			break;
-
-		free(names[i]);
-		if (num && --num == 0)
-			break;
-	}
-	free(names);
+	filenames_list = names;
+	num_filenames = n;
+	do_free_filenames = 1;
 }
 
 void
-shrink_display(char *fbp, struct imgRawImage *img)
+shrink_display(screen_t *scrp, struct imgRawImage *img)
 {
 	int	x, y;
 	float xfrac = 1;
 	float yfrac = 1;
 	int	width = img->width;
 
-	int vwidth = w_arg < (int) vinfo.xres ? w_arg : (int) vinfo.xres;
-	int vheight = h_arg < (int) vinfo.yres ? h_arg : (int) vinfo.yres;
+	int vwidth = w_arg < (int) scrp->s_width ? w_arg : (int) scrp->s_width;
+	int vheight = h_arg < (int) scrp->s_height ? h_arg : (int) scrp->s_height;
 
 	xfrac = img->width / (float) vwidth;
 	yfrac = img->height / (float) vheight;
@@ -603,71 +698,72 @@ shrink_display(char *fbp, struct imgRawImage *img)
 	for (y = 0; y < vheight; y++) {
 		int loc_end;
 
-		if (y_arg + vinfo.yoffset > vinfo.yres)
+		if (y_arg + scrp->s_yoffset > (int) scrp->s_height)
 			break;
 
-	        location = (y_arg + vinfo.yoffset + y) * finfo.line_length +
-			(x_arg + vinfo.xoffset) * (vinfo.bits_per_pixel / 8);
-	        loc_end = (y_arg + vinfo.yoffset + y + 1) * finfo.line_length;
+	        scrp->s_location = (y_arg + scrp->s_yoffset + y) * scrp->s_line_length +
+			(x_arg + scrp->s_xoffset) * (scrp->s_bpp / 8);
+	        loc_end = (y_arg + scrp->s_yoffset + y + 1) * scrp->s_line_length;
 		for (x = 0; x < vwidth; x++) {
-			if (location >= loc_end || location >= screensize)
+			if (scrp->s_location >= loc_end || scrp->s_location >= scrp->s_screensize)
 				break; 
 			if (x * xfrac > width)
-				put_pixel(fbp, 0, 0, 0);
+				put_pixel(scrp, 0, 0, 0);
 			else {
 				unsigned char *data = &img->lpData[
 					(int) (y * yfrac) * img->width * 3 +
 					(int) (x * xfrac) * 3];
 
-				put_pixel(fbp, data[0], data[1], data[2]);
+				put_pixel(scrp, data[0], data[1], data[2]);
 			}
 		}
 	}
 }
 
 void
-stretch_display(char *fbp, struct imgRawImage *img)
+stretch_display(screen_t *scrp, struct imgRawImage *img)
 {
 	int	x, y;
 	float xfrac = 1;
 	float yfrac = 1;
 	int	width = img->width;
 
-	xfrac = vinfo.xres / (float) img->width;
-	yfrac = vinfo.yres / (float) img->height;
+	xfrac = scrp->s_width / (float) img->width;
+	yfrac = scrp->s_height / (float) img->height;
 	xfrac = yfrac;
 	width *= xfrac;
 
-	int	x0 = (vinfo.xres - width) / 2;
+	int	x0 = (scrp->s_width - width) / 2;
 //printf("frac=%f %f\n", xfrac, yfrac);
 //printf("x0=%d xfrac=%.2f yfrac=%.2f\n", x0, xfrac, yfrac);
 
-	for (y = 0; y < (int) vinfo.yres; y++) {
-	        location = (vinfo.yoffset + y) * finfo.line_length +
-			vinfo.xoffset * (vinfo.bits_per_pixel / 8);
-		for (x = 0; x < (int) vinfo.xres; x++) {
+	for (y = 0; y < (int) scrp->s_height; y++) {
+	        scrp->s_location = (scrp->s_yoffset + y) * scrp->s_line_length +
+			scrp->s_xoffset * (scrp->s_bpp / 8);
+		for (x = 0; x < (int) scrp->s_width; x++) {
 			if (x < x0 || x > x0 + width)
-				put_pixel(fbp, 0, 0, 0);
+				put_pixel(scrp, 0, 0, 0);
 			else {
 				unsigned char *data = &img->lpData[
 					(int) (y / yfrac) * img->width * 3 +
 					(int) ((x - x0) / xfrac) * 3];
 
-				put_pixel(fbp, data[0], data[1], data[2]);
+				put_pixel(scrp, data[0], data[1], data[2]);
 			}
 		}
 	}
 }
 
 void
-put_pixel(char *fbp, int r, int g, int b)
-{
-	if ( vinfo.bits_per_pixel == 32 ) {
-		*(fbp + location) = b;
-		*(fbp + location + 1) = g;
-		*(fbp + location + 2) = r;
-		*(fbp + location + 3) = 0;      // No transparency
-		location += 4;
+put_pixel(screen_t *scrp, int r, int g, int b)
+{	char *fbp = scrp->s_mem;
+
+	if ( scrp->s_bpp == 32 ) {
+		*(fbp + scrp->s_location) = b;
+		*(fbp + scrp->s_location + 1) = g;
+		*(fbp + scrp->s_location + 2) = r;
+		*(fbp + scrp->s_location + 3) = 0;      // No transparency
+		scrp->s_location += 4;
 	} else {
 		/***********************************************/
 		/*   Really  need to look at the rgb ordering  */
@@ -677,43 +773,14 @@ put_pixel(char *fbp, int r, int g, int b)
 			((r >> 3) <<11) | 
 			(((g >> 2) & 0x3f) << 5) | 
 			((b >> 3) & 0x1f);
-		*((unsigned short int*)(fbp + location)) = t;
-		location += 2;
+		*((unsigned short int*)(fbp + scrp->s_location)) = t;
+		scrp->s_location += 2;
 	}
 }
 void
 usage()
-{
-	fprintf(stderr, "fb -- tool to display JPG images on the framebuffer\n");
-	fprintf(stderr, "Usage: fb [switches] <file1> <file2> ...\n");
-	fprintf(stderr, "\n");
-	fprintf(stderr, "Switches:\n");
-	fprintf(stderr, "\n");
-	fprintf(stderr, "   -cvt <fname>       Write loaded image to file.\n");
-	fprintf(stderr, "   -delay NN          Scroll delay in milliseconds\n");
-	fprintf(stderr, "   -effects           Scroll-in effects enabled\n");
-	fprintf(stderr, "   -f <file>          Get filenames from specified file.\n");
-	fprintf(stderr, "   -fullscreen        Stretch image to fill screen\n");
-	fprintf(stderr, "   -info              Print screen size info\n");
-	fprintf(stderr, "   -o <fname>         Write screen buffer to an output jpg file\n");
-	fprintf(stderr, "   -montage           Display images as thumbnails\n");
-	fprintf(stderr, "   -num NN            Only process first NN images\n");
-	fprintf(stderr, "   -page N            Display page/screen N of the image\n");
-	fprintf(stderr, "   -rand              Randomize files\n");
-	fprintf(stderr, "   -script <file>     Script file to do complex layouts\n");
-	fprintf(stderr, "   -scroll            Scroll image\n");
-	fprintf(stderr, "   -scroll_y_incr NN  When using -scroll, scroll by this much.\n");
-	fprintf(stderr, "   -seq               When doing montage, display l->r\n");
-	fprintf(stderr, "   -stretch           Stretch but dont change aspect ratio\n");
-	fprintf(stderr, "   -xfrac N.NN        Shrink image on the x-axis\n");
-	fprintf(stderr, "   -yfrac N.NN        Shrink image on the y-axis\n");
-	fprintf(stderr, "   -x NN              Set co-ordinate\n");
-	fprintf(stderr, "   -y NN              Set co-ordinate\n");
-	fprintf(stderr, "   -w NN              Set co-ordinate\n");
-	fprintf(stderr, "   -v                 Verbose; list lines in script files\n");
-	fprintf(stderr, "\n");
-	fprintf(stderr, "Examples:\n");
-	fprintf(stderr, "\n");
-	fprintf(stderr, "  $ fb -montage -delay 1 -rand -f index.log -num 30\n");
+{	extern const char *usage_text;
+
+	fprintf(stderr, "%s", usage_text);
 	exit(1);
 }

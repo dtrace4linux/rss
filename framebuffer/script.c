@@ -42,6 +42,31 @@ static char *cmds[] = {
 	"C_SLEEP",
 	};
 
+extern int x_arg;
+extern int y_arg;
+extern int w_arg;
+extern int h_arg;
+
+void
+do_script()
+{	cmd_t	*cmdp;
+	struct imgRawImage *img;
+
+	while ((cmdp = next_script_cmd()) != NULL) {
+		if (cmdp->type == C_EXIT)
+			return;
+
+		if ((img = next_image()) == NULL)
+			break;
+
+		x_arg = cmdp->x;
+		y_arg = cmdp->y;
+		w_arg = cmdp->w;
+		h_arg = cmdp->h;
+		shrink_display(scrp, img);
+	}
+}
+
 /**********************************************************************/
 /*   We  dont  want  to  randomize  in the script itself, since that  */
 /*   means a new file on each release. So handle randomization here.  */
@@ -239,10 +264,10 @@ static int line = 0;
 			cmdp->w = cmdp->args[3];
 			cmdp->h = cmdp->args[4];
 
-			cmdp->x *= vinfo.xres / (float) swidth;
-			cmdp->y *= vinfo.yres / (float) sheight;
-			cmdp->w *= vinfo.xres / (float) swidth;
-			cmdp->h *= vinfo.yres / (float) sheight;
+			cmdp->x *= scrp->s_width / (float) swidth;
+			cmdp->y *= scrp->s_height / (float) sheight;
+			cmdp->w *= scrp->s_width / (float) swidth;
+			cmdp->h *= scrp->s_height / (float) sheight;
 
 			return cmdp;
 		}
@@ -269,9 +294,9 @@ static int line = 0;
 
 //printf("circle %d %d %d 0x%lx\n", cmdp->x, cmdp->y, cmdp->radius, cmdp->rgb);
 
-			cmdp->x *= vinfo.xres / (float) swidth;
-			cmdp->y *= vinfo.yres / (float) sheight;
-			cmdp->radius *= vinfo.xres / (float) swidth;
+			cmdp->x *= scrp->s_width / (float) swidth;
+			cmdp->y *= scrp->s_height / (float) sheight;
+			cmdp->radius *= scrp->s_width / (float) swidth;
 
 			if (strcmp(cname, "filled_circle") == 0)
 		       		cmdp->type   = C_FILLED_CIRCLE;
@@ -282,8 +307,8 @@ static int line = 0;
 			cmdp->type = C_DOT;
 			cmdp->x = cmdp->args[1];
 			cmdp->y = cmdp->args[2];
-			cmdp->x *= vinfo.xres / (float) swidth;
-			cmdp->y *= vinfo.yres / (float) sheight;
+			cmdp->x *= scrp->s_width / (float) swidth;
+			cmdp->y *= scrp->s_height / (float) sheight;
 
 			return cmdp;
 		}
@@ -295,10 +320,10 @@ static int line = 0;
 			cmdp->y1  = cmdp->args[4];
 			cmdp->rgb = cmdp->args[5];
 
-			cmdp->x *= vinfo.xres / (float) swidth;
-			cmdp->y *= vinfo.yres / (float) sheight;
-			cmdp->x1 *= vinfo.xres / (float) swidth;
-			cmdp->y1 *= vinfo.yres / (float) sheight;
+			cmdp->x *= scrp->s_width / (float) swidth;
+			cmdp->y *= scrp->s_height / (float) sheight;
+			cmdp->x1 *= scrp->s_width / (float) swidth;
+			cmdp->y1 *= scrp->s_height / (float) sheight;
 
 			return cmdp;
 		}
@@ -310,10 +335,10 @@ static int line = 0;
 			cmdp->h = cmdp->args[4];
 			cmdp->rgb = cmdp->args[5];
 
-			cmdp->x *= vinfo.xres / (float) swidth;
-			cmdp->y *= vinfo.yres / (float) sheight;
-			cmdp->w *= vinfo.xres / (float) swidth;
-			cmdp->h *= vinfo.yres / (float) sheight;
+			cmdp->x *= scrp->s_width / (float) swidth;
+			cmdp->y *= scrp->s_height / (float) sheight;
+			cmdp->w *= scrp->s_width / (float) swidth;
+			cmdp->h *= scrp->s_height / (float) sheight;
 
 			if (strcmp(cname, "rectangle") == 0) {
 				cmdp->type = C_RECTANGLE;

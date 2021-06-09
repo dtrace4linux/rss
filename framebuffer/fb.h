@@ -1,3 +1,19 @@
+/**********************************************************************/
+/*   A virtual or physical screen buffer.			      */
+/**********************************************************************/
+typedef struct screen_t {
+	char	*s_name;
+	char	*s_mem;
+	int	s_screensize;
+	unsigned s_line_length;
+	unsigned s_width;
+	unsigned s_height;
+	long	s_location; /* Current offset for writing to buffer */
+	int	s_bpp;
+	int	s_yoffset;
+	int	s_xoffset;
+	} screen_t;
+
 struct imgRawImage {
 	unsigned int	numComponents;
 	unsigned long	width;
@@ -45,14 +61,15 @@ int	draw_dot(cmd_t *);
 int	draw_filled_rectangle(cmd_t *);
 int	draw_line(cmd_t *);
 int	draw_rectangle(cmd_t *);
-void put_pixel(char *fbp, int r, int g, int b);
+void put_pixel(screen_t *, int r, int g, int b);
 
-extern long location;
-extern char *fbp;
-extern struct fb_var_screeninfo vinfo;
-extern struct fb_fix_screeninfo finfo;
+cmd_t	*next_script_cmd(void);
+void	do_script(void);
+struct imgRawImage *next_image(void);
+void shrink_display(screen_t *, struct imgRawImage *img);
+
+extern screen_t *scrp;
 extern int v_flag;
 extern long delay;
 extern int num;
-extern long screensize;
 extern char *script_file;

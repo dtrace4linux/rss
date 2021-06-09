@@ -2,4 +2,5 @@
 tools/fb
 bin
 bin.x86_64
+framebuffer/usage.c
 tmp

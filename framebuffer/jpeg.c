@@ -119,10 +119,11 @@ struct imgRawImage* loadJpegImageFile(char* lpFilename) {
 /*   Copy framebuffer to a jpeg file.				      */
 /**********************************************************************/
 int
-write_jpeg(char *ofname, unsigned char *img, int w, int h, int depth)
+write_jpeg(char *ofname, screen_t *scrp, int depth)
 {	FILE	*fp;
 	struct jpeg_compress_struct cinfo;
 	struct jpeg_error_mgr       jerr;
+	char *img = scrp->s_mem;
 
 	if ((fp = fopen(ofname, "wb")) == NULL) {
 		perror(ofname);
@@ -133,8 +134,8 @@ write_jpeg(char *ofname, unsigned char *img, int w, int h, int depth)
 	jpeg_create_compress(&cinfo);
 	jpeg_stdio_dest(&cinfo, fp);
 	 
-	cinfo.image_width      = w;
-	cinfo.image_height     = h;
+	cinfo.image_width      = scrp->s_width;
+	cinfo.image_height     = scrp->s_height;
 	cinfo.input_components = 3;
 	cinfo.in_color_space   = JCS_RGB;
 
@@ -144,7 +145,7 @@ write_jpeg(char *ofname, unsigned char *img, int w, int h, int depth)
 	jpeg_start_compress(&cinfo, 1);
 
 	JSAMPROW row_pointer;          /* pointer to a single row */
-	unsigned char *row = malloc(w * 3 + 1);
+	unsigned char *row = malloc(scrp->s_width * 3 + 1);
  
 	while (cinfo.next_scanline < cinfo.image_height) {
 		unsigned char *rp;
@@ -154,8 +155,8 @@ write_jpeg(char *ofname, unsigned char *img, int w, int h, int depth)
 		switch (depth) {
 		  case 16: {
 			unsigned short *sp = (unsigned short *) 
-				&img[cinfo.next_scanline * w * (depth >> 3)];
-			for (i = 0; i < w; i++, rp += 3) {
+				&img[cinfo.next_scanline * scrp->s_width * (depth >> 3)];
+			for (i = 0; i < (int) scrp->s_width; i++, rp += 3) {
 				unsigned short p = *sp++;
 				rp[0] = ((p >> 11) & 0x1f) << 3;
 				rp[1] = ((p >> 5) & 0x3f) << 2;
@@ -169,8 +170,8 @@ write_jpeg(char *ofname, unsigned char *img, int w, int h, int depth)
 			/*   R,G,B				       */
 			/***********************************************/
 			unsigned char *sp = (unsigned char *) 
-				&img[cinfo.next_scanline * w * (depth >> 3)];
-			for (i = 0; i < w; i++) {
+				&img[cinfo.next_scanline * scrp->s_width * (depth >> 3)];
+			for (i = 0; i < (int) scrp->s_width; i++) {
 				rp[0] = sp[2];
 				rp[1] = sp[1];
 				rp[2] = sp[0];
@@ -184,8 +185,8 @@ write_jpeg(char *ofname, unsigned char *img, int w, int h, int depth)
 			/*   Assumes 32bpp			       */
 			/***********************************************/
 			unsigned char *sp = (unsigned char *) 
-				&img[cinfo.next_scanline * w * (depth >> 3)];
-			for (i = 0; i < w; i++) {
+				&img[cinfo.next_scanline * scrp->s_width * (depth >> 3)];
+			for (i = 0; i < (int) scrp->s_width; i++) {
 				rp[0] = sp[2];
 				rp[1] = sp[1];
 				rp[2] = sp[0];
