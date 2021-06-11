@@ -64,6 +64,7 @@ do_script()
 		w_arg = cmdp->w;
 		h_arg = cmdp->h;
 		shrink_display(scrp, img);
+		free_image(img);
 	}
 }
 

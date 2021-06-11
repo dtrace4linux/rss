@@ -60,12 +60,15 @@ draw_circle(cmd_t *cp)
 	        plot(cp->x + y, cp->y - x);
 	        plot(cp->x - y, cp->y - x);
 	}
+
+	update_image();
 }
 
 int
 draw_clear(cmd_t *cp)
 {
 	memset(scrp->s_mem, 0x00, scrp->s_screensize);
+	update_image();
 	return 0;
 }
 
@@ -77,6 +80,7 @@ draw_dot(cmd_t *cp)
 	int b = (cp->rgb >> 0) & 0xff;
 
 	plot(cp->x, cp->y);
+	update_image();
 }
 
 void
@@ -87,6 +91,8 @@ draw__line(cmd_t *cp, int x1, int y1, int x2, int y2)
 	cp->x1 = x2;
 	cp->y1 = y2;
 	draw_line(cp);
+
+	update_image();
 }
 int
 draw_filled_circle(cmd_t *cp)
@@ -112,6 +118,7 @@ draw_filled_circle(cmd_t *cp)
 		}
 		x++;
 	}
+	update_image();
 }
 
 int
@@ -128,6 +135,7 @@ draw_filled_rectangle(cmd_t *cp)
 			do_plot(x, y, r, g, b);
 		}
 	}
+	update_image();
 	return 0;
 }
 
@@ -155,6 +163,7 @@ draw_line(cmd_t *cp)
 		if (e2 >-dx) { err -= dy; x0 += sx; }
 		if (e2 < dy) { err += dx; y0 += sy; }
 	}
+	update_image();
 }
 
 int
@@ -177,5 +186,6 @@ draw_rectangle(cmd_t *cp)
 			do_plot(cp->x + cp->w - 1, y, r, g, b);
 		}
 	}
+	update_image();
 }
 

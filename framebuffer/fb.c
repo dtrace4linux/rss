@@ -77,6 +77,12 @@ void stretch_display(screen_t *, struct imgRawImage *img);
 void	usage(void);
 int	write_jpeg(char *ofname, screen_t *, int depth);
 
+void
+free_image(struct imgRawImage *img)
+{
+	free(img->lpData);
+	free(img);
+}
 struct imgRawImage *
 next_image()
 {	struct imgRawImage *img;
@@ -398,8 +404,7 @@ static int x, y;
 		normal_display(scrp, img, x_arg, y_arg, w_arg, h_arg, 0, 0);
 	}
 
-	free(img->lpData);
-	free(img);
+	free_image(img);
 }
 
 int main(int argc, char **argv)
@@ -508,6 +513,8 @@ fullscreen_display(screen_t *scrp, struct imgRawImage *img, double f)
 			put_pixel(scrp, data[0] * f, data[1] * f, data[2] * f);
 		}
 	}
+
+	update_image();
 }
 
 void 
@@ -543,12 +550,15 @@ normal_display(screen_t *scrp, struct imgRawImage *img, int x, int y, int w, int
 		    data += 3;
 
 	        }
-    }
+	}
+	update_image();
 }
 
 void
 close_framebuffer(screen_t *scrp)
 {
+	update_image();
+
 	munmap(scrp->s_mem, scrp->s_screensize);
 	free(scrp);
 }
@@ -578,20 +588,32 @@ open_framebuffer()
 		}
 		scrp->s_width = framebuffer_w;
 		scrp->s_height = framebuffer_h;
-		scrp->s_screensize = scrp->s_width * scrp->s_height * 3;
-		scrp->s_bpp = 24;
+		scrp->s_bpp = 32;
+		scrp->s_screensize = scrp->s_width * scrp->s_height * scrp->s_bpp / 8;
 		scrp->s_line_length = scrp->s_bpp / 8 * scrp->s_width;
 		if (sbuf.st_size < scrp->s_screensize) {
 			int	ret;
+			fb_info_t f;
+
+			memset(&f, 0, sizeof f);
+			f.f_width = scrp->s_width;
+			f.f_height = scrp->s_height;
+			f.f_bpp = scrp->s_bpp;
 
 			cp = calloc(scrp->s_screensize, 1);
 			if ((ret = write(fbfd, cp, scrp->s_screensize)) != scrp->s_screensize) {
 				fprintf(stderr, "write error - wrote %d, returned %d\n", scrp->s_screensize, ret);
 				exit(1);
 			}
+			if ((ret = write(fbfd, &f, sizeof f)) != sizeof f) {
+				fprintf(stderr, "write error (info) - wrote %ld, returned %d\n", sizeof f, ret);
+				exit(1);
+			}
 			free(cp);
 		}
-		scrp->s_mem = (char *)mmap(0, scrp->s_screensize, PROT_READ | PROT_WRITE, MAP_SHARED, fbfd, 0);
+		scrp->s_mem = (char *)mmap(0, scrp->s_screensize + sizeof(fb_info_t), 
+			PROT_READ | PROT_WRITE, MAP_SHARED, fbfd, 0);
+		scrp->s_info = (fb_info_t *) (scrp->s_mem + scrp->s_screensize);
 		if (scrp->s_mem == (char *) -1) {
 			printf("Error: failed to map framebuffer device to memory.\n");
 			exit(1);
@@ -718,6 +740,7 @@ shrink_display(screen_t *scrp, struct imgRawImage *img)
 			}
 		}
 	}
+	update_image();
 }
 
 void
@@ -752,6 +775,7 @@ stretch_display(screen_t *scrp, struct imgRawImage *img)
 			}
 		}
 	}
+	update_image();
 }
 
 void
@@ -776,6 +800,12 @@ put_pixel(screen_t *scrp, int r, int g, int b)
 		*((unsigned short int*)(fbp + scrp->s_location)) = t;
 		scrp->s_location += 2;
 	}
+}
+
+void
+update_image()
+{
+	if (scrp->s_info) scrp->s_info->f_seq++;
 }
 void
 usage()

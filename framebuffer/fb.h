@@ -12,7 +12,19 @@ typedef struct screen_t {
 	int	s_bpp;
 	int	s_yoffset;
 	int	s_xoffset;
+	struct fb_info_t *s_info;
 	} screen_t;
+
+/**********************************************************************/
+/*   For  virtual  frame buffers, we need to know the dimensions and  */
+/*   bpp							      */
+/**********************************************************************/
+typedef struct fb_info_t {
+	int	f_width;
+	int	f_height;
+	int	f_bpp;
+	unsigned long f_seq;
+	} fb_info_t;
 
 struct imgRawImage {
 	unsigned int	numComponents;
@@ -67,6 +79,8 @@ cmd_t	*next_script_cmd(void);
 void	do_script(void);
 struct imgRawImage *next_image(void);
 void shrink_display(screen_t *, struct imgRawImage *img);
+void	update_image(void);
+void	free_image(struct imgRawImage *);
 
 extern screen_t *scrp;
 extern int v_flag;
