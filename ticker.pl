@@ -1371,16 +1371,16 @@ sub ev_check
 	}
 #	return -1 if !$ev_fh;
 
-	my $bits = '';
-	vec($bits, $ev_fh->fileno(), 1) = 1 if $ev_fh;
-	vec($bits, STDIN->fileno(), 1) = 1 if !$stdin_disabled;
-	vec($bits, $sock->fileno(), 1) = 1 if $sock;
-
 	my $t = 1;
 	my $x = 0;
 	my $y = 0;
 
 	while (1) {
+		my $bits = '';
+		vec($bits, $ev_fh->fileno(), 1) = 1 if $ev_fh;
+		vec($bits, STDIN->fileno(), 1) = 1 if !$stdin_disabled;
+		vec($bits, $sock->fileno(), 1) = 1 if $sock;
+
 		check_executable();
 
 		my $rbits;
