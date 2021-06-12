@@ -3,13 +3,13 @@
 CC= gcc -W -g -O2
 BIN=../bin.$(shell uname -m)
 
-all: $(BIN)/fb $(BIN)/xlib
+all: $(BIN)/fb $(BIN)/fbview
 
 $(BIN)/fb: fb.c fb.h jpeg.c png.c script.c shapes.c usage.c
 	mkdir -p $(BIN)
 	$(CC) -o $(BIN)/fb fb.c jpeg.c png.c script.c shapes.c usage.c -ljpeg -lpng
-$(BIN)/xlib: xlib.c
-	$(CC) -o $(BIN)/xlib xlib.c -lX11
+$(BIN)/fbview: fbview.c
+	$(CC) -o $(BIN)/fbview fbview.c -lX11
 
 usage.c: usage.txt
 	(echo 'const char *usage_text = ' ; \
