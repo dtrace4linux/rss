@@ -633,7 +633,8 @@ sub get_tty_size
 	my $s = `stty -a | grep columns`;
 	chomp($s);
 	$s =~ m/rows (\d+); columns (\d+)/;
-	($rows, $columns) = ($1, $2);
+	$rows = $1 || 24;
+	$columns = $2 || 80;
 }
 sub main
 {
