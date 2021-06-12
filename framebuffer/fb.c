@@ -67,7 +67,7 @@ int	do_free_filenames;
 /**********************************************************************/
 screen_t	*open_framebuffer(void);
 void	close_framebuffer(screen_t *);
-void draw_image(struct imgRawImage *img);
+void draw_image_old(struct imgRawImage *img);
 void process_file(void);
 void free_filenames(void);
 struct imgRawImage *open_image(char *fname);
@@ -94,6 +94,24 @@ static int	i;
 			return img;
 	}
 	return NULL;
+}
+
+/**********************************************************************/
+/*   Shuffle images.						      */
+/**********************************************************************/
+void
+rand_images()
+{	int	i;
+	char	*name1;
+	char	*name2;
+
+	for (i = 0; i < num_filenames; i++) {
+		int r = (rand() / (float) RAND_MAX) * num_filenames;
+		name1 = filenames_list[i];
+		name2 = filenames_list[r];
+		filenames_list[i] = name2;
+		filenames_list[r] = name1;
+	}
 }
 
 struct imgRawImage *
@@ -330,7 +348,7 @@ do_switches(int argc, char **argv)
 }
 
 void
-draw_image(struct imgRawImage *img)
+draw_image_old(struct imgRawImage *img)
 {
 	if (img == NULL)
 		return;
@@ -471,7 +489,7 @@ int main(int argc, char **argv)
 
 	    	fname = filenames_list[i];
 		img = open_image(fname);
-		draw_image(img);
+		draw_image_old(img);
 
 		if (num_filenames> 1) {
 			do_sleep();

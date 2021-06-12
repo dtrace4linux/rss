@@ -4,11 +4,13 @@
 /**********************************************************************/
 
 #include <unistd.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
 #include <linux/fb.h>
+#include <search.h>
 #include "fb.h"
 
 static char	rand_buf[1024];
@@ -18,53 +20,96 @@ static int	script_used;
 static int	script_len;
 static int sp;
 
-static int swidth = 1920, sheight = 1020;
+int swidth = 1920, sheight = 1020;
 
-static cmd_t * read_script_cmd(cmd_t *cmdp);
-static cmd_t *script_exec();
 static int debug;
 
 static char *cmds[] = {
 	"C_NONE", 
+	"C_BREAK", 
 	"C_CIRCLE", 
 	"C_CLEAR", 
+	"C_CONTINUE",
 	"C_DELAY", 
 	"C_DOT", 
 	"C_DRAW",
+	"C_END",
 	"C_EXIT", 
 	"C_FILLED_CIRCLE", 
 	"C_FILLED_RECTANGLE", 
+	"C_FOR",
+	"C_FOR2",
+	"C_IF", 
 	"C_LINE", 
 	"C_NUMBER", 
+	"C_PRINT",
+	"C_RAND",
 	"C_RECTANGLE", 
 	"C_REPEAT", 
 	"C_SCREENSIZE", 
 	"C_SLEEP",
+	"C_TEXT",
+	"C_WHILE", 
 	};
+
+typedef struct estack_t {
+	int	e_start;
+	} estack_t;
+static int esize;
+static int eused;
+estack_t *estack;
 
 extern int x_arg;
 extern int y_arg;
 extern int w_arg;
 extern int h_arg;
+extern int rand_flag;
 
+/**********************************************************************/
+/*   Prototypes.						      */
+/**********************************************************************/
+static int	read_script_cmd(void);
+static cmd_t *script_exec();
+void push_estack(cmd_t *cmdp);
+void pop_estack(void);
+void set_var(char *name, int val);
+
+cmd_t *
+alloc_cmd(int type)
+{	cmd_t	*cmdp;
+
+	if (script_used + 1 >= script_len) {
+		script_len += 128;
+		script = realloc(script, script_len * sizeof *script);
+	}
+
+	cmdp = &script[script_used];
+	memset(cmdp, 0, sizeof *cmdp);
+	cmdp->type = type;
+	cmdp->pc = script_used++;
+
+	return cmdp;
+}
+
+void
+cmd_usage(cmd_t *cmdp, char *str)
+{
+	printf("syntax error - %s\n", str);
+	exit(1);
+}
 void
 do_script()
 {	cmd_t	*cmdp;
-	struct imgRawImage *img;
+
+	esize = 16;
+	estack = calloc(sizeof *estack * esize, 1);
+
+	set_var("screen_width", swidth);
+	set_var("screen_height", sheight);
 
 	while ((cmdp = next_script_cmd()) != NULL) {
 		if (cmdp->type == C_EXIT)
 			return;
-
-		if ((img = next_image()) == NULL)
-			break;
-
-		x_arg = cmdp->x;
-		y_arg = cmdp->y;
-		w_arg = cmdp->w;
-		h_arg = cmdp->h;
-		shrink_display(scrp, img);
-		free_image(img);
 	}
 }
 
@@ -100,9 +145,100 @@ map_rand(char *cp)
 	return cp1;
 }
 
+void
+compile_blocks()
+{	int	i, j;
+
+	for (i = 0; i < script_used; i++) {
+		cmd_t *cmdp = &script[i];
+		int	lv = 0;
+		if (cmdp->type == C_FOR2) {
+			for (j = i+1; j < script_used; j++) {
+				cmd_t *cmdp1 = &script[j];
+				if (cmdp1->type == C_FOR2) {
+					lv++;
+					continue;
+				}
+				if (cmdp1->type != C_END)
+					continue;
+				if (lv-- != 0)
+					continue;
+				cmdp->next_pc = j+1;
+//printf("Set %d->%d\n", i, j+1);
+			}
+		}
+	}
+}
+
+void
+dump_script()
+{	int	i, j;
+
+	if (debug) {
+		for (i = 0; i < script_used; i++) {
+			cmd_t *cmdp = &script[i];
+			printf("0x%04x: %s ",
+				i, cmds[cmdp->type]);
+			for (j = 0; j < cmdp->argc; j++) {
+				printf(" %s", cmdp->raw_args[j]);
+			}
+			if (cmdp->next_pc) {
+				printf(" => 0x%04x", cmdp->next_pc);
+			}
+			printf("\n");
+		}
+		printf("== END ===\n");
+	}
+}
+
+long
+eval(char *str)
+{	ENTRY e, *ep;
+
+	if (isdigit(*str))
+		return atoi(str);
+	if (strcmp(str, "rand_x") == 0) 
+		return (int) (rand() / (float) RAND_MAX) * swidth;
+	if (strcmp(str, "rand_y") == 0) 
+		return (int) (rand() / (float) RAND_MAX) * sheight;
+	if (strcmp(str, "rand_width") == 0) 
+		return (int) (rand() / (float) RAND_MAX) * swidth;
+	if (strcmp(str, "rand_height") == 0) 
+		return (int) (rand() / (float) RAND_MAX) * sheight;
+	e.key = str;
+	ep = hsearch(e, FIND);
+	if (ep) {
+//printf("eval %s = %d\n", str, (int) ep->data);
+		return (long) ep->data;
+	}
+	printf("lookup undefined variable: %s\n", str);
+	return 1;
+}
+
+void
+eval_range(char *str, int *from, int *to)
+{	char	*cp;
+
+	if (sscanf(str, "%d..%d", from, to) == 2)
+		return;
+printf("eval range %s\n", str);
+
+	for (cp = str; strncmp(cp, "..", 2) != 0; cp++)
+		;
+	if (strncmp(cp, "..", 2) != 0) {
+		printf("error in range - format is N..M\n");
+		exit(1);
+	}
+	*cp = '\0';
+	*from = eval(str);
+	*cp = '.';
+	*to = eval(cp+2);
+
+}
 cmd_t *
 next_script_cmd()
-{
+{	int	i;
+
 	if (script == NULL) {
 		char *cp;
 		if ((cp = getenv("DEBUG")) != NULL) {
@@ -112,19 +248,12 @@ next_script_cmd()
 		script_len += 32;
 		script = calloc(sizeof *script, script_len);
 
-		while (1) {
-			memset(&script[script_used], 0, sizeof *script);
-			if (read_script_cmd(&script[script_used]) == NULL)
-				break;
-
-			if (script[script_used++].type == C_EXIT)
-				break;
-
-			if (script_used >= script_len) {
-				script_len += 128;
-				script = realloc(script, script_len * sizeof *script);
-			}
+		while (read_script_cmd() != 0) {
 		}
+
+		compile_blocks();
+
+		dump_script();
 	}
 
 	while (sp < script_used) {
@@ -137,11 +266,13 @@ next_script_cmd()
 }
 static cmd_t *
 script_exec()
-{
+{	int	i;
 	cmd_t *cmdp = &script[sp++];
 
 	if (debug)
-		printf("exec: 0x%04x: %s 0x%02x\n", sp-1, cmds[cmdp->type], cmdp->type);
+		printf("%*s0x%04x: %s 0x%02x\n", 
+			eused, " ",
+			sp-1, cmds[cmdp->type], cmdp->type);
 
 	switch (cmdp->type) {
 	  case C_CIRCLE:
@@ -161,7 +292,9 @@ script_exec()
 	  	break;
 
 	  case C_DRAW:
-	  	return cmdp;
+	  	if (draw_image(cmdp) == 0)
+			exit(0);
+	  	break;
 
 	  case C_EXIT:
 	  	return cmdp;
@@ -174,12 +307,46 @@ script_exec()
 		draw_filled_rectangle(cmdp);
 		break;
 
+	  case C_END:
+	  	pop_estack();
+	  	break;
+
+	  case C_FOR:
+	  	eval_range(cmdp->raw_args[3], &cmdp->start, &cmdp->end);
+	  	cmdp[1].curval = cmdp->start;
+	  	cmdp[1].end = cmdp->end;
+	  	break;
+
+	  case C_FOR2:
+//printf("for2: %d - %d\n", cmdp->curval, cmdp->end);
+		cmdp->curval += cmdp->step;
+//printf("FOR2: %s %d\n", cmdp->var, cmdp->curval);
+		set_var(cmdp->var, cmdp->curval);
+	  	if (cmdp->curval > cmdp->end) {
+//printf("end loop - %x\n", cmdp->next_pc);
+			sp = cmdp->next_pc;
+			break;
+		}
+	  	push_estack(cmdp);
+	  	break;
+
 	  case C_LINE:
 		draw_line(cmdp);
 	  	break;
 
 	  case C_NUMBER:
 	  	num = cmdp->args[1];
+		break;
+
+	  case C_PRINT:
+	  	for (i = 1; i < cmdp->argc; i++) {
+			printf("%s%s", i > 1 ? " " : "", cmdp->raw_args[i]);
+		}
+		printf("\n");
+		break;
+
+	  case C_RAND:
+	  	rand_images();
 		break;
 
 	  case C_RECTANGLE:
@@ -201,6 +368,8 @@ script_exec()
 	  case C_SCREENSIZE:
 		swidth = cmdp->args[1];
 		sheight = cmdp->args[2];
+		set_var("screen_width", swidth);
+		set_var("screen_height", sheight);
 	  	break;
 
 	  default:
@@ -212,13 +381,36 @@ script_exec()
 	return NULL;
 }
 
-static cmd_t *
-read_script_cmd(cmd_t *cmdp)
+void
+push_estack(cmd_t *cmdp)
+{
+	if (eused + 1 >= esize) {
+		printf("Execution stack overflow\n");
+		exit(1);
+	}
+	estack_t *esp = &estack[eused++];
+	esp->e_start = cmdp->pc;
+}
+
+void
+pop_estack()
+{
+	if (eused == 0) {
+		printf("pop_estack: internal error\n");
+		exit(1);
+	}
+	sp = estack[--eused].e_start;
+}
+
+
+static int
+read_script_cmd()
 {
 static FILE *fp;
 	char	buf[BUFSIZ];
 	char	*cp;
 static int line = 0;
+	cmd_t *cmdp;
 
 	if (fp == NULL) {
 		if ((fp = fopen(script_file, "r")) == NULL) {
@@ -232,8 +424,8 @@ static int line = 0;
 		if (fgets(buf, sizeof buf, fp) == NULL) {
 			if (v_flag)
 				printf("[EOF]\n");
-			cmdp->type = C_EXIT;
-			return cmdp;
+			alloc_cmd(C_EXIT);
+			return 0;
 		}
 		if (v_flag) {
 			printf("%s", buf);
@@ -243,11 +435,16 @@ static int line = 0;
 			buf[strlen(buf) - 1] = '\0';
 		}
 
-		if (*buf == '\0' || *buf == ' ' || *buf == '#' || *buf == '\n')
+		cp = buf;
+		while (isspace(*cp))
+			cp++;
+
+		if (*cp == '\0' || *cp == '#' || *cp == '\n' || strncmp(cp, "//", 2) == 0)
 			continue;
 
 		rand_idx = 0;
-		for (cp = strtok(buf, " "); cp; cp = strtok(NULL, " ")) {
+		cmdp = alloc_cmd(C_NONE);
+		for (cp = strtok(cp, " "); cp; cp = strtok(NULL, " ")) {
 			cmdp->raw_args[cmdp->argc] = strdup(cp);
 			if (cmdp->argc < MAX_ARGS) {
 				cp = map_rand(cp);
@@ -257,6 +454,11 @@ static int line = 0;
 		}
 
 		char *cname = cmdp->raw_args[0];
+
+		if (strcmp(cname, "}") == 0 || strcmp(cname, "end") == 0) {
+			cmdp->type = C_END;
+			return 1;
+		}
 
 		if (strcmp(cname, "draw") == 0 && cmdp->argc >= 5) {
 			cmdp->type = C_DRAW;
@@ -270,24 +472,28 @@ static int line = 0;
 			cmdp->w *= scrp->s_width / (float) swidth;
 			cmdp->h *= scrp->s_height / (float) sheight;
 
-			return cmdp;
+			return 1;
 		}
 		if (strcmp(cname, "clear") == 0) {
 			cmdp->type = C_CLEAR;
-			return cmdp;
+			return 1;
+		}
+		if (strcmp(cname, "exit") == 0) {
+			cmdp->type = C_EXIT;
+			return 1;
 		}
 		if (strcmp(cname, "delay") == 0 && cmdp->argc >= 1) {
 			cmdp->type = C_DELAY;
-			return cmdp;
+			return 1;
 		}
 		if (strcmp(cname, "number") == 0 && cmdp->argc >= 1) {
 			cmdp->type = C_NUMBER;
-		    	num = cmdp->args[1];
-			return cmdp;
+//		    	num = cmdp->args[1];
+			return 1;
 		}
 		if ((strcmp(cname, "circle") == 0 ||
 		    strcmp(cname, "filled_circle") == 0) && cmdp->argc >= 4) {
-			cmdp->type   = C_CIRCLE;
+			cmdp->type = C_CIRCLE;
 			cmdp->x      = cmdp->args[1];
 			cmdp->y      = cmdp->args[2];
 			cmdp->radius = cmdp->args[3];
@@ -302,8 +508,34 @@ static int line = 0;
 			if (strcmp(cname, "filled_circle") == 0)
 		       		cmdp->type   = C_FILLED_CIRCLE;
 
-			return cmdp;
+			return 1;
 		}
+		if (strcmp(cname, "for") == 0) {
+			cmd_t *cmdp1;
+
+			// for var in 0..100 step n
+			if (cmdp->argc < 5) {
+				cmd_usage(cmdp, "for");
+			}
+			cmdp->type = C_FOR;
+			cmdp->var = cmdp->raw_args[1];
+			if (strcmp(cmdp->raw_args[2], "in") != 0)
+				cmd_usage(cmdp, "for: usage: for <var> in N..M [step SS]");
+			cp = cmdp->raw_args[3];
+/*			if (sscanf(cp, "%d..%d", &cmdp->start, &cmdp->end) != 2)
+				cmd_usage(cmdp, "for (range): usage: for <var> in N..M [step SS]");
+*/
+			cmdp->step = 1;
+			if (strcmp(cmdp->raw_args[4], "step") == 0)
+				cmdp->step = atoi(cmdp->raw_args[5]);
+			cmdp1 = alloc_cmd(C_FOR2);
+			cmdp1->start = cmdp->start;
+			cmdp1->end = cmdp->end;
+			cmdp1->step = cmdp->step;
+			cmdp1->var = cmdp->var;
+			return 1;
+		}
+
 		if (strcmp(cname, "dot") == 0 && cmdp->argc >= 4) {
 			cmdp->type = C_DOT;
 			cmdp->x = cmdp->args[1];
@@ -311,7 +543,7 @@ static int line = 0;
 			cmdp->x *= scrp->s_width / (float) swidth;
 			cmdp->y *= scrp->s_height / (float) sheight;
 
-			return cmdp;
+			return 1;
 		}
 		if (strcmp(cname, "line") == 0 && cmdp->argc >= 6) {
 			cmdp->type = C_LINE;
@@ -326,10 +558,24 @@ static int line = 0;
 			cmdp->x1 *= scrp->s_width / (float) swidth;
 			cmdp->y1 *= scrp->s_height / (float) sheight;
 
-			return cmdp;
+			return 1;
+		}
+		if (strcmp(cname, "print") == 0) {
+			cmdp->type = C_PRINT;
+			return 1;
+		}
+		if (strcmp(cname, "rand") == 0) {
+			cmdp->type = C_RAND;
+			return 1;
 		}
 		if ((strcmp(cname, "rectangle") == 0 ||
 		    strcmp(cname, "filled_rectangle") == 0) && cmdp->argc >= 5) {
+			if (strcmp(cname, "rectangle") == 0) {
+				cmdp->type = C_RECTANGLE;
+				}
+			else {
+				cmdp->type = C_FILLED_RECTANGLE;
+				}
 			cmdp->x = cmdp->args[1];
 			cmdp->y = cmdp->args[2];
 			cmdp->w = cmdp->args[3];
@@ -341,33 +587,41 @@ static int line = 0;
 			cmdp->w *= scrp->s_width / (float) swidth;
 			cmdp->h *= scrp->s_height / (float) sheight;
 
-			if (strcmp(cname, "rectangle") == 0) {
-				cmdp->type = C_RECTANGLE;
-				}
-			else {
-				cmdp->type = C_FILLED_RECTANGLE;
-				}
-
-			return cmdp;
+			return 1;
 		}
 		if (strcmp(cname, "repeat") == 0 && cmdp->argc >= 1) {
 			cmdp->type = C_REPEAT;
-			return cmdp;
+			return 1;
 		}
 		if (strcmp(cname, "sleep") == 0 && cmdp->argc >= 1) {
 			cmdp->type = C_SLEEP;
-			return cmdp;
+			return 1;
 		}
 		if (strcmp(cname, "screensize") == 0 && cmdp->argc >= 1) {
 			cmdp->type = C_SCREENSIZE;
-			return cmdp;
+			return 1;
 		}
 
 		printf("%s:%d: bad command - not recognized '%s'\n",
 			script_file, line, cname);
 	}
 
-	return NULL;
+	return 0;
 }
 
+void
+set_var(char *name, int val)
+{static int first_time = 1;
+	ENTRY	e, *ep;
 
+	if (first_time) {
+		hcreate(30);
+		first_time = 0;
+	}
+
+	e.key = name;
+	e.data = (void *) (long) val;
+	ep = hsearch(e, ENTER);
+	if (ep)
+		ep->data = (void *) (long) val;
+}

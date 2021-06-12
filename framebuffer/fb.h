@@ -37,20 +37,30 @@ struct imgRawImage* read_png_file(char *lpFilename);
 
 enum ctypes { 
 	C_NONE, 
+	C_BREAK,
 	C_CIRCLE, 
-	C_CLEAR, 
+	C_CLEAR,
+	C_CONTINUE, 
 	C_DELAY, 
 	C_DOT, 
 	C_DRAW,
+	C_END,
 	C_EXIT, 
 	C_FILLED_CIRCLE, 
 	C_FILLED_RECTANGLE, 
+	C_FOR,
+	C_FOR2,
+	C_IF,
 	C_LINE, 
 	C_NUMBER, 
+	C_PRINT,
+	C_RAND,
 	C_RECTANGLE, 
 	C_REPEAT, 
 	C_SCREENSIZE, 
 	C_SLEEP,
+	C_TEXT,
+	C_WHILE,
 	 };
 # define MAX_ARGS 16
 
@@ -64,6 +74,13 @@ typedef struct cmd_t {
 	int	argc;
 	char	*raw_args[MAX_ARGS];
 	int	args[MAX_ARGS];
+	int	pc;	/* Program Counter. */
+	int	next_pc;	/* Jump outside block */
+	char	*var;
+	int	start;
+	int	end;
+	int	step;
+	int	curval;
 	} cmd_t;
 
 int	draw_circle(cmd_t *);
@@ -81,9 +98,18 @@ struct imgRawImage *next_image(void);
 void shrink_display(screen_t *, struct imgRawImage *img);
 void	update_image(void);
 void	free_image(struct imgRawImage *);
+int	draw_image(cmd_t *);
+void	rand_images(void);
+long	eval(char *);
 
 extern screen_t *scrp;
 extern int v_flag;
 extern long delay;
 extern int num;
 extern char *script_file;
+extern int x_arg;
+extern int y_arg;
+extern int w_arg;
+extern int h_arg;
+extern int swidth, sheight;
+

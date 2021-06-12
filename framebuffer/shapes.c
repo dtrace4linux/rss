@@ -3,7 +3,8 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
-#include <linux/fb.h>
+#include <search.h>
+#include <ctype.h>
 #include "fb.h"
 
 # define set_location(x, y) \
@@ -82,7 +83,28 @@ draw_dot(cmd_t *cp)
 	plot(cp->x, cp->y);
 	update_image();
 }
+int
+draw_image(cmd_t *cp)
+{	struct imgRawImage *img;
 
+	if ((img = next_image()) == NULL) {
+		return 0;
+		}
+
+	x_arg = eval(cp->raw_args[1]);
+	y_arg = eval(cp->raw_args[2]);
+	w_arg = eval(cp->raw_args[3]);
+	h_arg = eval(cp->raw_args[4]);
+
+	x_arg *= scrp->s_width / (float) swidth;
+	y_arg *= scrp->s_height / (float) sheight;
+	w_arg *= scrp->s_width / (float) swidth;
+	h_arg *= scrp->s_height / (float) sheight;
+
+	shrink_display(scrp, img);
+	free_image(img);
+	return 1;
+}
 void
 draw__line(cmd_t *cp, int x1, int y1, int x2, int y2)
 {
