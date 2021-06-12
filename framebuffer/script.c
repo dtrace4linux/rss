@@ -73,6 +73,7 @@ static cmd_t *script_exec();
 void push_estack(cmd_t *cmdp);
 void pop_estack(void);
 void set_var(char *name, int val);
+long lookup(char *str);
 
 cmd_t *
 alloc_cmd(int type)
@@ -191,8 +192,97 @@ dump_script()
 	}
 }
 
+#define NUMBER	0
+#define PLUS	1
+#define MINUS	2
+#define MUL	3
+#define DIV	4
+
+void
+get_token(char *str, char **str2, int *type, long *value)
+{
+	if (isdigit(*str)) {
+		*value = atoi(str);
+		while (isdigit(*str))
+			str++;
+		*str2 = str;
+		type = NUMBER;
+		return;
+	}
+	if (isalpha(*str)) {
+		char *cp;
+		int	ch;
+		for (cp = str; isalpha(*cp) || isdigit(*cp) || *cp == '_'; )
+			cp++;
+		ch = *cp;
+		*cp = '\0';
+		*value = lookup(str);
+		*cp = ch;
+		*str2 = cp;
+		type = NUMBER;
+		return;
+	}
+	if (*str == '+') {
+		*str2 = str+1;
+		*type = PLUS;
+		return;
+	}
+	if (*str == '-') {
+		*str2 = str+1;
+		*type = MINUS;
+		return;
+	}
+	if (*str == '+') {
+		*str2 = str+1;
+		*type = MUL;
+		return;
+	}
+	if (*str == '+') {
+		*str2 = str+1;
+		*type = DIV;
+		return;
+	}
+}
+
 long
 eval(char *str)
+{	long	value, value2;
+	int	type;
+	char	*str2;
+
+	get_token(str, &str2, &type, &value);
+	str = str2;
+	while (*str) {
+		get_token(str, &str2, &type, &value);
+		str = str2;
+		switch (type) {
+		  case PLUS:
+			get_token(str, &str2, &type, &value2);
+			str = str2;
+			value += value2;
+			break;
+		  case MINUS:
+			get_token(str, &str2, &type, &value2);
+			str = str2;
+			value -= value2;
+			break;
+		  case MUL:
+			get_token(str, &str2, &type, &value2);
+			str = str2;
+			value *= value2;
+			break;
+		  case DIV:
+			get_token(str, &str2, &type, &value2);
+			str = str2;
+			value /= value2;
+			break;
+		}
+	}
+	return value;
+}
+
+long
+lookup(char *str)
 {	ENTRY e, *ep;
 
 	if (isdigit(*str))
@@ -221,7 +311,7 @@ eval_range(char *str, int *from, int *to)
 
 	if (sscanf(str, "%d..%d", from, to) == 2)
 		return;
-printf("eval range %s\n", str);
+//printf("eval range %s\n", str);
 
 	for (cp = str; strncmp(cp, "..", 2) != 0; cp++)
 		;
@@ -233,6 +323,7 @@ printf("eval range %s\n", str);
 	*from = eval(str);
 	*cp = '.';
 	*to = eval(cp+2);
+//printf("  => %d..%d\n", *from, *to);
 
 }
 cmd_t *
@@ -315,6 +406,8 @@ script_exec()
 	  	eval_range(cmdp->raw_args[3], &cmdp->start, &cmdp->end);
 	  	cmdp[1].curval = cmdp->start;
 	  	cmdp[1].end = cmdp->end;
+		cmdp[1].step = eval(cmdp->raw_args[5]);
+		cmdp[1].curval -= cmdp[1].step;
 	  	break;
 
 	  case C_FOR2:
