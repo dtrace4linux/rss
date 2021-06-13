@@ -10,6 +10,7 @@
 #include     <fcntl.h>
 #include     <stdlib.h>
 #include     <sys/types.h>
+#include     <time.h>
 #include     <sys/stat.h>
 #include     <sys/mman.h>
 #include     <X11/Xlib.h>
@@ -25,6 +26,7 @@ int	screensize;
 int width=512, height=512;
 int	img_width;
 int	img_height;
+char	*video_dir;
 
 /**********************************************************************/
 /*   Prototypes.						      */
@@ -41,7 +43,7 @@ do_switches(int argc, char **argv)
 
 	for (i = 1; i < argc; i++) {
 		cp = argv[i];
-		if (*cp++ != 'i')
+		if (*cp++ != '-')
 			break;
 		if (strcmp(cp, "height") == 0) {
 			if (++i >= argc)
@@ -53,6 +55,12 @@ do_switches(int argc, char **argv)
 			if (++i >= argc)
 				usage();
 			width = atoi(argv[i]);
+			continue;
+		}
+		if (strcmp(cp, "video") == 0) {
+			if (++i >= argc)
+				usage();
+			video_dir = argv[i];
 			continue;
 		}
 	}
@@ -204,12 +212,28 @@ int main(int argc, char **argv)
 void
 redraw_buffer()
 {	XEvent ev;
+	char	buf[BUFSIZ];
+	char	buf2[BUFSIZ];
+static int seq;
+
 
     	ev.xexpose.x = 0;
     	ev.xexpose.y = 0;
     	ev.xexpose.width  = width;
     	ev.xexpose.height= height;
     	expose_image(display, window, &ev);
+
+	if (!video_dir)
+		return;
+
+	snprintf(buf, sizeof buf, "%s/IMG_%06d.jpg", video_dir, seq++);
+
+	screen_t s;
+	s.s_mem = ximage->data;
+	s.s_width = width;
+	s.s_height = height;
+	write_jpeg(buf, &s, info->f_bpp);
+	printf("Created: %s\n", buf);
 }
 
 void
@@ -220,7 +244,8 @@ usage()
 	printf("\n");
 	printf("Options:\n");
 	printf("\n");
-	printf("  -width NN      Set default image width\n");
+	printf("  -width NN       Set default image width\n");
 	printf("  -height NN      Set default image height\n");
+	printf("  -video <dir>    Record images to directory\n");
 	exit(1);
 }

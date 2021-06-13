@@ -11,6 +11,7 @@ do_start ()
 {
 	sleep 10
 	chvt 1
+	/usr/bin/xset -dpms
 	log_daemon_msg "Starting RSS newsfeed" "rss"
   	sudo -u $RSS_USERID /home/$RSS_USERID/src/rss/startup >>/tmp/rss_startup.log
 }

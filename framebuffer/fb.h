@@ -101,6 +101,7 @@ void	free_image(struct imgRawImage *);
 int	draw_image(cmd_t *);
 void	rand_images(void);
 long	eval(char *);
+int	write_jpeg(char *ofname, screen_t *, int depth);
 
 extern screen_t *scrp;
 extern int v_flag;

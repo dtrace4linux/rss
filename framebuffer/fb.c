@@ -75,7 +75,6 @@ void normal_display(screen_t *, struct imgRawImage *img, int x, int y, int w, in
 void fullscreen_display(screen_t *, struct imgRawImage *img, double f);
 void stretch_display(screen_t *, struct imgRawImage *img);
 void	usage(void);
-int	write_jpeg(char *ofname, screen_t *, int depth);
 
 void
 free_image(struct imgRawImage *img)
