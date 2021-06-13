@@ -13,6 +13,8 @@
 			(x+scrp->s_xoffset) * (scrp->s_bpp/8);
 # define plot(x, y) do_plot(x, y, r, g, b)
 
+void gfx_mono(struct imgRawImage *img);
+
 static void
 do_plot(int x, int y, int r, int g, int b)
 {
@@ -101,7 +103,40 @@ draw_image(cmd_t *cp)
 	w_arg *= scrp->s_width / (float) swidth;
 	h_arg *= scrp->s_height / (float) sheight;
 
-	shrink_display(scrp, img);
+	if (has_attribute(cp, "mono")) {
+		gfx_mono(img);
+	}
+
+	if (has_attribute(cp, "animate")) {
+		int	i, t;
+		int	x1, y1;
+
+		x_arg = (scrp->s_width - img->width) / 2;
+		y_arg = (scrp->s_height - img->height) / 2;
+
+		for (t = 0; t < 10; t++) {
+			x1 = get_rand(5);
+			y1 = get_rand(5);
+			if (get_rand(2) == 0) x1 = -x1;
+			if (get_rand(2) == 0) y1 = -y1;
+
+			for (i = 0; i < 10; i++) {
+				x_arg += x1;
+				y_arg += y1;
+				if (x_arg < 0) x_arg = 0;
+				if (y_arg < 0) y_arg = 0;
+				if (x_arg + img->width > scrp->s_width)
+					x_arg = scrp->s_width - img->width;
+				if (y_arg + img->height > scrp->s_height)
+					y_arg = scrp->s_height - img->height;
+				memset(scrp->s_mem, 0x00, scrp->s_screensize);
+				shrink_display(scrp, img);
+				do_sleep(200);
+			}
+		}
+	} else {
+		shrink_display(scrp, img);
+	}
 	free_image(img);
 	return 1;
 }
@@ -211,3 +246,18 @@ draw_rectangle(cmd_t *cp)
 	update_image();
 }
 
+void
+gfx_mono(struct imgRawImage *img)
+{	unsigned x, y;
+
+	for (y = 0; y < img->height; y++) {
+		unsigned char *sp = &img->lpData[y * img->width * 3];
+		for (x = 0; x < img->width; x++) {
+			unsigned long r = sp[1];
+			sp[0] = r;
+			sp[1] = r;
+			sp[2] = r;
+			sp += 3;
+		}
+	}
+}

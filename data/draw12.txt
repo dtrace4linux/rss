@@ -1,0 +1,8 @@
+screensize 1920 1080
+delay 0
+clear
+rand
+
+draw 100 100 1000 900 animate
+draw 100 100 1000 900 animate
+

@@ -281,6 +281,16 @@ eval(char *str)
 	return value;
 }
 
+int
+has_attribute(cmd_t *cmdp, char *name)
+{	int	i;
+
+	for (i = 0; i < cmdp->argc; i++) {
+		if (strcmp(name, cmdp->raw_args[i]) == 0)
+			return 1;
+		}
+	return 0;
+}
 long
 lookup(char *str)
 {	ENTRY e, *ep;

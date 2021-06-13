@@ -172,7 +172,7 @@ open_image(char *fname)
 }
 
 void
-do_sleep()
+do_sleep(int delay)
 {
     	struct timeval tval;
 	tval.tv_sec = 0;
@@ -424,6 +424,11 @@ static int x, y;
 	free_image(img);
 }
 
+int
+get_rand(int n)
+{
+	return (rand() / (float) RAND_MAX) * n;
+}
 int main(int argc, char **argv)
 {
 	int	x0, y0;
@@ -491,7 +496,7 @@ int main(int argc, char **argv)
 		draw_image_old(img);
 
 		if (num_filenames> 1) {
-			do_sleep();
+			do_sleep(delay);
 		}
 	}
 

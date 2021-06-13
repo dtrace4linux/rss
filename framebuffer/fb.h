@@ -102,6 +102,9 @@ int	draw_image(cmd_t *);
 void	rand_images(void);
 long	eval(char *);
 int	write_jpeg(char *ofname, screen_t *, int depth);
+int	has_attribute(cmd_t *, char *);
+void do_sleep(int delay);
+int	get_rand(int n);
 
 extern screen_t *scrp;
 extern int v_flag;
