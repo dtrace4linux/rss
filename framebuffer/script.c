@@ -489,6 +489,10 @@ script_exec()
 		set_var("screen_height", sheight);
 	  	break;
 
+	  case C_TEXT:
+	  	draw_text(cmdp);
+		break;
+
 	  default:
 		printf("script_exec: error, 0x%04x: %s '%d' is unhandled\n", 
 			sp-1, cmds[cmdp->type], cmdp->type);
@@ -627,8 +631,9 @@ static int line = 0;
 		while ((cp = token_next()) != NULL) {
 			cmdp->raw_args[cmdp->argc] = strdup(cp);
 			if (cmdp->argc < MAX_ARGS) {
+				char	*cp1;
 				cp = map_rand(cp);
-				cmdp->args[cmdp->argc] = atoi(cp);
+				cmdp->args[cmdp->argc] = strtol(cp, &cp1, 16);
 			}
 			cmdp->argc++;
 		}
@@ -779,6 +784,12 @@ static int line = 0;
 		}
 		if (strcmp(cname, "screensize") == 0 && cmdp->argc >= 1) {
 			cmdp->type = C_SCREENSIZE;
+			return 1;
+		}
+
+		if (strcmp(cname, "text") == 0 && cmdp->argc >= 1) {
+			cmdp->type = C_TEXT;
+			cmdp->rgb = cmdp->args[5];
 			return 1;
 		}
 

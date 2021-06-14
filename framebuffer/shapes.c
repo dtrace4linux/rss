@@ -5,6 +5,7 @@
 #include <string.h>
 #include <search.h>
 #include <ctype.h>
+#include <cairo/cairo.h>
 #include "fb.h"
 
 # define set_location(x, y) \
@@ -16,6 +17,19 @@
 void gfx_grid(struct imgRawImage *img);
 void gfx_mono(struct imgRawImage *img);
 void gfx_sepia(struct imgRawImage *img);
+
+void compute_rect(cmd_t *cp)
+{
+	x_arg = eval(cp->raw_args[1]);
+	y_arg = eval(cp->raw_args[2]);
+	w_arg = eval(cp->raw_args[3]);
+	h_arg = eval(cp->raw_args[4]);
+
+	x_arg *= scrp->s_width / (float) swidth;
+	y_arg *= scrp->s_height / (float) sheight;
+	w_arg *= scrp->s_width / (float) swidth;
+	h_arg *= scrp->s_height / (float) sheight;
+}
 
 static void
 do_plot(int x, int y, int r, int g, int b)
@@ -96,15 +110,7 @@ draw_image(cmd_t *cp)
 		return 0;
 		}
 
-	x_arg = eval(cp->raw_args[1]);
-	y_arg = eval(cp->raw_args[2]);
-	w_arg = eval(cp->raw_args[3]);
-	h_arg = eval(cp->raw_args[4]);
-
-	x_arg *= scrp->s_width / (float) swidth;
-	y_arg *= scrp->s_height / (float) sheight;
-	w_arg *= scrp->s_width / (float) swidth;
-	h_arg *= scrp->s_height / (float) sheight;
+	compute_rect(cp);
 
 	if ((str = get_attribute(cp, "random")) != NULL) {
 		str = parse_percentage(str);
@@ -242,6 +248,7 @@ draw_line(cmd_t *cp)
 		if (e2 < dy) { err += dx; y0 += sy; }
 	}
 	update_image();
+	return 0;
 }
 
 int
@@ -265,6 +272,79 @@ draw_rectangle(cmd_t *cp)
 		}
 	}
 	update_image();
+	return 0;
+}
+
+int
+draw_text(cmd_t *cp)
+{
+ 	cairo_surface_t *surface;
+	cairo_t *cr;
+	cairo_text_extents_t te;
+	int i, j;
+	int	x, y;
+	
+	int r = cp->rgb >> 16;
+	int g = (cp->rgb >> 8) & 0xff;
+	int b = (cp->rgb >> 0) & 0xff;
+
+	compute_rect(cp);
+
+	surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 
+		w_arg, h_arg);
+	cr = cairo_create(surface);
+	cairo_set_source_rgb(cr, r, g, b);
+
+	cairo_select_font_face(cr, "Sans", CAIRO_FONT_SLANT_NORMAL,
+		CAIRO_FONT_WEIGHT_NORMAL);
+	cairo_set_font_size(cr, 40.0);
+
+	x = 10;
+	y = 50;
+	int x0 = x;
+
+	for (i = 6; i < cp->argc; i++) {
+		char *str = cp->raw_args[i];
+printf("cairo: %s\n", str);
+		cairo_text_extents(cr, str, &te);
+		if (x + te.width > w_arg) {
+			x = x0;
+			y += te.height;
+		}
+
+		cairo_move_to(cr, x, y);
+		cairo_show_text(cr, str);
+		x += te.width;
+		cairo_text_extents(cr, "n", &te);
+		x += te.width;
+		cairo_move_to(cr, x, y);
+	}
+
+	unsigned char *data = cairo_image_surface_get_data (surface);
+	int width = cairo_image_surface_get_width(surface);
+	int height = cairo_image_surface_get_height(surface);
+	int stride = cairo_image_surface_get_stride(surface);
+	int	pixel_size = 4;
+
+	for (i = 0; i < height; i++) {
+		unsigned char *row = data + i * stride;
+		for (int j = 0; j < width; j++) {
+			int r = *row++;
+			int g = *row++;
+			int b = *row++;
+			plot(x_arg + j, y_arg + i);
+			row ++;
+
+		// do something with the pixel at (i, j), which lies at row + j * (pixel size),
+		// based on the result of cairo_image_get_format and platform endian-ness
+		}
+	}
+
+	cairo_destroy(cr);
+	cairo_surface_destroy(surface);
+
+	update_image();
+	return 0;
 }
 
 void

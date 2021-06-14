@@ -99,6 +99,7 @@ void shrink_display(screen_t *, struct imgRawImage *img);
 void	update_image(void);
 void	free_image(struct imgRawImage *);
 int	draw_image(cmd_t *);
+int	draw_text(cmd_t *);
 void	rand_images(void);
 long	eval(char *);
 int	write_jpeg(char *ofname, screen_t *, int depth);
