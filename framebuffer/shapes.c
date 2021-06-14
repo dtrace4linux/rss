@@ -305,7 +305,7 @@ draw_text(cmd_t *cp)
 
 	for (i = 6; i < cp->argc; i++) {
 		char *str = cp->raw_args[i];
-printf("cairo: %s\n", str);
+//printf("cairo: %s\n", str);
 		cairo_text_extents(cr, str, &te);
 		if (x + te.width > w_arg) {
 			x = x0;

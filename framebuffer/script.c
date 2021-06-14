@@ -629,7 +629,7 @@ static int line = 0;
 		cmdp = alloc_cmd(C_NONE);
 		token_init(cp);
 		while ((cp = token_next()) != NULL) {
-			cmdp->raw_args[cmdp->argc] = strdup(cp);
+			cmdp->raw_args[cmdp->argc] = cp ;
 			if (cmdp->argc < MAX_ARGS) {
 				char	*cp1;
 				cp = map_rand(cp);
@@ -824,20 +824,48 @@ token_init(char *str)
 }
 char *
 token_next()
-{	char	*start;
+{
 	int	br = 0;
+	int	quote = 0;
+	int	oused = 0;
+	int	osize = 16;
+	char	*ostr = malloc(osize);
 
 	while (isspace(*tok))
 		tok++;
 	if (*tok == '\0')
 		return NULL;
 
-	start = tok;
 	while (*tok) {
-		if (*tok == ' ' && br == 0) {
-			*tok++ = '\0';
-			return start;
+		if (oused + 1 >= osize) {
+			osize += 32;
+			ostr = realloc(ostr, osize);
 		}
+
+		if (*tok == ' ' && br == 0 && quote == 0) {
+			ostr[oused] = '\0';
+			*tok++;
+			return ostr;
+		}
+		if (*tok == '"' && quote == 0)
+			quote = '"';
+		else if (*tok == '\'' && quote == 0)
+			quote = '\'';
+		else if (*tok == quote)
+			quote = '\0';
+		else if (*tok == '\\' && tok[1]) {
+			switch (*++tok) {
+			  case 'n':
+				ostr[oused++] = '\n';
+				break;
+			  default:
+				ostr[oused++] = *tok;
+				break;
+			  }
+		}
+		else
+			ostr[oused++] = *tok;
+
 		if (*tok == '(')
 			br++;
 		if (*tok == ')')
@@ -848,6 +876,7 @@ token_next()
 		fprintf(stderr, "unmatched brackets in argument\n");
 		exit(1);
 	}
-	return start;
+	ostr[oused] = '\0';
+	return ostr;
 }
 
