@@ -1,0 +1,15 @@
+screensize 1920 1080
+delay 0
+clear
+rand
+
+for sz in 100..500 step 50
+  clear
+  for y in 0..screen_height step sz+10
+    for x in 0..screen_width step sz+10
+      draw x y sz sz sepia
+    end
+  end
+  sleep 6
+end
+

@@ -14,6 +14,7 @@
 # define plot(x, y) do_plot(x, y, r, g, b)
 
 void gfx_mono(struct imgRawImage *img);
+void gfx_sepia(struct imgRawImage *img);
 
 static void
 do_plot(int x, int y, int r, int g, int b)
@@ -105,6 +106,9 @@ draw_image(cmd_t *cp)
 
 	if (has_attribute(cp, "mono")) {
 		gfx_mono(img);
+	}
+	if (has_attribute(cp, "sepia")) {
+		gfx_sepia(img);
 	}
 
 	if (has_attribute(cp, "animate")) {
@@ -261,3 +265,28 @@ gfx_mono(struct imgRawImage *img)
 		}
 	}
 }
+void
+gfx_sepia(struct imgRawImage *img)
+{	unsigned x, y;
+
+	for (y = 0; y < img->height; y++) {
+		unsigned char *sp = &img->lpData[y * img->width * 3];
+		for (x = 0; x < img->width; x++) {
+			int r = sp[0];
+			int g = sp[1];
+			int b = sp[2];
+
+			int r1 = (r * 0.393 + g * 0.769 + 0.189);
+			int g1 = (r * 0.349 + g * 0.686 + 0.168);
+			int b1 = (r * 0.272 + g * 0.534 + 0.131);
+			if (r1 > 255) r1 = 255;
+			if (g1 > 255) g1 = 255;
+			if (b1 > 255) b1 = 255;
+			sp[0] = r1;
+			sp[1] = g1;
+			sp[2] = b1;
+			sp += 3;
+		}
+	}
+}
+
