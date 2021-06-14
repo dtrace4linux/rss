@@ -105,6 +105,8 @@ int	write_jpeg(char *ofname, screen_t *, int depth);
 int	has_attribute(cmd_t *, char *);
 void do_sleep(int delay);
 int	get_rand(int n);
+char *get_attribute(cmd_t *cmdp, char *name);
+char	*parse_percentage(char *);
 
 extern screen_t *scrp;
 extern int v_flag;

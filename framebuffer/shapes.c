@@ -13,6 +13,7 @@
 			(x+scrp->s_xoffset) * (scrp->s_bpp/8);
 # define plot(x, y) do_plot(x, y, r, g, b)
 
+void gfx_grid(struct imgRawImage *img);
 void gfx_mono(struct imgRawImage *img);
 void gfx_sepia(struct imgRawImage *img);
 
@@ -89,6 +90,7 @@ draw_dot(cmd_t *cp)
 int
 draw_image(cmd_t *cp)
 {	struct imgRawImage *img;
+	char	*str;
 
 	if ((img = next_image()) == NULL) {
 		return 0;
@@ -104,6 +106,21 @@ draw_image(cmd_t *cp)
 	w_arg *= scrp->s_width / (float) swidth;
 	h_arg *= scrp->s_height / (float) sheight;
 
+	if ((str = get_attribute(cp, "random")) != NULL) {
+		str = parse_percentage(str);
+		if (str && strcmp(str, "grid") == 0)
+			gfx_grid(img);
+		if (str && strcmp(str, "mono") == 0)
+			gfx_mono(img);
+		if (str && strcmp(str, "sepia") == 0)
+			gfx_sepia(img);
+//		printf("got a random - %s\n", str);
+		if (str)
+			free(str);
+	}
+	if (has_attribute(cp, "grid")) {
+		gfx_grid(img);
+	}
 	if (has_attribute(cp, "mono")) {
 		gfx_mono(img);
 	}
@@ -248,6 +265,27 @@ draw_rectangle(cmd_t *cp)
 		}
 	}
 	update_image();
+}
+
+void
+gfx_grid(struct imgRawImage *img)
+{	unsigned x, y;
+	int	n = 20;
+
+	for (y = 0; y < img->height; y += n) {
+		unsigned char *sp = &img->lpData[y * img->width * 3];
+		memset(sp, 0, 3 * img->width);
+	}
+
+	for (y = 0; y < img->height; y++) {
+		unsigned char *sp = &img->lpData[y * img->width * 3];
+		for (x = 0; x < img->width; x += n) {
+			sp[0] = 0;
+			sp[1] = 0;
+			sp[2] = 0;
+			sp += 3 * n;
+		}
+	}
 }
 
 void

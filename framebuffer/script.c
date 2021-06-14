@@ -74,6 +74,8 @@ void push_estack(cmd_t *cmdp);
 void pop_estack(void);
 void set_var(char *name, int val);
 long lookup(char *str);
+void token_init(char *str);
+char *token_next();
 
 cmd_t *
 alloc_cmd(int type)
@@ -281,6 +283,18 @@ eval(char *str)
 	return value;
 }
 
+char *
+get_attribute(cmd_t *cmdp, char *name)
+{	int	i;
+	int	len = strlen(name);
+
+	for (i = 0; i < cmdp->argc; i++) {
+		if (strncmp(name, cmdp->raw_args[i], len) == 0 &&
+		    cmdp->raw_args[i][len] == '(')
+		    	return cmdp->raw_args[i];
+		}
+	return NULL;
+}
 int
 has_attribute(cmd_t *cmdp, char *name)
 {	int	i;
@@ -484,6 +498,68 @@ script_exec()
 	return NULL;
 }
 
+/**********************************************************************/
+/*   Parse an expression like: random(xxx:10%, yyy:20%, ...)	      */
+/**********************************************************************/
+char *
+parse_percentage(char *str)
+{	int	pc = get_rand(100);
+	int	cum_pc = 0;
+	char	*name = NULL;
+
+	while (*str && *str != '(')
+		str++;
+	if (*str == '\0')
+		return NULL;
+	str++;
+	if (*str == '\0')
+		return NULL;
+
+	while (*str && *str != ')') {
+		int	n;
+
+		if (isspace(*str)) {
+			str++;
+			continue;
+		}
+
+		char *sym_start = str;
+		while (*str && (isalnum(*str) || *str == '_'))
+			str++;
+		name = malloc(str - sym_start + 1);
+		memcpy(name, sym_start, str - sym_start);
+		name[str-sym_start] = '\0';
+
+		while (*str && isspace(*str))
+			str++;
+
+		if (*str++ != ':') {
+			break;
+		}
+
+		while (*str && isspace(*str))
+			str++;
+		n = atoi(str);
+		cum_pc += n;
+		if (cum_pc >= pc)
+			return name;
+
+		free(name);
+
+		while (isdigit(*str))
+			str++;
+		while (*str == '%')
+			str++;
+		while (*str && isspace(*str))
+			str++;
+		if (*str == ',')
+			str++;
+	}
+	if (name)
+		free(name);
+	return NULL;
+}
+
 void
 push_estack(cmd_t *cmdp)
 {
@@ -499,7 +575,7 @@ void
 pop_estack()
 {
 	if (eused == 0) {
-		printf("pop_estack: internal error\n");
+		printf("pop_estack: internal error - stack is empty. extraneous 'end'?\n");
 		exit(1);
 	}
 	sp = estack[--eused].e_start;
@@ -547,7 +623,8 @@ static int line = 0;
 
 		rand_idx = 0;
 		cmdp = alloc_cmd(C_NONE);
-		for (cp = strtok(cp, " "); cp; cp = strtok(NULL, " ")) {
+		token_init(cp);
+		while ((cp = token_next()) != NULL) {
 			cmdp->raw_args[cmdp->argc] = strdup(cp);
 			if (cmdp->argc < MAX_ARGS) {
 				cp = map_rand(cp);
@@ -728,3 +805,38 @@ set_var(char *name, int val)
 	if (ep)
 		ep->data = (void *) (long) val;
 }
+static char *tok;
+void
+token_init(char *str)
+{
+	tok = str;
+}
+char *
+token_next()
+{	char	*start;
+	int	br = 0;
+
+	while (isspace(*tok))
+		tok++;
+	if (*tok == '\0')
+		return NULL;
+
+	start = tok;
+	while (*tok) {
+		if (*tok == ' ' && br == 0) {
+			*tok++ = '\0';
+			return start;
+		}
+		if (*tok == '(')
+			br++;
+		if (*tok == ')')
+			br--;
+		tok++;
+	}
+	if (br) {
+		fprintf(stderr, "unmatched brackets in argument\n");
+		exit(1);
+	}
+	return start;
+}
+
