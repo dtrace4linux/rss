@@ -180,7 +180,10 @@ draw__line(cmd_t *cp, int x1, int y1, int x2, int y2)
 }
 int
 draw_filled_circle(cmd_t *cp)
-{
+{	char	*str;
+	unsigned long start = cp->rgb;
+	unsigned long end = cp->rgb;
+	int	has_grad = 0;
 
 	int	x0 = cp->x;
 	int	y0 = cp->y;
@@ -189,7 +192,32 @@ draw_filled_circle(cmd_t *cp)
 	int x = 0;
 	int y = cp->radius;
 
+	if ((str = get_attribute(cp, "gradient")) != NULL) {
+		parse_gradient(str, &start, &end);
+		has_grad = 1;
+//printf("strat=%lx %lx\n", start, end);
+	}
+
+	double f = 1.0 / (y - x);
+	int n = 0;
+
 	while (x <= y) {
+		if (has_grad) {
+			int r = (start >> 16) & 0xff;
+			int g = (start >> 8) & 0xff;
+			int b = (start >> 0) & 0xff;
+
+			int r1 = (end >> 16) & 0xff;
+			int g1 = (end >> 8) & 0xff;
+			int b1 = (end >> 0) & 0xff;
+	//printf("%02x %02x %02x\n", r, g, b);
+
+			cp->rgb = (((int) ((r - r1) * n * f) & 0xff) << 16) |
+			          (((int) ((g - g1) * n * f) & 0xff) << 8) |
+			          (((int) ((b - b1) * n * f) & 0xff) << 0);
+			n++;
+		}
+
 		draw__line(cp, x0 + x, y0 + y, x0 + y, y0 + x);
 		draw__line(cp, x0 - x, y0 + y, x0 + y, y0 - x);
 		draw__line(cp, x0 - x, y0 - y, x0 - y, y0 - x);
@@ -280,6 +308,7 @@ draw_text(cmd_t *cp)
 {
  	cairo_surface_t *surface;
 	cairo_t *cr;
+	cairo_font_extents_t fe;
 	cairo_text_extents_t te;
 	int i, j;
 	int	x, y;
@@ -298,6 +327,7 @@ draw_text(cmd_t *cp)
 	cairo_select_font_face(cr, "Sans", CAIRO_FONT_SLANT_NORMAL,
 		CAIRO_FONT_WEIGHT_NORMAL);
 	cairo_set_font_size(cr, 40.0);
+	cairo_font_extents (cr, &fe);
 
 	x = 10;
 	y = 50;
@@ -305,19 +335,40 @@ draw_text(cmd_t *cp)
 
 	for (i = 6; i < cp->argc; i++) {
 		char *str = cp->raw_args[i];
-//printf("cairo: %s\n", str);
-		cairo_text_extents(cr, str, &te);
-		if (x + te.width > w_arg) {
-			x = x0;
-			y += te.height;
-		}
+		int	j = 0;
 
-		cairo_move_to(cr, x, y);
-		cairo_show_text(cr, str);
-		x += te.width;
-		cairo_text_extents(cr, "n", &te);
-		x += te.width;
-		cairo_move_to(cr, x, y);
+		while (1) {
+			int ch, j;
+
+			for (j = 0; str[j]; j++) {
+				if (str[j] == '\0' || str[j] == '\n')
+					break;
+			}
+			ch = str[j];
+			str[j] = '\0';
+
+//printf("cairo: %s\n", str);
+			cairo_text_extents(cr, str, &te);
+			if (x + te.width > x_arg + w_arg) {
+				x = x0;
+				y += fe.descent + te.height;
+			}
+
+			cairo_move_to(cr, x, y);
+			cairo_show_text(cr, str);
+			x += te.width;
+			cairo_text_extents(cr, "n", &te);
+			x += te.width;
+			cairo_move_to(cr, x, y);
+
+			str[j] = ch;
+			if (ch == 0)
+				break;
+			str += j + 1;
+
+			x = x0;
+			y += fe.descent + te.height;
+		}
 	}
 
 	unsigned char *data = cairo_image_surface_get_data (surface);

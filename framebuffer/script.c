@@ -76,6 +76,7 @@ void set_var(char *name, int val);
 long lookup(char *str);
 void token_init(char *str);
 char *token_next();
+char ** parse_list(char *str, int *len);
 
 cmd_t *
 alloc_cmd(int type)
@@ -500,6 +501,62 @@ script_exec()
 	  }
 
 	return NULL;
+}
+
+int
+parse_gradient(char *str, unsigned long *start, unsigned long *end)
+{	char	**array;
+	int	len;
+	int	i;
+
+	while (*str && *str != '(')
+		str++;
+	if (*str++ == '\0')
+		return 0;
+	array = parse_list(str, &len);
+	if (len > 0)
+		*start = strtol(array[0], NULL, 16);
+	if (len > 1)
+		*end = strtol(array[1], NULL, 16);
+
+	for (i = 0; i < len; i++)
+		free(array[i]);
+	free(array);
+
+	return 1;
+}
+
+char **
+parse_list(char *str, int *len)
+{	int	size = 10;
+	int	used = 0;
+	char	**array = calloc(sizeof *array, size);
+
+	while (*str) {
+		if (used + 1 >= size) {
+			size += 10;
+			array = realloc(array, size * sizeof *array);
+		}
+
+		while (isspace(*str))
+			str++;
+		char *start = str;
+		while (*str && *str != ',' && *str != ')')
+			str++;
+		char *arg = malloc(str - start + 1);
+		memcpy(arg, start, str - start);
+		arg[str - start] = '\0';
+		array[used++] = arg;
+//printf("arg='%s'\n", arg);
+		while (*arg && isspace(arg[strlen(arg) - 1]))
+			arg[strlen(arg)-1] = '\0';
+
+		if (*str != ',')
+			break;
+		str++;
+	}
+	*len = used;
+	return array;
 }
 
 /**********************************************************************/
