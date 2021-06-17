@@ -178,7 +178,7 @@ sub display_pictures
 	if ($r == 1 && -x $fb_prog) {
 		my $seq = get_rand("pictures-seq", 2) == 0 ? "-seq" : "";
 		save_screendump();
-		spawn("$fb_prog -delay 0 -montage $seq -f $dir/index.log -rand");
+		spawn("$fb_prog -delay 0 -montage $seq -f $dir/index.log -rand -num 500");
 		return;
 	}
 	if ($r == 2 && -x $fb_prog) {

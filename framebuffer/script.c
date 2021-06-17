@@ -484,8 +484,8 @@ script_exec()
 	  	break;
 
 	  case C_SCREENSIZE:
-		swidth = cmdp->args[1];
-		sheight = cmdp->args[2];
+		swidth = eval(cmdp->raw_args[1]);
+		sheight = eval(cmdp->raw_args[2]);
 		set_var("screen_width", swidth);
 		set_var("screen_height", sheight);
 	  	break;

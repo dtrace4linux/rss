@@ -31,6 +31,29 @@ void compute_rect(cmd_t *cp)
 	h_arg *= scrp->s_height / (float) sheight;
 }
 
+# define MIN(a, b) ((a) < (b) ? (a) : (b))
+# define MAX(a, b) ((a) > (b) ? (a) : (b))
+
+static unsigned long
+do_gradient(cmd_t *cp, unsigned long start, unsigned long end, double n)
+{
+	int r = (start >> 16) & 0xff;
+	int g = (start >> 8) & 0xff;
+	int b = (start >> 0) & 0xff;
+
+	int r1 = (end >> 16) & 0xff;
+	int g1 = (end >> 8) & 0xff;
+	int b1 = (end >> 0) & 0xff;
+
+	r = (int) (r1 + (r - r1) * n) & 0xff;
+	g = (int) (g1 + (g - g1) * n) & 0xff;
+	b = (int) (b1 + (b - b1) * n) & 0xff;
+
+	unsigned long p = (r << 16) | (g << 8) | (b << 0);
+//printf("grad %02x %02x %02x - %02x %02x %02x %f -> 0x%lx\n", r, g, b, r1, g1, b1, n, p);
+	return p;
+}
+
 static void
 do_plot(int x, int y, int r, int g, int b)
 {
@@ -167,16 +190,14 @@ draw_image(cmd_t *cp)
 	free_image(img);
 	return 1;
 }
-void
-draw__line(cmd_t *cp, int x1, int y1, int x2, int y2)
+static void
+draw__line(cmd_t *cp, int x1, int y1, int w)
 {
 	cp->x = x1;
 	cp->y = y1;
-	cp->x1 = x2;
-	cp->y1 = y2;
+	cp->x1 = x1 + w;
+	cp->y1 = y1;
 	draw_line(cp);
-
-	update_image();
 }
 int
 draw_filled_circle(cmd_t *cp)
@@ -185,12 +206,12 @@ draw_filled_circle(cmd_t *cp)
 	unsigned long end = cp->rgb;
 	int	has_grad = 0;
 
-	int	x0 = cp->x;
-	int	y0 = cp->y;
+	int	xp = cp->x;
+	int	yp = cp->y;
 
-	int	d = 3 - (2 * cp->radius);
-	int x = 0;
-	int y = cp->radius;
+	int xoff = 0;
+	int yoff = cp->radius;
+	int balance = -cp->radius;
 
 	if ((str = get_attribute(cp, "gradient")) != NULL) {
 		parse_gradient(str, &start, &end);
@@ -198,37 +219,34 @@ draw_filled_circle(cmd_t *cp)
 //printf("strat=%lx %lx\n", start, end);
 	}
 
-	double f = 1.0 / (y - x);
 	int n = 0;
+	while (xoff <= yoff) {
+		int p0 = xp - xoff;
+		int p1 = xp - yoff;
 
-	while (x <= y) {
+		int w0 = xoff + xoff;
+		int w1 = yoff + yoff;
+
 		if (has_grad) {
-			int r = (start >> 16) & 0xff;
-			int g = (start >> 8) & 0xff;
-			int b = (start >> 0) & 0xff;
-
-			int r1 = (end >> 16) & 0xff;
-			int g1 = (end >> 8) & 0xff;
-			int b1 = (end >> 0) & 0xff;
-	//printf("%02x %02x %02x\n", r, g, b);
-
-			cp->rgb = (((int) ((r - r1) * n * f) & 0xff) << 16) |
-			          (((int) ((g - g1) * n * f) & 0xff) << 8) |
-			          (((int) ((b - b1) * n * f) & 0xff) << 0);
-			n++;
+			int	denom = xoff == yoff ? 1 : yoff - xoff;
+			cp->rgb = do_gradient(cp, start, end, n++ / (double) denom);
 		}
 
-		draw__line(cp, x0 + x, y0 + y, x0 + y, y0 + x);
-		draw__line(cp, x0 - x, y0 + y, x0 + y, y0 - x);
-		draw__line(cp, x0 - x, y0 - y, x0 - y, y0 - x);
-		draw__line(cp, x0 + x, y0 - y, x0 - y, y0 + x);
-		if (d < 0)
-			d += 4 * x + 6;
-		else {
-			d += 4*(x-y) + 10;
-			y--;
+cp->rgb = 0xff;
+		draw__line(cp, p0, yp + yoff, w0);
+cp->rgb = 0xffff;
+	      	draw__line(cp, p0, yp - yoff, w0);
+cp->rgb = 0xff00;
+		draw__line(cp, p1, yp + xoff, w1);
+cp->rgb = 0xffff00;
+		draw__line(cp, p1, yp - xoff, w1);
+
+		balance += xoff + 1 + xoff;
+		xoff++;
+		if (balance >= 0) {
+			balance -= yoff-1 + yoff;
+			yoff--;
 		}
-		x++;
 	}
 	update_image();
 }
@@ -236,12 +254,29 @@ draw_filled_circle(cmd_t *cp)
 int
 draw_filled_rectangle(cmd_t *cp)
 {	int	x, y;
+	unsigned long start = cp->rgb;
+	unsigned long end = cp->rgb;
+	int	has_grad = 0;
+	int	end_y;
+	char	*str;
 
-	int r = cp->rgb >> 16;
-	int g = (cp->rgb >> 8) & 0xff;
-	int b = (cp->rgb >> 0) & 0xff;
+	if ((str = get_attribute(cp, "gradient")) != NULL) {
+		parse_gradient(str, &start, &end);
+		has_grad = 1;
+//printf("strat=%lx %lx\n", start, end);
+	}
 
-	for (y = cp->y; y < cp->y + cp->h; y++) {
+	end_y = cp->y + cp->h;
+	for (y = cp->y; y < end_y; y++) {
+		if (has_grad) {
+			cp->rgb = do_gradient(cp, start, end, 
+				(double) (y - cp->y) / (end_y - cp->y));
+		}
+
+		int r = cp->rgb >> 16;
+		int g = (cp->rgb >> 8) & 0xff;
+		int b = (cp->rgb >> 0) & 0xff;
+
 		set_location(cp->x, y);
 		for (x = cp->x; x < cp->x + cp->w; x++) {
 			do_plot(x, y, r, g, b);

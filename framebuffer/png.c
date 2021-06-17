@@ -46,27 +46,46 @@ read_png_file(char* file_name)
 
         /* open file and test for it being a png */
         FILE *fp = fopen(file_name, "rb");
-        if (!fp)
-                abort_("[read_png_file] File %s could not be opened for reading", file_name);
-        if (fread(header, 1, 8, fp) != 8) {
-                abort_("[read_png_file] File %s is too short", file_name);
+        if (!fp) {
+                fprintf(stderr, "[read_png_file] File %s could not be opened for reading", file_name);
+		return NULL;
 	}
-        if (png_sig_cmp(header, 0, 8))
-                abort_("[read_png_file] File %s is not recognized as a PNG file", file_name);
+        if (fread(header, 1, 8, fp) != 8) {
+                fprintf(stderr, "[read_png_file] File %s is too short", file_name);
+		fclose(fp);
+		return NULL;
+	}
+        if (png_sig_cmp(header, 0, 8)) {
+                fprintf(stderr, "[read_png_file] File %s is not recognized as a PNG file", file_name);
+		fclose(fp);
+		return NULL;
+	}
 
 
         /* initialize stuff */
         png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 
-        if (!png_ptr)
-                abort_("[read_png_file] png_create_read_struct failed");
+	/***********************************************/
+	/*   Memleaks ahead...			       */
+	/***********************************************/
+        if (!png_ptr) {
+                fprintf(stderr, "[read_png_file] png_create_read_struct failed");
+		fclose(fp);
+		return NULL;
+	}
 
         info_ptr = png_create_info_struct(png_ptr);
-        if (!info_ptr)
-                abort_("[read_png_file] png_create_info_struct failed");
+        if (!info_ptr) {
+                fprintf(stderr, "[read_png_file] png_create_info_struct failed");
+		fclose(fp);
+		return NULL;
+	}
 
-        if (setjmp(png_jmpbuf(png_ptr)))
-                abort_("[read_png_file] Error during init_io");
+        if (setjmp(png_jmpbuf(png_ptr))) {
+                fprintf(stderr, "[read_png_file] Error during init_io");
+		fclose(fp);
+		return NULL;
+	}
 
         png_init_io(png_ptr, fp);
         png_set_sig_bytes(png_ptr, 8);
@@ -83,8 +102,11 @@ read_png_file(char* file_name)
 
 
         /* read file */
-        if (setjmp(png_jmpbuf(png_ptr)))
-                abort_("[read_png_file] Error during read_image");
+        if (setjmp(png_jmpbuf(png_ptr))) {
+                fprintf(stderr, "[read_png_file] Error during read_image");
+		fclose(fp);
+		return NULL;
+	}
 
         row_pointers = (png_bytep*) malloc(sizeof(png_bytep) * height);
         for (y=0; y<height; y++)

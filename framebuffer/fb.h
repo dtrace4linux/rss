@@ -109,6 +109,7 @@ int	get_rand(int n);
 char *get_attribute(cmd_t *cmdp, char *name);
 char	*parse_percentage(char *);
 int parse_gradient(char *str, unsigned long *start, unsigned long *end);
+long eval(char *str);
 
 extern screen_t *scrp;
 extern int v_flag;

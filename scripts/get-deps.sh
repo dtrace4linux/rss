@@ -3,7 +3,7 @@
 # Following are needed for Raspbian/Ubuntu
 
 apt install toilet figlet ansiweather \
-	libjpeg-dev gcc make libpng-dev \
+	libcairo-dev libjpeg-dev gcc make libpng-dev \
 	libjson-perl \
 	caca-utils \
 	libraspberrypi-bin \
