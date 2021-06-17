@@ -61,7 +61,12 @@ Switches:
    -w NN              Set co-ordinate
    -v                 Verbose; list lines in script files
 
+Environment variables:
+
+  FBVIEW_FRAMEBUFFER=<filename> If set, then same as -framebuffer switch.
+
 Examples:
 
   $ fb -montage -delay 1 -rand -f index.log -num 30
+  $ fb -script $HOME/src/rss/data/draw13.txt -f $HOME/images/news/index.log -rand
 

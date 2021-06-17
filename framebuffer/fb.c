@@ -436,6 +436,10 @@ int main(int argc, char **argv)
 	char	*fname = NULL;
 	int	fd;
 	int	i;
+	char	*cp;
+
+	if ((cp = getenv("FBVIEW_FRAMEBUFFER")) != NULL)
+		framebuffer_name = cp;
 
 	arg_index = do_switches(argc, argv);
 
