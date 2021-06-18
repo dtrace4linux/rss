@@ -28,7 +28,8 @@ release:
 	tar czf $$fn --exclude=bin --exclude=.git . ; \
 	echo $$fn created ; \
 	rm -f $(HOME)/release/rss/rss-current.tar.gz ; \
-	ln -s rss-$$label.tar.gz $(HOME)/release/rss/rss-current.tar.gz ;
+	ln -s rss-$$label.tar.gz $(HOME)/release/rss/rss-current.tar.gz ; \
+	cp version.txt $(HOME)/release/rss
 	cd $(HOME)/release/rss ; . ; find . | sort > updates.txt
 
 push:
