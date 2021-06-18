@@ -347,10 +347,16 @@ draw_text(cmd_t *cp)
 	cairo_text_extents_t te;
 	int i, j;
 	int	x, y;
+	int	has_alpha = 0;
+	char	*str;
 	
 	int r = cp->rgb >> 16;
 	int g = (cp->rgb >> 8) & 0xff;
 	int b = (cp->rgb >> 0) & 0xff;
+
+	if ((str = get_attribute(cp, "alpha")) != NULL) {
+		has_alpha = 1;
+	}
 
 	compute_rect(cp);
 
@@ -368,43 +374,73 @@ draw_text(cmd_t *cp)
 	y = 50;
 	int x0 = x;
 
-	for (i = 6; i < cp->argc; i++) {
-		char *str = cp->raw_args[i];
-		int	j = 0;
+	if ((str = get_value(cp, "text")) == NULL)
+		str = strdup("no text specified");
 
-		while (1) {
-			int ch, j;
+	j = 0;
+	while (str[j]) {
+		int start = j;
+		int	skip_char = 1;
+		int ch;
 
-			for (j = 0; str[j]; j++) {
-				if (str[j] == '\0' || str[j] == '\n')
-					break;
-			}
-			ch = str[j];
-			str[j] = '\0';
+		if (str[j] == ' ') {
+			j++;
+			continue;
+		}
+
+		for (j = start; str[j]; j++) {
+			if (str[j] == '\0' || str[j] == '\n' || str[j] == ' ')
+				break;
+		}
+		ch = str[j];
+		str[j] = '\0';
 
 //printf("cairo: %s\n", str);
-			cairo_text_extents(cr, str, &te);
-			if (x + te.width > x_arg + w_arg) {
-				x = x0;
-				y += fe.descent + te.height;
-			}
-
-			cairo_move_to(cr, x, y);
-			cairo_show_text(cr, str);
-			x += te.width;
-			cairo_text_extents(cr, "n", &te);
-			x += te.width;
-			cairo_move_to(cr, x, y);
-
-			str[j] = ch;
-			if (ch == 0)
-				break;
-			str += j + 1;
-
+		cairo_text_extents(cr, str + start, &te);
+		if (x + te.width > x_arg + w_arg && start) {
 			x = x0;
 			y += fe.descent + te.height;
 		}
+
+		/***********************************************/
+		/*   If word is still too long, need to split  */
+		/*   a word.				       */
+		/***********************************************/
+		if (x + te.width >= x_arg + w_arg) {
+			str[j] = ch;
+//printf("loop j=%d %f\n", j, te.width);
+			while (x + te.width >= x_arg + w_arg) {
+				j--;
+				ch = str[j];
+				str[j] = '\0';
+//printf("j=%d %f '%s'\n", j, te.width, str);
+				cairo_text_extents(cr, str + start, &te);
+				skip_char = 0;
+			}
+		}
+
+		cairo_move_to(cr, x, y);
+		cairo_show_text(cr, str + start);
+		x += te.width;
+		if (ch) {
+			cairo_text_extents(cr, "n", &te);
+			x += te.width;
+		}
+//		cairo_move_to(cr, x, y);
+
+		str[j] = ch;
+		if (skip_char)
+			j++;
+		if (ch == 0)
+			break;
+		if (ch == ' ') {
+			continue;
+		}
+
+		x = x0;
+		y += fe.descent + te.height;
 	}
+	free(str);
 
 	unsigned char *data = cairo_image_surface_get_data (surface);
 	int width = cairo_image_surface_get_width(surface);
@@ -415,10 +451,12 @@ draw_text(cmd_t *cp)
 	for (i = 0; i < height; i++) {
 		unsigned char *row = data + i * stride;
 		for (int j = 0; j < width; j++) {
-			int r = *row++;
-			int g = *row++;
 			int b = *row++;
-			plot(x_arg + j, y_arg + i);
+			int g = *row++;
+			int r = *row++;
+			if (!has_alpha || b + g + r) {
+				plot(x_arg + j, y_arg + i);
+			}
 			row ++;
 
 		// do something with the pixel at (i, j), which lies at row + j * (pixel size),

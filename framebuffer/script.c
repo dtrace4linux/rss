@@ -291,10 +291,59 @@ get_attribute(cmd_t *cmdp, char *name)
 
 	for (i = 0; i < cmdp->argc; i++) {
 		if (strncmp(name, cmdp->raw_args[i], len) == 0 &&
-		    cmdp->raw_args[i][len] == '(')
+		    (cmdp->raw_args[i][len] == '(' || cmdp->raw_args[i][len] == '=')) {
 		    	return cmdp->raw_args[i];
 		}
+	}
 	return NULL;
+}
+char *
+get_value(cmd_t *cmdp, char *name)
+{	int	i;
+	int	len = strlen(name);
+	char	*v = NULL;
+	int	size = 10;
+	int	used = 0;
+	char	*str;
+
+	for (i = 0; i < cmdp->argc; i++) {
+		if (strncmp(name, cmdp->raw_args[i], len) == 0 &&
+		    (cmdp->raw_args[i][len] == '(' || cmdp->raw_args[i][len] == '=')) {
+		    	v = cmdp->raw_args[i];
+			break;
+		}
+	}
+	if (v == NULL)
+		return NULL;
+
+	v += len;
+	str = malloc(size);
+	if (*v++ == '=') {
+		while (isspace(*v))
+			v++;
+		if (*v == '"')
+			v++;
+		while (*v && *v != '"') {
+			if (used + 2 >= size) {
+				size += 32;
+				str = realloc(str, size);
+			}
+			str[used++] = *v++;
+		}
+	} else {
+		while (isspace(*v))
+			v++;
+		while (*v && *v != ')') {
+			if (used + 2 >= size) {
+				size += 32;
+				str = realloc(str, size);
+			}
+			str[used++] = *v++;
+		}
+	}
+	str[used] = '\0';
+
+	return str;
 }
 int
 has_attribute(cmd_t *cmdp, char *name)

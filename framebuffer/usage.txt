@@ -54,6 +54,7 @@ Switches:
    -scroll_y_incr NN  When using -scroll, scroll by this much.
    -seq               When doing montage, display l->r
    -stretch           Stretch but dont change aspect ratio
+   -text <msg>        Display a text string in the frame buffer.
    -xfrac N.NN        Shrink image on the x-axis
    -yfrac N.NN        Shrink image on the y-axis
    -x NN              Set co-ordinate

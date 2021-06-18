@@ -55,6 +55,7 @@ int	v_flag;
 char	*framebuffer_name;
 int	framebuffer_w = 1920;
 int	framebuffer_h = 1080;
+char	*text_str;
 
 screen_t	*scrp;
 
@@ -292,6 +293,12 @@ do_switches(int argc, char **argv)
 				stretch = 1;
 				break;
 			}
+			if (strcmp(cp, "text") == 0) {
+				if (++i >= argc)
+					usage();
+				text_str = argv[i];
+				break;
+			}
 			if (strcmp(cp, "x") == 0) {
 				if (++i >= argc)
 					usage();
@@ -453,6 +460,21 @@ int main(int argc, char **argv)
 //			scrp->s_width_virtual, scrp->s_height_virtual);
 	}
 
+	if (text_str) {
+		cmd_t cp;
+		char	*str = malloc(16 + strlen(text_str));
+		snprintf(str, strlen(text_str) + 15, "text=\"%s\"", text_str);
+		cp.argc = 7;
+		cp.raw_args[1] = "0";
+		cp.raw_args[2] = "0";
+		cp.raw_args[3] = "700";
+		cp.raw_args[4] = "600";
+		cp.raw_args[5] = "0xffff";
+		cp.raw_args[6] = str;
+		draw_text(&cp);
+		free(str);
+		exit(0);
+	}
 
 	if (arg_index >= argc && !ofname && !f_flag) {
 		if (info)
