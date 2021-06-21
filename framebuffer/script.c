@@ -33,9 +33,11 @@ static char *cmds[] = {
 	"C_DELAY", 
 	"C_DOT", 
 	"C_DRAW",
+	"C_ELLIPSE",
 	"C_END",
 	"C_EXIT", 
 	"C_FILLED_CIRCLE", 
+	"C_FILLED_ELLIPSE",
 	"C_FILLED_RECTANGLE", 
 	"C_FOR",
 	"C_FOR2",
@@ -461,6 +463,11 @@ script_exec()
 			exit(0);
 	  	break;
 
+	  case C_ELLIPSE:
+	  case C_FILLED_ELLIPSE:
+		draw_ellipse(cmdp);
+	  	break;
+
 	  case C_EXIT:
 	  	return cmdp;
 
@@ -801,6 +808,16 @@ static int line = 0;
 
 			return 1;
 		}
+		if (strcmp(cname, "ellipse") == 0) {
+			cmdp->type = C_ELLIPSE;
+			return 1;
+		}
+
+		if (strcmp(cname, "filled_ellipse") == 0) {
+			cmdp->type = C_FILLED_ELLIPSE;
+			return 1;
+		}
+
 		if (strcmp(cname, "for") == 0) {
 			cmd_t *cmdp1;
 

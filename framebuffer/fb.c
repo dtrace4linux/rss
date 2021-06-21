@@ -56,6 +56,7 @@ char	*framebuffer_name;
 int	framebuffer_w = 1920;
 int	framebuffer_h = 1080;
 char	*text_str;
+int	clear_flag;
 
 screen_t	*scrp;
 
@@ -193,6 +194,11 @@ do_switches(int argc, char **argv)
 			break;
 
 		while (*cp) {
+			if (strcmp(cp, "clear") == 0) {
+				clear_flag = 1;
+				break;
+			}
+
 			if (strcmp(cp, "cvt") == 0) {
 				if (++i >= argc)
 					usage();
@@ -476,7 +482,7 @@ int main(int argc, char **argv)
 		exit(0);
 	}
 
-	if (arg_index >= argc && !ofname && !f_flag) {
+	if (arg_index >= argc && !clear_flag && !script_file && !ofname && !f_flag) {
 		if (info)
 			exit(0);
 		usage();
@@ -496,8 +502,11 @@ int main(int argc, char **argv)
 	/***********************************************/
 	/*   Clear screen if doing montage.	       */
 	/***********************************************/
-	if (montage) {
+	if (montage || clear_flag) {
 		memset(scrp->s_mem, 0x00, scrp->s_screensize);
+		update_image();
+		if (clear_flag)
+			exit(0);
 	}
 
 

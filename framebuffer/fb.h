@@ -44,9 +44,11 @@ enum ctypes {
 	C_DELAY, 
 	C_DOT, 
 	C_DRAW,
+	C_ELLIPSE,
 	C_END,
 	C_EXIT, 
 	C_FILLED_CIRCLE, 
+	C_FILLED_ELLIPSE, 
 	C_FILLED_RECTANGLE, 
 	C_FOR,
 	C_FOR2,
@@ -87,6 +89,7 @@ int	draw_circle(cmd_t *);
 int	draw_filled_circle(cmd_t *);
 int	draw_clear(cmd_t *);
 int	draw_dot(cmd_t *);
+int	draw_ellipse(cmd_t *);
 int	draw_filled_rectangle(cmd_t *);
 int	draw_line(cmd_t *);
 int	draw_rectangle(cmd_t *);

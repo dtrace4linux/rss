@@ -34,6 +34,7 @@ Montage mode:
 
 Switches:
 
+   -clear             Clear screen
    -cvt <fname>       Write loaded image to file.
    -delay NN          Scroll delay in milliseconds
    -effects           Scroll-in effects enabled

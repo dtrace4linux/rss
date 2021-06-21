@@ -29,6 +29,11 @@ void compute_rect(cmd_t *cp)
 	y_arg *= scrp->s_height / (float) sheight;
 	w_arg *= scrp->s_width / (float) swidth;
 	h_arg *= scrp->s_height / (float) sheight;
+
+	cp->x = x_arg;
+	cp->y = y_arg;
+	cp->w = w_arg;
+	cp->h = h_arg;
 }
 
 # define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -192,19 +197,126 @@ draw_image(cmd_t *cp)
 }
 static void
 draw__line(cmd_t *cp, int x1, int y1, int w)
-{
+{	int	x = cp->x;
+	int	y = cp->y;
+	int	x1_save = cp->x1;
+	int	y1_save = cp->y1;
+
 	cp->x = x1;
 	cp->y = y1;
 	cp->x1 = x1 + w;
 	cp->y1 = y1;
 	draw_line(cp);
+
+	cp->x = x;
+	cp->y = y;
+	cp->x1 = x1_save;
+	cp->y1 = y1_save;
 }
+
+// https://dai.fmph.uniba.sk/upload/0/01/Ellipse.pdf
+// ellipse(x, y, xradius, yradius)
+int
+draw_ellipse(cmd_t *cp)
+{	char	*str;
+	unsigned long start = cp->rgb;
+	unsigned long end = cp->rgb;
+	int	has_grad = 0;
+
+	compute_rect(cp);
+
+	if ((str = get_attribute(cp, "gradient")) != NULL) {
+		parse_gradient(str, &start, &end);
+		has_grad = 1;
+	}
+
+	cp->rgb = cp->args[5];
+	int r = cp->rgb >> 16;
+	int g = (cp->rgb >> 8) & 0xff;
+	int b = (cp->rgb >> 0) & 0xff;
+
+	long xradius = cp->w;
+	long yradius = cp->h;
+
+	long TwoASquare = 2 * xradius * xradius;
+	long TwoBSquare = 2 * yradius * yradius;
+	long x = xradius;
+	long y = 0;
+	long XChange = yradius * yradius * (1 - 2 * xradius);
+	long YChange = xradius * xradius;
+	long ellipse_error = 0;
+	long stopping_x = TwoBSquare * xradius;
+	long stopping_y = 0;
+
+	while (stopping_x >= stopping_y) {
+//printf("plot %ld %ld %02x%02x%02x\n", cp->x+x, cp->y+y, r, g, b);
+		if (cp->type == C_FILLED_ELLIPSE) {
+			draw__line(cp, cp->x-x, cp->y-y, 2 * x);
+			draw__line(cp, cp->x-x, cp->y+y, 2 * x);
+		} else {
+			plot(cp->x + x, cp->y + y);
+			plot(cp->x - x, cp->y + y);
+			plot(cp->x - x, cp->y - y);
+			plot(cp->x + x, cp->y - y);
+		}
+
+		y++;
+		stopping_y += TwoASquare;
+		ellipse_error += YChange;
+		YChange += TwoASquare;
+		if (2 * ellipse_error + XChange > 0) {
+			x--;
+			stopping_x -= TwoBSquare;
+			ellipse_error += XChange;
+			XChange += TwoBSquare;
+		}
+	}
+
+	// 1st point set is done; start the 2nd set of points
+	x = 0;
+	y = yradius;
+	XChange = yradius * yradius;
+	YChange = xradius * xradius * (1 - 2 * yradius);
+	ellipse_error = 0;
+	stopping_x = 0;
+	stopping_y = TwoASquare * yradius;
+	while (stopping_x <= stopping_y) {
+//printf("plot2 %ld %ld %02x%02x%02x\n", cp->x+x, cp->y+y, r, g, b);
+		if (cp->type == C_FILLED_ELLIPSE) {
+			draw__line(cp, cp->x-x, cp->y-y, 2 * x);
+			draw__line(cp, cp->x-x, cp->y+y, 2 * x);
+		} else {
+			plot(cp->x + x, cp->y + y);
+			plot(cp->x - x, cp->y + y);
+			plot(cp->x - x, cp->y - y);
+			plot(cp->x + x, cp->y - y);
+		}
+
+		x++;
+		stopping_x += TwoBSquare;
+		ellipse_error += XChange;
+		XChange += TwoBSquare;
+		if (2 * ellipse_error + YChange > 0) {
+			y--;
+			stopping_y -= TwoASquare;
+			ellipse_error += YChange;
+			YChange += TwoASquare;
+		}
+	}
+
+	return 0;
+}
+
 int
 draw_filled_circle(cmd_t *cp)
 {	char	*str;
 	unsigned long start = cp->rgb;
 	unsigned long end = cp->rgb;
 	int	has_grad = 0;
+	int	grad_type = 0;
+
+	if (cp->radius <= 0)
+		return 0;
 
 	int	xp = cp->x;
 	int	yp = cp->y;
@@ -219,7 +331,7 @@ draw_filled_circle(cmd_t *cp)
 //printf("strat=%lx %lx\n", start, end);
 	}
 
-	int n = 0;
+int n = 0;
 	while (xoff <= yoff) {
 		int p0 = xp - xoff;
 		int p1 = xp - yoff;
@@ -228,17 +340,16 @@ draw_filled_circle(cmd_t *cp)
 		int w1 = yoff + yoff;
 
 		if (has_grad) {
-			int	denom = xoff == yoff ? 1 : yoff - xoff;
-			cp->rgb = do_gradient(cp, start, end, n++ / (double) denom);
+//			double f = (xoff - xp) / ((double) cp->radius * 2);
+//			double f = (double) n++ / cp->radius;
+			double f = (double) p0 / cp->radius;
+//printf("%d) f=%f %d %d %d\n", n++, f, p0, xoff, yoff);
+			cp->rgb = do_gradient(cp, start, end, f);
 		}
 
-cp->rgb = 0xff;
 		draw__line(cp, p0, yp + yoff, w0);
-cp->rgb = 0xffff;
 	      	draw__line(cp, p0, yp - yoff, w0);
-cp->rgb = 0xff00;
 		draw__line(cp, p1, yp + xoff, w1);
-cp->rgb = 0xffff00;
 		draw__line(cp, p1, yp - xoff, w1);
 
 		balance += xoff + 1 + xoff;
