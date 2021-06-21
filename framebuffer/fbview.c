@@ -70,6 +70,7 @@ do_switches(int argc, char **argv)
 void
 open_image(char *fn)
 {	struct stat sbuf;
+	char	buf[BUFSIZ];
 	int	fd;
 
 	if ((fd = open(fn, O_RDONLY)) < 0) {
@@ -84,12 +85,28 @@ open_image(char *fn)
 		fprintf(stderr, "Couldnt mmap file into memory, size %ld\n", sbuf.st_size);
 		exit(1);
 	}
-	info = (fb_info_t *) (fb + screensize);
+	close(fd);
+
+	snprintf(buf, sizeof buf, "%s.info", fn);
+	if ((fd = open(buf, O_RDONLY)) < 0) {
+		perror(buf);
+		exit(1);
+	}
+	if (fstat(fd, &sbuf) < 0) {
+		perror("fstat");
+		exit(1);
+	}
+	info = (fb_info_t *)mmap(0, sbuf.st_size, PROT_READ, MAP_SHARED, fd, 0);
+	if (info == (fb_info_t *) -1) {
+		fprintf(stderr, "Couldnt mmap file into memory, size %ld\n", sbuf.st_size);
+		exit(1);
+	}
+	close(fd);
+
 	img_width = info->f_width;
 	img_height = info->f_height;
 	width = img_width / 2;
 	height = img_height / 2;
-	close(fd);
 }
 
 XImage *

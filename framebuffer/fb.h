@@ -19,7 +19,11 @@ typedef struct screen_t {
 /*   For  virtual  frame buffers, we need to know the dimensions and  */
 /*   bpp							      */
 /**********************************************************************/
+# define	FB_MAGIC "fb-info-file"
+# define	FB_VERSION 1
 typedef struct fb_info_t {
+	char	f_magic[64];
+	int	f_version;
 	int	f_width;
 	int	f_height;
 	int	f_bpp;

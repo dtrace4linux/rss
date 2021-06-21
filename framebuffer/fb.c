@@ -629,17 +629,20 @@ open_framebuffer()
 	screen_t *scrp = calloc(sizeof(screen_t), 1);
 	struct fb_var_screeninfo vinfo;
 	struct fb_fix_screeninfo finfo;
-	int	fbfd;
+	char	buf[BUFSIZ];
+	int	fd;
 
 	if (framebuffer_name) {
 		struct stat sbuf;
 		char	*cp;
+		int	ret;
+		int	create_mode = 0;
 
-		if ((fbfd = open(framebuffer_name, O_RDWR | O_CREAT, 0644)) < 0) {
+		if ((fd = open(framebuffer_name, O_RDWR | O_CREAT, 0644)) < 0) {
 			perror(framebuffer_name);
 			exit(1);
 		}
-		if (fstat(fbfd, &sbuf) < 0) {
+		if (fstat(fd, &sbuf) < 0) {
 			perror("fstat");
 			exit(1);
 		}
@@ -649,51 +652,77 @@ open_framebuffer()
 		scrp->s_screensize = scrp->s_width * scrp->s_height * scrp->s_bpp / 8;
 		scrp->s_line_length = scrp->s_bpp / 8 * scrp->s_width;
 		if (sbuf.st_size < scrp->s_screensize) {
-			int	ret;
-			fb_info_t f;
 
-			memset(&f, 0, sizeof f);
-			f.f_width = scrp->s_width;
-			f.f_height = scrp->s_height;
-			f.f_bpp = scrp->s_bpp;
+			create_mode = 1;
 
 			cp = calloc(scrp->s_screensize, 1);
-			if ((ret = write(fbfd, cp, scrp->s_screensize)) != scrp->s_screensize) {
+			if ((ret = write(fd, cp, scrp->s_screensize)) != scrp->s_screensize) {
 				fprintf(stderr, "write error - wrote %d, returned %d\n", scrp->s_screensize, ret);
-				exit(1);
-			}
-			if ((ret = write(fbfd, &f, sizeof f)) != sizeof f) {
-				fprintf(stderr, "write error (info) - wrote %ld, returned %d\n", sizeof f, ret);
 				exit(1);
 			}
 			free(cp);
 		}
-		scrp->s_mem = (char *)mmap(0, scrp->s_screensize + sizeof(fb_info_t), 
-			PROT_READ | PROT_WRITE, MAP_SHARED, fbfd, 0);
-		scrp->s_info = (fb_info_t *) (scrp->s_mem + scrp->s_screensize);
+		scrp->s_mem = (char *) mmap(0, scrp->s_screensize + sizeof(fb_info_t), 
+			PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+		close(fd);
 		if (scrp->s_mem == (char *) -1) {
 			printf("Error: failed to map framebuffer device to memory.\n");
 			exit(1);
 		}
-		close(fbfd);
+
+		/***********************************************/
+		/*   Get the info file			       */
+		/***********************************************/
+		snprintf(buf, sizeof buf, "%s.info", framebuffer_name);
+		if ((fd = open(buf, O_RDWR | O_CREAT, 0644)) < 0) {
+			perror(buf);
+		}
+		if (fstat(fd, &sbuf) < 0) {
+			perror("fstat");
+			exit(1);
+		}
+
+		if (create_mode || sbuf.st_size != sizeof(fb_info_t)) {
+			fb_info_t f;
+
+			memset(&f, 0, sizeof f);
+			strcpy(f.f_magic, FB_MAGIC);
+			f.f_version = FB_VERSION;
+			f.f_width = scrp->s_width;
+			f.f_height = scrp->s_height;
+			f.f_bpp = scrp->s_bpp;
+
+			if ((ret = write(fd, &f, sizeof f)) != sizeof f) {
+				fprintf(stderr, "write error (info) - wrote %ld, returned %d\n", sizeof f, ret);
+				exit(1);
+			}
+		}
+
+		scrp->s_info = (fb_info_t *) mmap(0, sizeof(fb_info_t), 
+			PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+		close(fd);
+		if (scrp->s_info == (fb_info_t *) -1) {
+			printf("Error: failed to map framebuffer device to memory.\n");
+			exit(1);
+		}
 		return scrp;
 	}
 
-	fbfd = open(fbname, O_RDWR);
-	if (fbfd == -1) {
+	fd = open(fbname, O_RDWR);
+	if (fd == -1) {
 		fprintf(stderr, "Error opening %s - %s\n",
 			fbname, strerror(errno));
 		exit(1);
 	}
 
 	// Get fixed screen information
-	if (ioctl(fbfd, FBIOGET_FSCREENINFO, &finfo)) {
+	if (ioctl(fd, FBIOGET_FSCREENINFO, &finfo)) {
 		fprintf(stderr, "%s: Error reading fixed information.\n", fbname);
 		exit(1);
 	}
 
 	// Get variable screen information
-	if (ioctl(fbfd, FBIOGET_VSCREENINFO, &vinfo)) {
+	if (ioctl(fd, FBIOGET_VSCREENINFO, &vinfo)) {
 		fprintf(stderr, "%s: Error reading variable information.\n", fbname);
 		exit(1);
 	}
@@ -709,12 +738,12 @@ open_framebuffer()
 	scrp->s_screensize = scrp->s_width * scrp->s_height * vinfo.bits_per_pixel / 8;
 
 	// Map the device to memory
-	scrp->s_mem = (char *)mmap(0, scrp->s_screensize, PROT_READ | PROT_WRITE, MAP_SHARED, fbfd, 0);
+	scrp->s_mem = (char *)mmap(0, scrp->s_screensize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 	if (scrp->s_mem == (char *) -1) {
 		printf("Error: failed to map framebuffer device to memory.\n");
 		exit(1);
 	}
-	close(fbfd);
+	close(fd);
 
 	return scrp;
 }
