@@ -41,6 +41,7 @@ static char *cmds[] = {
 	"C_FILLED_RECTANGLE", 
 	"C_FOR",
 	"C_FOR2",
+	"C_FRAME",
 	"C_IF", 
 	"C_LINE", 
 	"C_NUMBER", 
@@ -103,6 +104,43 @@ cmd_usage(cmd_t *cmdp, char *str)
 	printf("syntax error - %s\n", str);
 	exit(1);
 }
+
+void
+do_frame(cmd_t *cp)
+{	int	f_no;
+	int	x;
+	int	y;
+	int	w;
+	int	h;
+	screen_t *scrp1;
+static int id = 0;
+
+	if (cp->argc < 6) {
+		printf("frame: usage: frame <fno> <x> <y> <width> <height>\n");
+		exit(0);
+	}
+
+	f_no = eval(cp->raw_args[1]);
+	x = eval(cp->raw_args[2]);
+	y = eval(cp->raw_args[3]);
+	w = eval(cp->raw_args[4]);
+	h = eval(cp->raw_args[5]);
+
+	scrp1 = calloc(sizeof *scrp1, 1);
+	*scrp1 = *scrp;
+	scrp1->s_id = ++id;
+	scrp1->s_xoffset = x * 3;
+  	scrp1->s_yoffset = y;
+	scrp1->s_width = w;
+	scrp1->s_height = h;
+
+	swidth = w;
+	sheight = h;
+
+	scrp = scrp1;
+
+}
+
 void
 do_script()
 {	cmd_t	*cmdp;
@@ -202,6 +240,7 @@ dump_script()
 #define MINUS	2
 #define MUL	3
 #define DIV	4
+#define COMMA	5
 
 void
 get_token(char *str, char **str2, int *type, long *value)
@@ -247,6 +286,11 @@ get_token(char *str, char **str2, int *type, long *value)
 		*type = DIV;
 		return;
 	}
+	if (*str == ',') {
+		*str2 = str+1;
+		*type = COMMA;
+		return;
+	}
 }
 
 long
@@ -281,6 +325,8 @@ eval(char *str)
 			str = str2;
 			value /= value2;
 			break;
+		  case COMMA:
+		  	break;
 		}
 	}
 	return value;
@@ -502,6 +548,10 @@ script_exec()
 			break;
 		}
 	  	push_estack(cmdp);
+	  	break;
+
+	  case C_FRAME:
+	  	do_frame(cmdp);
 	  	break;
 
 	  case C_LINE:
@@ -844,6 +894,10 @@ static int line = 0;
 			return 1;
 		}
 
+		if (strcmp(cname, "frame") == 0) {
+			cmdp->type = C_FRAME;
+			return 1;
+		}
 		if (strcmp(cname, "dot") == 0 && cmdp->argc >= 4) {
 			cmdp->type = C_DOT;
 			cmdp->x = cmdp->args[1];

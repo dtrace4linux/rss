@@ -656,7 +656,7 @@ open_framebuffer()
 			create_mode = 1;
 
 			cp = calloc(scrp->s_screensize, 1);
-			if ((ret = write(fd, cp, scrp->s_screensize)) != scrp->s_screensize) {
+			if ((ret = write(fd, cp, scrp->s_screensize)) != (int) scrp->s_screensize) {
 				fprintf(stderr, "write error - wrote %d, returned %d\n", scrp->s_screensize, ret);
 				exit(1);
 			}
@@ -792,6 +792,7 @@ shrink_display(screen_t *scrp, struct imgRawImage *img)
 	float xfrac = 1;
 	float yfrac = 1;
 	int	width = img->width;
+	int	bpp = scrp->s_bpp / 8;
 
 	int vwidth = w_arg < (int) scrp->s_width ? w_arg : (int) scrp->s_width;
 	int vheight = h_arg < (int) scrp->s_height ? h_arg : (int) scrp->s_height;
@@ -803,18 +804,31 @@ shrink_display(screen_t *scrp, struct imgRawImage *img)
 //printf("frac=%f %f [img: %dx%d] %d,%d\n", xfrac, yfrac, img->width, img->height, x_arg, y_arg);
 //printf("x0=%d xfrac=%.2f yfrac=%.2f\n", x0, xfrac, yfrac);
 
+//printf("x_arg: %d %d %d %d img=%dx%d\n", x_arg, y_arg, w_arg, h_arg, width, img->height);
+
 	for (y = 0; y < vheight; y++) {
-		int loc_end;
+		unsigned loc_end;
+
+		if (y_arg + y < 0)
+			continue;
 
 		if (y_arg + scrp->s_yoffset > (int) scrp->s_height)
 			break;
 
-	        scrp->s_location = (y_arg + scrp->s_yoffset + y) * scrp->s_line_length +
-			(x_arg + scrp->s_xoffset) * (scrp->s_bpp / 8);
+//printf("row %d\n", y);
+	        scrp->s_location = ((long) y_arg + scrp->s_yoffset + y) * scrp->s_line_length +
+			(x_arg + scrp->s_xoffset) * bpp;
 	        loc_end = (y_arg + scrp->s_yoffset + y + 1) * scrp->s_line_length;
+		loc_end = MIN(loc_end, scrp->s_screensize);
 		for (x = 0; x < vwidth; x++) {
-			if (scrp->s_location >= loc_end || scrp->s_location >= scrp->s_screensize)
+			if (x + x_arg < 0) {
+				scrp->s_location += bpp;
+				continue;
+			}
+			if (scrp->s_location >= loc_end) {
+//printf("hit end y,x=%d,%d  %u-%u=%d\n", y, x, scrp->s_location, loc_end, loc_end - scrp->s_location);
 				break; 
+			}
 			if (x * xfrac > width)
 				put_pixel(scrp, 0, 0, 0);
 			else {

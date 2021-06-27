@@ -36,9 +36,6 @@ void compute_rect(cmd_t *cp)
 	cp->h = h_arg;
 }
 
-# define MIN(a, b) ((a) < (b) ? (a) : (b))
-# define MAX(a, b) ((a) > (b) ? (a) : (b))
-
 static unsigned long
 do_gradient(cmd_t *cp, unsigned long start, unsigned long end, double n)
 {
@@ -166,27 +163,35 @@ draw_image(cmd_t *cp)
 		int	i, t;
 		int	x1, y1;
 
-		x_arg = (scrp->s_width - img->width) / 2;
-		y_arg = (scrp->s_height - img->height) / 2;
+		if (scrp->s_width > img->width) {
+			x_arg = (scrp->s_width - img->width) / 2;
+			y_arg = (scrp->s_height - img->height) / 2;
+		} else {
+			x_arg = (img->width - scrp->s_width) / 2;
+			y_arg = (img->height - scrp->s_height) / 2;
+		}
 
 		for (t = 0; t < 10; t++) {
 			x1 = get_rand(5);
 			y1 = get_rand(5);
-			if (get_rand(2) == 0) x1 = -x1;
-			if (get_rand(2) == 0) y1 = -y1;
+			if (x1 > 0 && get_rand(2) == 0) x1 = -x1;
+			if (y1 > 0 && get_rand(2) == 0) y1 = -y1;
 
-			for (i = 0; i < 10; i++) {
+			for (i = 0; i < 20; i++) {
 				x_arg += x1;
 				y_arg += y1;
-				if (x_arg < 0) x_arg = 0;
-				if (y_arg < 0) y_arg = 0;
-				if (x_arg + img->width > scrp->s_width)
+/*				if (x_arg < 0) 
+					x_arg = 0;
+				else if (x_arg + img->width > scrp->s_width)
 					x_arg = scrp->s_width - img->width;
-				if (y_arg + img->height > scrp->s_height)
+				if (y_arg < 0) 
+					y_arg = 0;
+				else if (y_arg + img->height > scrp->s_height)
 					y_arg = scrp->s_height - img->height;
+*/
 				memset(scrp->s_mem, 0x00, scrp->s_screensize);
 				shrink_display(scrp, img);
-				do_sleep(200);
+				do_sleep(100);
 			}
 		}
 	} else {
@@ -481,15 +486,15 @@ draw_text(cmd_t *cp)
 	cairo_set_font_size(cr, 40.0);
 	cairo_font_extents (cr, &fe);
 
-	x = 10;
-	y = 50;
+	x = scrp->s_txt_col;
+	y = scrp->s_txt_row;
 	int x0 = x;
 
 	if ((str = get_value(cp, "text")) == NULL)
 		str = strdup("no text specified");
 
 	j = 0;
-	while (str[j]) {
+	while (str[j] && y < (int) scrp->s_height) {
 		int start = j;
 		int	skip_char = 1;
 		int ch;
@@ -506,7 +511,7 @@ draw_text(cmd_t *cp)
 		ch = str[j];
 		str[j] = '\0';
 
-//printf("cairo: %s\n", str);
+printf("cairo: '%s' start=%d j=%d x=%d y=%d\n", str + start, start, j, x, y);
 		cairo_text_extents(cr, str + start, &te);
 		if (x + te.width > x_arg + w_arg && start) {
 			x = x0;
@@ -519,7 +524,7 @@ draw_text(cmd_t *cp)
 		/***********************************************/
 		if (x + te.width >= x_arg + w_arg) {
 			str[j] = ch;
-//printf("loop j=%d %f\n", j, te.width);
+printf("loop j=%d %f x_arg=%d, w_arg=%d\n", j, te.width, x_arg, w_arg);
 			while (x + te.width >= x_arg + w_arg) {
 				j--;
 				ch = str[j];
@@ -528,9 +533,11 @@ draw_text(cmd_t *cp)
 				cairo_text_extents(cr, str + start, &te);
 				skip_char = 0;
 			}
+printf("       '%s' start=%d j=%d x=%d y=%d\n", str + start, start, j, x, y);
 		}
 
 		cairo_move_to(cr, x, y);
+printf(" -> '%s'\n", str + start);
 		cairo_show_text(cr, str + start);
 		x += te.width;
 		if (ch) {
@@ -577,6 +584,9 @@ draw_text(cmd_t *cp)
 
 	cairo_destroy(cr);
 	cairo_surface_destroy(surface);
+
+	scrp->s_txt_row = y;
+	scrp->s_txt_col = x;
 
 	update_image();
 	return 0;

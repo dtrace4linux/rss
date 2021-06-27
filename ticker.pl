@@ -1325,6 +1325,7 @@ sub do_page11_ascii_art
 		"galton.pl",
 		"life.pl",
 		"pi.pl",
+		"tetris.pl",
 		"scrabble.sh", 
 		"sierpinksi.pl",
 		);

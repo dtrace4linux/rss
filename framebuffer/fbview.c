@@ -14,12 +14,15 @@
 #include     <sys/stat.h>
 #include     <sys/mman.h>
 #include     <X11/Xlib.h>
+#include     <X11/keysym.h>
+#include     <X11/Xutil.h>
 # include "fb.h"
 
 Display *display;
 Window	window;
 XImage *ximage;
 
+int	debug;
 char	*fb;
 fb_info_t *info;
 int	screensize;
@@ -31,8 +34,8 @@ char	*video_dir;
 /**********************************************************************/
 /*   Prototypes.						      */
 /**********************************************************************/
-void XPutPixel(XImage *, int, int, unsigned long);
-int	XDestroyImage(XImage *);
+//void XPutPixel(XImage *, int, int, unsigned long);
+//int	XDestroyImage(XImage *);
 void	usage();
 void	redraw_buffer();
 
@@ -45,6 +48,10 @@ do_switches(int argc, char **argv)
 		cp = argv[i];
 		if (*cp++ != '-')
 			break;
+		if (strcmp(cp, "debug") == 0) {
+			debug = 1;
+			continue;
+		}
 		if (strcmp(cp, "height") == 0) {
 			if (++i >= argc)
 				usage();
@@ -166,14 +173,36 @@ void processEvent(Display *display, Window window)
 
 		ximage = create_image(display, width, height);
 
-	    	printf("resize %d,%d %dx%d\n",
-			ev.xconfigure.x,
-			ev.xconfigure.y,
-			ev.xconfigure.width,
-			ev.xconfigure.height
-			);
+		if (debug) {
+		    	printf("resize %d,%d %dx%d\n",
+				ev.xconfigure.x,
+				ev.xconfigure.y,
+				ev.xconfigure.width,
+				ev.xconfigure.height
+				);
+		}
 		redraw_buffer();
 	    	break;
+	  case KeyPress: {
+static	XComposeStatus	compose;
+		KeySym	keysym = 0;
+	  	char	buf[BUFSIZ];
+		XLookupString(&ev.xkey, buf, sizeof buf, &keysym, &compose);
+		if (debug) {
+		  	printf("keypress keycode=%02x state=%02x buf=%s\n", 
+				ev.xkey.keycode, ev.xkey.state, buf);
+		}
+		if (strcmp(buf, "i") == 0) {
+			printf("Debug: %s\n", debug ? "on" : "off");
+			printf("Display: %dx%d\n", width, height);
+			printf("Seq: %lu\n", info->f_seq);
+		}
+		if (strcmp(buf, "d") == 0) {
+			debug = !debug;
+			printf("Debug: %s\n", debug ? "on" : "off");
+		}
+	  	break;
+		}
 	    default:
 	//    	printf("event %d\n", ev.type);
 		break;
@@ -206,7 +235,7 @@ int main(int argc, char **argv)
 
 	ximage = create_image(display, width, height);
 	XSelectInput(display, window, 
-		StructureNotifyMask|ButtonPressMask|ExposureMask);
+		StructureNotifyMask|ButtonPressMask|KeyPressMask|ExposureMask);
 	XMapWindow(display, window);
 	while (1) {
 		struct timeval tval = {0, 50 * 1000};
@@ -218,7 +247,7 @@ int main(int argc, char **argv)
 			if (info->f_seq != last_seq) {
 				last_seq = info->f_seq;
 				redraw_buffer();
-				if (write(1, ".", 1) != 1)
+				if (debug && write(1, ".", 1) != 1)
 					exit(0);
 			}
 		}
@@ -261,6 +290,7 @@ usage()
 	printf("\n");
 	printf("Options:\n");
 	printf("\n");
+	printf("  -debug          Show debug messages\n");
 	printf("  -width NN       Set default image width\n");
 	printf("  -height NN      Set default image height\n");
 	printf("  -video <dir>    Record images to directory\n");

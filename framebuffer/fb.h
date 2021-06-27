@@ -2,9 +2,10 @@
 /*   A virtual or physical screen buffer.			      */
 /**********************************************************************/
 typedef struct screen_t {
+	int	s_id;
 	char	*s_name;
 	char	*s_mem;
-	int	s_screensize;
+	unsigned s_screensize;
 	unsigned s_line_length;
 	unsigned s_width;
 	unsigned s_height;
@@ -13,6 +14,11 @@ typedef struct screen_t {
 	int	s_yoffset;
 	int	s_xoffset;
 	struct fb_info_t *s_info;
+	int	s_txt_row, s_txt_col;
+	unsigned long s_txt_fg_rgb;
+	unsigned long s_txt_bg_rgb;
+	struct screen_t *s_next;
+	struct screen_t *s_prev;
 	} screen_t;
 
 /**********************************************************************/
@@ -54,6 +60,7 @@ enum ctypes {
 	C_FILLED_CIRCLE, 
 	C_FILLED_ELLIPSE, 
 	C_FILLED_RECTANGLE, 
+	C_FRAME,
 	C_FOR,
 	C_FOR2,
 	C_IF,
@@ -130,3 +137,7 @@ extern int w_arg;
 extern int h_arg;
 extern int swidth, sheight;
 
+# if !defined(MIN)
+#	define MIN(a, b) ((a) < (b)) ? (a) : (b)
+#	define MAX(a, b) ((a) > (b)) ? (a) : (b)
+# endif

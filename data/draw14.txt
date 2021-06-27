@@ -1,13 +1,30 @@
 clear
+frame 1 200 400 400 400
+text 0 0 200 200 0xffff00 text="hello-world how are you?"
 text 0 0 200 200 0xffff00 text="hello-world how are you?"
 text 300 300 400 200 0xffff text="another-time another place"
-text 600 600 400 200 0xffff text="Aone two three four five six seven eight nine ten eleven twelve"
-text 500 200 400 200 0xffff text="abc\" def"
-text 700 200 400 200 0xffff text="new\nline"
-#filled_circle 400 300 150 0xffff00
-#filled_circle 200 300 150 gradient(0xffffff, 0x0)
-filled_circle 100 300 150 gradient(0xff2020, 0xffffff)
-#filled_rectangle 100 100 200 200 gradient(0x808020, 0xffffff)
-#ellipse 500 500 400 100 0xffff00
-filled_ellipse 500 500 400 200 0xff00ff
-ellipse 600 800 400 200 0xff00ff
+#text 600 600 400 200 0xffff text="Aone two three four five six seven eight nine ten eleven twelve"
+#text 500 200 400 200 0xffff text="abc\" def"
+#text 700 200 400 200 0xffff text="new\nline"
+##filled_circle 400 300 150 0xffff00
+##filled_circle 200 300 150 gradient(0xffffff, 0x0)
+#filled_circle 100 300 150 gradient(0xff2020, 0xffffff)
+##filled_rectangle 100 100 200 200 gradient(0x808020, 0xffffff)
+##ellipse 500 500 400 100 0xffff00
+#filled_ellipse 500 500 400 200 0xff00ff
+#ellipse 600, 800, 400, 200, 0xff00ff
+#
+#frame 2 900 400 400 400
+#text 0 0 200 200 0xffff00 text="hello-world how are you?"
+#text 300 300 400 200 0xffff text="another-time another place"
+#text 600 600 400 200 0xffff text="Aone two three four five six seven eight nine ten eleven twelve"
+#text 500 200 400 200 0xffff text="abc\" def"
+#text 700 200 400 200 0xffff text="new\nline"
+##filled_circle 400 300 150 0xffff00
+##filled_circle 200 300 150 gradient(0xffffff, 0x0)
+#filled_circle 100 300 150 gradient(0xff2020, 0xffffff)
+##filled_rectangle 100 100 200 200 gradient(0x808020, 0xffffff)
+##ellipse 500 500 400 100 0xffff00
+#filled_ellipse 500 500 400 200 0xff00ff
+#ellipse 600, 800, 400, 200, 0xff00ff
+##
