@@ -598,7 +598,7 @@ normal_display(screen_t *scrp, struct imgRawImage *img, int x, int y, int w, int
 		    if (x0 - x >= (int) img->width || x0 >= (int) scrp->s_width) {
 			break;
 		    }
-		    if (scrp->s_location >= scrp->s_screensize) {
+		    if (scrp->s_location >= (unsigned) scrp->s_screensize) {
 	//	    	printf("loc=0x%04x screensize=%04x\n", scrp->s_location, screensize);
 		    	break;
 		    }
@@ -651,7 +651,7 @@ open_framebuffer()
 		scrp->s_bpp = 32;
 		scrp->s_screensize = scrp->s_width * scrp->s_height * scrp->s_bpp / 8;
 		scrp->s_line_length = scrp->s_bpp / 8 * scrp->s_width;
-		if (sbuf.st_size < scrp->s_screensize) {
+		if (sbuf.st_size < (off_t) scrp->s_screensize) {
 
 			create_mode = 1;
 
@@ -825,7 +825,7 @@ shrink_display(screen_t *scrp, struct imgRawImage *img)
 				scrp->s_location += bpp;
 				continue;
 			}
-			if (scrp->s_location >= loc_end) {
+			if (scrp->s_location >= (long) loc_end) {
 //printf("hit end y,x=%d,%d  %u-%u=%d\n", y, x, scrp->s_location, loc_end, loc_end - scrp->s_location);
 				break; 
 			}
