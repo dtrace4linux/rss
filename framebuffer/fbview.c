@@ -23,6 +23,7 @@ Window	window;
 XImage *ximage;
 
 int	debug;
+long	delay = 50;
 char	*fb;
 fb_info_t *info;
 int	screensize;
@@ -50,6 +51,12 @@ do_switches(int argc, char **argv)
 			break;
 		if (strcmp(cp, "debug") == 0) {
 			debug = 1;
+			continue;
+		}
+		if (strcmp(cp, "delay") == 0) {
+			if (++i >= argc)
+				usage();
+			delay = atoi(argv[i]);
 			continue;
 		}
 		if (strcmp(cp, "height") == 0) {
@@ -238,7 +245,8 @@ int main(int argc, char **argv)
 		StructureNotifyMask|ButtonPressMask|KeyPressMask|ExposureMask);
 	XMapWindow(display, window);
 	while (1) {
-		struct timeval tval = {0, 50 * 1000};
+		struct timeval tval = {0, 0};
+		tval.tv_usec = delay * 1000;
 		if (XPending(display) > 0) {
 			processEvent(display, window);
 			continue;
@@ -291,6 +299,7 @@ usage()
 	printf("Options:\n");
 	printf("\n");
 	printf("  -debug          Show debug messages\n");
+	printf("  -delay NN       Set refresh delay in milliseconds (default 50)\n");
 	printf("  -width NN       Set default image width\n");
 	printf("  -height NN      Set default image height\n");
 	printf("  -video <dir>    Record images to directory\n");

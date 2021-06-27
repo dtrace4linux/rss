@@ -162,6 +162,8 @@ draw_image(cmd_t *cp)
 	if (has_attribute(cp, "animate")) {
 		int	i, t;
 		int	x1, y1;
+		int	old_x = 0;
+		int	old_y = 0;
 
 		if (scrp->s_width > img->width) {
 			x_arg = (scrp->s_width - img->width) / 2;
@@ -189,8 +191,53 @@ draw_image(cmd_t *cp)
 				else if (y_arg + img->height > scrp->s_height)
 					y_arg = scrp->s_height - img->height;
 */
-				memset(scrp->s_mem, 0x00, scrp->s_screensize);
+//				memset(scrp->s_mem, 0x00, scrp->s_screensize);
+
+				/***********************************************/
+				/*   Need  to  erase the delta image to avoid  */
+				/*   bleeding				       */
+				/***********************************************/
+				cmd_t cp1;
+				memset(&cp1, 0, sizeof cp1);
+				if (y_arg > old_y) {
+					cp1.x = old_x;
+					cp1.y = old_y;
+					cp1.w = w_arg;
+					cp1.h = y_arg - old_y;
+					draw_filled_rectangle(&cp1);
+				}
+
+				if (y1 < 0) {
+					cp1.x = old_x;
+					cp1.y = old_y + w_arg - y1;
+					cp1.w = w_arg;
+					cp1.h = -y1;
+					draw_filled_rectangle(&cp1);
+				}
+				if (x1 > 0) {
+					cp1.x = old_x;
+					cp1.y = old_y;
+					cp1.w = x1;
+					cp1.h = h_arg;
+					draw_filled_rectangle(&cp1);
+				}
+				if (x1 < 0) {
+					cp1.x = old_x + w_arg + x1;
+					cp1.y = old_y;
+					cp1.w = -x1;
+					cp1.h = h_arg;
+					draw_filled_rectangle(&cp1);
+				}
+
+				/***********************************************/
+				/*   Now  we  can  draw the new image without  */
+				/*   flicker				       */
+				/***********************************************/
 				shrink_display(scrp, img);
+
+				old_x = x_arg;
+				old_y = y_arg;
+
 				do_sleep(100);
 			}
 		}
