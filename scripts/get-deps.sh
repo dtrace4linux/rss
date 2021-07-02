@@ -8,3 +8,5 @@ apt install toilet figlet ansiweather \
 	caca-utils \
 	libraspberrypi-bin \
 	pango1.0-tools
+
+# Ubuntu: openssh-server

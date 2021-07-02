@@ -31,6 +31,7 @@ https://github.com/godspeed1989/fbv/blob/master/main.c
 
 int quiet;
 char	*f_flag;
+int	wait_flag;
 char	*script_file;
 int fullscreen;
 int	rand_flag;
@@ -176,6 +177,15 @@ open_image(char *fname)
 void
 do_sleep(int delay)
 {
+	if (wait_flag) {
+		printf("> ");
+		char	buf[BUFSIZ];
+		if (fgets(buf, sizeof buf, stdin) == NULL)
+			exit(0);
+		memset(scrp->s_mem, 0x00, scrp->s_screensize);
+		return;
+	}
+
     	struct timeval tval;
 	tval.tv_sec = 0;
 	tval.tv_usec = 0;
@@ -339,6 +349,10 @@ do_switches(int argc, char **argv)
 				if (++i >= argc)
 					usage();
 				yfrac = atof(argv[i]);
+				break;
+			}
+			if (strcmp(cp, "wait") == 0) {
+				wait_flag = 1;
 				break;
 			}
 
@@ -528,6 +542,13 @@ int main(int argc, char **argv)
 
 	    	fname = filenames_list[i];
 		img = open_image(fname);
+		if (wait_flag) {
+			printf("[%lux%lux%u] %s\n", 
+				img->width, 
+				img->height, 
+				img->numComponents, 
+				fname);
+		}
 		draw_image_old(img);
 
 		if (num_filenames> 1) {
@@ -846,30 +867,48 @@ shrink_display(screen_t *scrp, struct imgRawImage *img)
 void
 stretch_display(screen_t *scrp, struct imgRawImage *img)
 {
-	int	x, y;
+	int	x, y, x0;
 	float xfrac = 1;
 	float yfrac = 1;
 	int	width = img->width;
 
 	xfrac = scrp->s_width / (float) img->width;
 	yfrac = scrp->s_height / (float) img->height;
-	xfrac = yfrac;
-	width *= xfrac;
 
-	int	x0 = (scrp->s_width - width) / 2;
-//printf("frac=%f %f\n", xfrac, yfrac);
+	if (yfrac < xfrac)
+		xfrac = yfrac;
+	else
+		yfrac = xfrac;
+
+	width *= xfrac;
+	x0 = ((int) scrp->s_width - width) / 2;
+	if (x0 < 0) {
+		x0 = 0;
+	}
+
+/*	if (x0 < 0) {
+		normal_display(scrp, img, x_arg, y_arg, w_arg, h_arg, 0, 0);
+		return;
+	}*/
+//printf("frac=%f %f screen=%dx%d\n", xfrac, yfrac, scrp->s_width, scrp->s_height);
 //printf("x0=%d xfrac=%.2f yfrac=%.2f\n", x0, xfrac, yfrac);
+
+	unsigned char *img_end = img->lpData + img->width * img->height * 3;
 
 	for (y = 0; y < (int) scrp->s_height; y++) {
 	        scrp->s_location = (scrp->s_yoffset + y) * scrp->s_line_length +
 			scrp->s_xoffset * (scrp->s_bpp / 8);
 		for (x = 0; x < (int) scrp->s_width; x++) {
+			if (scrp->s_location >= scrp->s_screensize)
+				break;
 			if (x < x0 || x > x0 + width)
 				put_pixel(scrp, 0, 0, 0);
 			else {
 				unsigned char *data = &img->lpData[
 					(int) (y / yfrac) * img->width * 3 +
 					(int) ((x - x0) / xfrac) * 3];
+				if (data >= img_end)
+					break;
 
 				put_pixel(scrp, data[0], data[1], data[2]);
 			}

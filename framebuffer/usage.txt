@@ -62,6 +62,8 @@ Switches:
    -y NN              Set co-ordinate
    -w NN              Set co-ordinate
    -v                 Verbose; list lines in script files
+   -wait              Instead of sleeping before each image, wait
+                      for terminal input.
 
 Environment variables:
 

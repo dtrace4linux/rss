@@ -45,49 +45,73 @@ for F(0..W-1){for D(0..H-1){(K[F][D]>0)&&(G[X+F][Y+D] =K[F][D]) }}1
 sub o{for F(0..W-1){for D(0..H-1){(K[F][D]>0)&&(G[
 X+F][ Y+D]=0)}}}
 
-sub n{C=int(rand(P)) ;W=J[C];H=I[C];X=int(A/2)-1
-;Y=0;for F(0..W-1){for D(0..H-1){K[F][D]= C[C][F][D]}}r(int(rand
-(4)));l&&p}
+sub n
+{
+	C=int(rand(P)) ;
+	W=J[C];H=I[C];X=int(A/2)-1;
+	Y=0;
+	for F(0..W-1) {
+		for D(0..H-1){
+			K[F][D]= C[C][F][D]
+		}
+	}
+	r(int(rand (4)));l&&p
+}
 
-sub c{d:for(D=B;D>=0;D--){for F(0..A-1){G[F][D]||next
-d}for(D2=D;D2>=0; D2--){for F(0..A-1){G[F][D2]= (D2>1)?G[F][D2-1
-]:0; }}u;}}
+sub c
+{
+d:
+	for(D=B;D>=0;D--) {
+		for F(0..A-1){
+			G[F][D]||next d
+		}
+	for(D2=D;D2>=0; D2--){
+	for F(0..A-1){G[F][D2]= (D2>1)?G[F][D2-1 ]:0; }}u;}
+}
 
-a ("m=0;0 a=0;37;40 c");
+	a ("m=0;0 a=0;37;40 c");
 
-print "\n\n".4x" "." "x(A-4).
-"perltris\n".(" "x4)."--"xA."\n".((" "x3)."|"." "x(A*2)."|\n")xB
-.(" "x4). "--"xA."\n";n;
+	print "\n\n".4x" "." "x(A-4).
+		"perltris\n".(" "x4)."--"xA."\n".((" "x3)."|"." "x(A*2)."|\n")xB
+	.(" "x4). "--"xA."\n";
+	n;
 
 for(;;) {
-u;
-R=chr(1); 
-(S,T)=select(R,U,V, 0.01);
-if(S) {Z=getc;}
-else {
-if($e++>20){
-Z=" ";
+	u;
+	R=chr(1); 
+	(S,T)=select(R,U,V, 0.01);
+	if(S) {
+		Z=getc;
+	} else {
+		if($e++>20){
+			Z=" ";
 
-# Auto move
-my @moves = ("k", "j", "l", " ");
-Z = $moves[int(rand(scalar(@moves)))];
+			# Auto move
+			my @moves = ("k", "j", "l", " ");
+			Z = $moves[int(rand(scalar(@moves)))];
 
-#print "Z=$Z.\n";
-$e=0;}
-else{next;} }
+			#print "Z=$Z.\n";
+			$e=0;
+		} else{
+			next;
+		} 
+	}
 
 
-if(Z eq "k"){o;r(1);l||r(3);p}; 
-if(Z eq "j"){o;X--;l||X++;p}; 
-if (Z eq "l"){o;X++;l||X--;p};
-# ensure we keep dropping
-if(Z eq " " || 1) {
-o;Y++;(E=l)||Y--;p;E|| c
-|c|c|c|c|n||
-goto g;};
+	if(Z eq "k"){o;r(1);l||r(3);p}; 
+	if(Z eq "j"){o;X--;l||X++;p}; 
+	if (Z eq "l"){o;X++;l||X--;p};
+	# ensure we keep dropping
+	if(Z eq " " || 1) {
+	o;Y++;(E=l)||Y--;p;E|| c
+	|c|c|c|c|n||
+	goto g;};
 
-if(Z eq "q"){last;}
+	if(Z eq "q"){
+		last;
+	}
 }
 
 g: a("a=0 m=".(B+8).";0" ); 
+
 system "stty sane"; '; s/([A-Z])/\$$1/g; s/\%\$/\%/g; eval;

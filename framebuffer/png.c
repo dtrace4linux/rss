@@ -92,17 +92,39 @@ read_png_file(char* file_name)
 
         png_read_info(png_ptr, info_ptr);
 
+        color_type = png_get_color_type(png_ptr, info_ptr);
         width = png_get_image_width(png_ptr, info_ptr);
         height = png_get_image_height(png_ptr, info_ptr);
-        color_type = png_get_color_type(png_ptr, info_ptr);
         bit_depth = png_get_bit_depth(png_ptr, info_ptr);
 
+	if (color_type == PNG_COLOR_TYPE_PALETTE) {
+		png_set_palette_to_rgb(png_ptr);
+		width *= 3;
+	}
+
+	if(png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS))
+		png_set_tRNS_to_alpha(png_ptr);
+
+// These color_type don't have an alpha channel then fill it with 0xff.
+/*
+  if(color_type == PNG_COLOR_TYPE_RGB ||
+     color_type == PNG_COLOR_TYPE_GRAY ||
+     color_type == PNG_COLOR_TYPE_PALETTE)
+    png_set_filler(png_ptr, 0xFF, PNG_FILLER_AFTER);
+*/
+
+//printf("w=%dx%d %d\n", width, height, bit_depth);
+
+
         number_of_passes = png_set_interlace_handling(png_ptr);
-        png_read_update_info(png_ptr, info_ptr);
+	png_read_update_info(png_ptr, info_ptr);
 
 
         /* read file */
         if (setjmp(png_jmpbuf(png_ptr))) {
+		/***********************************************/
+		/*   MLK ahead				       */
+		/***********************************************/
                 fprintf(stderr, "[read_png_file] Error during read_image");
 		fclose(fp);
 		return NULL;
@@ -141,6 +163,13 @@ read_png_file(char* file_name)
 				*dp++ = *sp;
 				*sp++;
 				break;
+
+			  case PNG_COLOR_TYPE_PALETTE: // 3 - xkcd/here_to_help.png
+				*dp++ = *sp;
+				*dp++ = *sp;
+				*dp++ = *sp;
+				*sp++;
+			  	break;
 
 			  case PNG_COLOR_TYPE_RGB: // 2
 				dp[0] = sp[0];
