@@ -5,9 +5,9 @@ BIN=../bin.$(shell uname -m)
 
 all: $(BIN)/fb $(BIN)/fbview
 
-$(BIN)/fb: fb.c fb.h jpeg.c png.c script.c shapes.c usage.c
+$(BIN)/fb: fb.c fb.h jpeg.c png.c script.c draw.c usage.c
 	mkdir -p $(BIN)
-	$(CC) -o $(BIN)/fb fb.c jpeg.c png.c script.c shapes.c usage.c -lcairo -ljpeg -lpng
+	$(CC) -o $(BIN)/fb fb.c jpeg.c png.c script.c draw.c usage.c -lcairo -ljpeg -lpng
 $(BIN)/fbview: fbview.c jpeg.c
 	$(CC) -o $(BIN)/fbview fbview.c jpeg.c -lX11 -ljpeg
 
