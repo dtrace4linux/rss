@@ -313,8 +313,8 @@ sub get
 	my $r = 0;
 	my $c = 0;
 	foreach my $dt (@{$info->{list}}) {
-		my $s = sprintf("%s %2dC/%-3s %-20s %s\n",
-			strftime("%a %b %d", localtime($dt->{dt})),
+		my $s = sprintf("%s %2dC/%-3s %-16s %s\n",
+			strftime("%a %d", localtime($dt->{dt})),
 			$dt->{temp}{min},
 			sprintf("%dC", $dt->{temp}{max}),
 #			$dt->{weather}[0]{main},

@@ -19,11 +19,20 @@ void gfx_mono(struct imgRawImage *img);
 void gfx_sepia(struct imgRawImage *img);
 
 void compute_rect(cmd_t *cp)
-{
+{	char	*str;
+	int	montage = 0;
+
 	x_arg = eval(cp->raw_args[1]);
 	y_arg = eval(cp->raw_args[2]);
 	w_arg = eval(cp->raw_args[3]);
 	h_arg = eval(cp->raw_args[4]);
+
+	if ((str = get_attribute(cp, "montage")) != NULL) {
+		montage = parse_value(str);
+	}
+	if (montage) {
+		compute_montage(scrp, 0);
+	}
 
 	x_arg *= scrp->s_width / (float) swidth;
 	y_arg *= scrp->s_height / (float) sheight;
@@ -247,6 +256,22 @@ draw_image(cmd_t *cp)
 	free_image(img);
 	return 1;
 }
+
+int
+draw_image_list(cmd_t *cp)
+{
+	while (draw_image(cp) == 1) {
+		update_image();
+
+		if (time_limit_exceeded())
+			break;
+	}
+
+	update_image();
+
+	return 0;
+}
+
 static void
 draw__line(cmd_t *cp, int x1, int y1, int w)
 {	int	x = cp->x;

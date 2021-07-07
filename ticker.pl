@@ -1637,10 +1637,12 @@ sub spawn
 {	my $cmd = shift;
 
 	pr2("exec: $cmd\n");
+	my $t = time();
 	my $ret = system($cmd);
+	pr2("elapsed: " . (time() - $t) . "\n");
 	return if $ret == 0;
 
-	pr("failed command: $cmd\n");
+	pr("failed command: $cmd, ret=$ret\n");
 }
 
 sub time_string

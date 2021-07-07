@@ -64,6 +64,7 @@ enum ctypes {
 	C_FOR,
 	C_FOR2,
 	C_IF,
+	C_IMAGE_LIST,
 	C_LINE, 
 	C_NUMBER, 
 	C_PRINT,
@@ -73,6 +74,7 @@ enum ctypes {
 	C_SCREENSIZE, 
 	C_SLEEP,
 	C_TEXT,
+	C_TIME_LIMIT,
 	C_WHILE,
 	 };
 # define MAX_ARGS 16
@@ -102,6 +104,7 @@ int	draw_clear(cmd_t *);
 int	draw_dot(cmd_t *);
 int	draw_ellipse(cmd_t *);
 int	draw_filled_rectangle(cmd_t *);
+int	draw_image_list(cmd_t *);
 int	draw_line(cmd_t *);
 int	draw_rectangle(cmd_t *);
 void put_pixel(screen_t *, int r, int g, int b);
@@ -125,6 +128,9 @@ char *get_value(cmd_t *cmdp, char *name);
 char	*parse_percentage(char *);
 int parse_gradient(char *str, unsigned long *start, unsigned long *end);
 long eval(char *str);
+int time_limit_exceeded();
+int	compute_montage(screen_t *, int seq_flag);
+int parse_value(char *str);
 
 extern screen_t *scrp;
 extern int v_flag;

@@ -79,6 +79,32 @@ void fullscreen_display(screen_t *, struct imgRawImage *img, double f);
 void stretch_display(screen_t *, struct imgRawImage *img);
 void	usage(void);
 
+/**********************************************************************/
+/*   When  montage  mode  is  in  effect,  compute  the next x,w w,h  */
+/*   dimensions							      */
+/**********************************************************************/
+int
+compute_montage(screen_t *scrp, int seq_flag)
+{
+static int x, y;
+	x_arg = (rand() / (float) RAND_MAX) * scrp->s_width;
+	y_arg = (rand() / (float) RAND_MAX) * scrp->s_height;
+	w_arg = (rand() / (float) RAND_MAX) * 90 + 30;
+	h_arg = (rand() / (float) RAND_MAX) * 90 + 30;
+	if (seq_flag) {
+		x_arg = x;
+		y_arg = y;
+		if ((x += w_arg) >= (int) scrp->s_width) {
+			x = 0;
+			y += 80 + (rand() / (float) RAND_MAX) * 20;
+		}
+		if (y_arg + h_arg >= (int) scrp->s_height) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
 void
 free_image(struct imgRawImage *img)
 {
@@ -411,22 +437,8 @@ draw_image_old(struct imgRawImage *img)
 			shrink_display(scrp, img);
 		}
 	} else if (montage) {
-static int x, y;
-		x_arg = (rand() / (float) RAND_MAX) * scrp->s_width;
-		y_arg = (rand() / (float) RAND_MAX) * scrp->s_height;
-		w_arg = (rand() / (float) RAND_MAX) * 90 + 30;
-		h_arg = (rand() / (float) RAND_MAX) * 90 + 30;
-		if (seq_flag) {
-			x_arg = x;
-			y_arg = y;
-			if ((x += w_arg) >= (int) scrp->s_width) {
-				x = 0;
-				y += 80 + (rand() / (float) RAND_MAX) * 20;
-			}
-			if (y_arg + h_arg >= (int) scrp->s_height) {
-				exit(0);
-			}
-		}
+		if (compute_montage(scrp, seq_flag))
+			exit(0);
 		shrink_display(scrp, img);
 	} else if (shrink) {
 		shrink_display(scrp, img);
@@ -551,7 +563,7 @@ int main(int argc, char **argv)
 		}
 		draw_image_old(img);
 
-		if (num_filenames> 1) {
+		if (num_filenames > 1) {
 			do_sleep(delay);
 		}
 	}

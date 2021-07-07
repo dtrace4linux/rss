@@ -34,6 +34,7 @@ my @pages = (
 	"http://reddit.com",
 	"https://en.wikipedia.org/wiki/Special:Random",
 	"https://www.notebookcheck.net/",
+	"http://www.theonion.com/",
 	);
 
 #######################################################################

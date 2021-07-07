@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <stdio.h>
+#include <time.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,6 +20,7 @@ static cmd_t	*script;
 static int	script_used;
 static int	script_len;
 static int sp;
+static time_t	time_limit;
 
 int swidth = 1920, sheight = 1020;
 
@@ -43,6 +45,7 @@ static char *cmds[] = {
 	"C_FOR2",
 	"C_FRAME",
 	"C_IF", 
+	"C_IMAGE_LIST",
 	"C_LINE", 
 	"C_NUMBER", 
 	"C_PRINT",
@@ -52,6 +55,7 @@ static char *cmds[] = {
 	"C_SCREENSIZE", 
 	"C_SLEEP",
 	"C_TEXT",
+	"C_TIME_LIMIT",
 	"C_WHILE", 
 	};
 
@@ -76,7 +80,7 @@ static cmd_t *script_exec();
 void push_estack(cmd_t *cmdp);
 void pop_estack(void);
 void set_var(char *name, int val);
-long lookup(char *str);
+long lookup(char *str, int len);
 void token_init(char *str);
 char *token_next();
 char ** parse_list(char *str, int *len);
@@ -241,93 +245,130 @@ dump_script()
 #define MUL	3
 #define DIV	4
 #define COMMA	5
+#define UNKNOWN 6
+#define EQUAL	7
+#define SYMBOL	8
+#define TOK_EOF 9
 
-void
-get_token(char *str, char **str2, int *type, long *value)
+char	*tok_symbol;
+int	tok_symlen;
+
+int
+get_token(char *str, char **str2, long *value)
 {
+	while (isspace(*str))
+		str++;
+
+	if (*str == '\0') {
+		return TOK_EOF;
+	}
+
 	if (isdigit(*str)) {
 		*value = atoi(str);
 		while (isdigit(*str))
 			str++;
 		*str2 = str;
-		type = NUMBER;
-		return;
+		return NUMBER;
 	}
 	if (isalpha(*str)) {
 		char *cp;
 		int	ch;
+		tok_symbol = str;
 		for (cp = str; isalpha(*cp) || isdigit(*cp) || *cp == '_'; )
 			cp++;
-		ch = *cp;
-		*cp = '\0';
-		*value = lookup(str);
-		*cp = ch;
+		tok_symlen = cp - tok_symbol;
 		*str2 = cp;
-		type = NUMBER;
-		return;
+		return SYMBOL;
 	}
-	if (*str == '+') {
-		*str2 = str+1;
-		*type = PLUS;
-		return;
+
+	*str2 = str + 1;
+	switch (*str) {
+	  case '+':
+		return PLUS;
+
+	  case '-':
+		return MINUS;
+
+	  case '*':
+		return MUL;
+
+	  case '/':
+		return DIV;
+
+	  case ',':
+		return COMMA;
+
+	  case '=':
+	  	return EQUAL;
 	}
-	if (*str == '-') {
-		*str2 = str+1;
-		*type = MINUS;
-		return;
-	}
-	if (*str == '+') {
-		*str2 = str+1;
-		*type = MUL;
-		return;
-	}
-	if (*str == '+') {
-		*str2 = str+1;
-		*type = DIV;
-		return;
-	}
-	if (*str == ',') {
-		*str2 = str+1;
-		*type = COMMA;
-		return;
-	}
+
+	return UNKNOWN;
 }
 
+/**********************************************************************/
+/*   This should be a proper parser, but it isnt (yet)		      */
+/**********************************************************************/
 long
 eval(char *str)
 {	long	value, value2;
 	int	type;
 	char	*str2;
+	char	*lv = NULL;
 
-	get_token(str, &str2, &type, &value);
-	str = str2;
+	if (str == NULL)
+		return 0;
+
+	type = get_token(str, &str, &value);
+	if (type == SYMBOL) {
+		type = get_token(str, &str, &value);
+		if (type == EQUAL) {
+			lv = strdup(tok_symbol);
+			lv[tok_symlen] = '\0';
+		}
+		type = get_token(str, &str, &value);
+	}
 	while (*str) {
-		get_token(str, &str2, &type, &value);
+		if (type == SYMBOL) {
+			value = lookup(tok_symbol, tok_symlen);
+		}
+		type = get_token(str, &str2, &value);
 		str = str2;
 		switch (type) {
+		  case EQUAL:
+		  	break;
+
 		  case PLUS:
-			get_token(str, &str2, &type, &value2);
+			type = get_token(str, &str2, &value2);
 			str = str2;
 			value += value2;
 			break;
 		  case MINUS:
-			get_token(str, &str2, &type, &value2);
+			type = get_token(str, &str2, &value2);
 			str = str2;
 			value -= value2;
 			break;
 		  case MUL:
-			get_token(str, &str2, &type, &value2);
+			type = get_token(str, &str2, &value2);
 			str = str2;
 			value *= value2;
 			break;
 		  case DIV:
-			get_token(str, &str2, &type, &value2);
+			type = get_token(str, &str2, &value2);
 			str = str2;
 			value /= value2;
 			break;
 		  case COMMA:
 		  	break;
+		  case UNKNOWN:
+		  	break;
+		  case TOK_EOF:
+		  	goto do_end;
 		}
+	}
+do_end:
+  	if (lv) {
+		set_var(lv, value);
+		free(lv);
 	}
 	return value;
 }
@@ -404,8 +445,9 @@ has_attribute(cmd_t *cmdp, char *name)
 	return 0;
 }
 long
-lookup(char *str)
+lookup(char *str, int len)
 {	ENTRY e, *ep;
+	int	ch;
 
 	if (isdigit(*str))
 		return atoi(str);
@@ -418,12 +460,15 @@ lookup(char *str)
 	if (strcmp(str, "rand_height") == 0) 
 		return (int) (rand() / (float) RAND_MAX) * sheight;
 	e.key = str;
+	ch = str[len];
+	str[len] = '\0';
 	ep = hsearch(e, FIND);
+	str[len] = ch;
 	if (ep) {
 //printf("eval %s = %d\n", str, (int) ep->data);
 		return (long) ep->data;
 	}
-	printf("lookup undefined variable: %s\n", str);
+	printf("lookup undefined variable: %*.*s\n", len, len, str);
 	return 1;
 }
 
@@ -473,6 +518,13 @@ next_script_cmd()
 		cmd_t *cmdp = script_exec();
 		if (cmdp)
 			return cmdp;
+
+		/***********************************************/
+		/*   Allow  script  to set an upper execution  */
+		/*   time.				       */
+		/***********************************************/
+		if (time_limit_exceeded())
+			break;
 	}
 
 	return NULL;
@@ -554,6 +606,10 @@ script_exec()
 	  	do_frame(cmdp);
 	  	break;
 
+	  case C_IMAGE_LIST:
+		draw_image_list(cmdp);
+	  	break;
+
 	  case C_LINE:
 		draw_line(cmdp);
 	  	break;
@@ -599,6 +655,13 @@ script_exec()
 	  case C_TEXT:
 	  	draw_text(cmdp);
 		break;
+
+	  case C_TIME_LIMIT:
+	  	if (cmdp->x)
+			time_limit = time(NULL) + cmdp->x;
+		else
+			time_limit = 0;
+	  	break;
 
 	  default:
 		printf("script_exec: error, 0x%04x: %s '%d' is unhandled\n", 
@@ -725,6 +788,18 @@ parse_percentage(char *str)
 	if (name)
 		free(name);
 	return NULL;
+}
+
+int
+parse_value(char *str)
+{
+	while (*str && *str != '(')
+		str++;
+	if (*str++ == '\0')
+		return 0;
+	while (isspace(*str))
+		str++;
+	return atoi(str);
 }
 
 void
@@ -858,6 +933,17 @@ static int line = 0;
 
 			return 1;
 		}
+
+		if (strcmp(cname, "dot") == 0 && cmdp->argc >= 4) {
+			cmdp->type = C_DOT;
+			cmdp->x = cmdp->args[1];
+			cmdp->y = cmdp->args[2];
+			cmdp->x *= scrp->s_width / (float) swidth;
+			cmdp->y *= scrp->s_height / (float) sheight;
+
+			return 1;
+		}
+
 		if (strcmp(cname, "ellipse") == 0) {
 			cmdp->type = C_ELLIPSE;
 			return 1;
@@ -898,13 +984,8 @@ static int line = 0;
 			cmdp->type = C_FRAME;
 			return 1;
 		}
-		if (strcmp(cname, "dot") == 0 && cmdp->argc >= 4) {
-			cmdp->type = C_DOT;
-			cmdp->x = cmdp->args[1];
-			cmdp->y = cmdp->args[2];
-			cmdp->x *= scrp->s_width / (float) swidth;
-			cmdp->y *= scrp->s_height / (float) sheight;
-
+		if (strcmp(cname, "image_list") == 0) {
+			cmdp->type = C_IMAGE_LIST;
 			return 1;
 		}
 		if (strcmp(cname, "line") == 0 && cmdp->argc >= 6) {
@@ -970,6 +1051,15 @@ static int line = 0;
 			return 1;
 		}
 
+		if (strcmp(cname, "time_limit") == 0) {
+			cmdp->type = C_TIME_LIMIT;
+			if (cmdp->argc > 1)
+				cmdp->x = time(NULL) + atoi(cmdp->raw_args[1]);
+			else
+				cmdp->x = 0;
+			return 1;
+		}
+
 		printf("%s:%d: bad command - not recognized '%s'\n",
 			script_file, line, cname);
 	}
@@ -993,6 +1083,16 @@ set_var(char *name, int val)
 	if (ep)
 		ep->data = (void *) (long) val;
 }
+
+int
+time_limit_exceeded()
+{
+
+	if (time_limit && time(NULL) > time_limit)
+		return 1;
+	return 0;
+}
+
 static char *tok;
 void
 token_init(char *str)
