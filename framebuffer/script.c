@@ -3,6 +3,8 @@
 /*   drawing on the framebuffer.				      */
 /**********************************************************************/
 
+#define _GNU_SOURCE
+
 #include <unistd.h>
 #include <ctype.h>
 #include <stdio.h>
@@ -28,6 +30,7 @@ static int debug;
 
 static char *cmds[] = {
 	"C_NONE", 
+	"C_ASSIGN",
 	"C_BREAK", 
 	"C_CIRCLE", 
 	"C_CLEAR", 
@@ -65,6 +68,7 @@ typedef struct estack_t {
 static int esize;
 static int eused;
 estack_t *estack;
+static struct hsearch_data htab;
 
 extern int x_arg;
 extern int y_arg;
@@ -80,7 +84,7 @@ static cmd_t *script_exec();
 void push_estack(cmd_t *cmdp);
 void pop_estack(void);
 void set_var(char *name, int val);
-long lookup(char *str, int len);
+long lookupn(char *str, int len, int quiet);
 void token_init(char *str);
 char *token_next();
 char ** parse_list(char *str, int *len);
@@ -310,51 +314,33 @@ get_token(char *str, char **str2, long *value)
 /**********************************************************************/
 long
 eval(char *str)
-{	long	value, value2;
-	int	type;
+{	long	value = 0, value2 = 0;
+	int	type = PLUS;
 	char	*str2;
-	char	*lv = NULL;
 
 	if (str == NULL)
 		return 0;
 
-	type = get_token(str, &str, &value);
-	if (type == SYMBOL) {
-		type = get_token(str, &str, &value);
-		if (type == EQUAL) {
-			lv = strdup(tok_symbol);
-			lv[tok_symlen] = '\0';
-		}
-		type = get_token(str, &str, &value);
-	}
 	while (*str) {
+		int type2 = get_token(str, &str, &value2);
 		if (type == SYMBOL) {
-			value = lookup(tok_symbol, tok_symlen);
+			value2 = lookupn(tok_symbol, tok_symlen, 0);
 		}
-		type = get_token(str, &str2, &value);
-		str = str2;
 		switch (type) {
 		  case EQUAL:
 		  	break;
 
 		  case PLUS:
-			type = get_token(str, &str2, &value2);
-			str = str2;
+printf("  %ld + %ld -> %ld\n", value, value2, value + value2);
 			value += value2;
 			break;
 		  case MINUS:
-			type = get_token(str, &str2, &value2);
-			str = str2;
 			value -= value2;
 			break;
 		  case MUL:
-			type = get_token(str, &str2, &value2);
-			str = str2;
 			value *= value2;
 			break;
 		  case DIV:
-			type = get_token(str, &str2, &value2);
-			str = str2;
 			value /= value2;
 			break;
 		  case COMMA:
@@ -364,13 +350,42 @@ eval(char *str)
 		  case TOK_EOF:
 		  	goto do_end;
 		}
+
+		type = type2;
 	}
-do_end:
-  	if (lv) {
-		set_var(lv, value);
-		free(lv);
-	}
+do_end: ;
 	return value;
+}
+
+void
+eval_assignment(char *cp)
+{	int	type;
+	long	value;
+	char	*orig_cp = cp;
+	char	*sym;
+
+	printf("assign %s\n", cp);
+
+	type = get_token(cp, &cp, &value);
+	if (type != SYMBOL) {
+		printf("assignment error: %s\n", orig_cp);
+		exit(1);
+	}
+	sym = malloc(tok_symlen + 1);
+	memcpy(sym, tok_symbol, tok_symlen);
+	sym[tok_symlen] = '\0';
+
+	type = get_token(cp, &cp, &value);
+	if (type != EQUAL) {
+		printf("assignment expects '=': %s\n", orig_cp);
+		exit(1);
+	}
+
+	value = eval(cp);
+
+	set_var(sym, value);
+
+	free(sym);
 }
 
 char *
@@ -445,31 +460,43 @@ has_attribute(cmd_t *cmdp, char *name)
 	return 0;
 }
 long
-lookup(char *str, int len)
+lookup(char *name, int quiet)
+{
+	return lookupn(name, -1, quiet);
+}
+
+long
+lookupn(char *str, int len, int quiet)
 {	ENTRY e, *ep;
 	int	ch;
 
 	if (isdigit(*str))
 		return atoi(str);
 	if (strcmp(str, "rand_x") == 0) 
-		return (int) (rand() / (float) RAND_MAX) * swidth;
-	if (strcmp(str, "rand_y") == 0) 
-		return (int) (rand() / (float) RAND_MAX) * sheight;
+		return (rand() / (float) RAND_MAX) * swidth;
+	if (strcmp(str, "rand_y") == 0)
+		return (rand() / (float) RAND_MAX) * sheight;
 	if (strcmp(str, "rand_width") == 0) 
-		return (int) (rand() / (float) RAND_MAX) * swidth;
-	if (strcmp(str, "rand_height") == 0) 
-		return (int) (rand() / (float) RAND_MAX) * sheight;
+		return (rand() / (float) RAND_MAX) * swidth;
+	if (strcmp(str, "rand_rgb") == 0) 
+		return (rand() / (float) RAND_MAX) * 0xffffff;
 	e.key = str;
-	ch = str[len];
-	str[len] = '\0';
-	ep = hsearch(e, FIND);
-	str[len] = ch;
-	if (ep) {
+	if (len > 0) {
+		ch = str[len];
+		str[len] = '\0';
+	}
+	int ret = hsearch_r(e, FIND, &ep, &htab);
+	if (len > 0) {
+		str[len] = ch;
+	}
+	if (ret) {
 //printf("eval %s = %d\n", str, (int) ep->data);
 		return (long) ep->data;
 	}
-	printf("lookup undefined variable: %*.*s\n", len, len, str);
-	return 1;
+
+	if (!quiet)
+		printf("lookup undefined variable: %*.*s\n", len, len, str);
+	return 0;
 }
 
 void
@@ -540,6 +567,10 @@ script_exec()
 			sp-1, cmds[cmdp->type], cmdp->type);
 
 	switch (cmdp->type) {
+	  case C_ASSIGN:
+	  	eval_assignment(cmdp->raw_args[0]);
+	  	break;
+
 	  case C_CIRCLE:
 		draw_circle(cmdp);
 	  	break;
@@ -582,15 +613,16 @@ script_exec()
 	  	break;
 
 	  case C_FOR:
+	  	// for var in 0..100 step 1
 	  	eval_range(cmdp->raw_args[3], &cmdp->start, &cmdp->end);
 	  	cmdp[1].curval = cmdp->start;
 	  	cmdp[1].end = cmdp->end;
-		cmdp[1].step = eval(cmdp->raw_args[5]);
+		cmdp[1].step = cmdp->step;
 		cmdp[1].curval -= cmdp[1].step;
 	  	break;
 
 	  case C_FOR2:
-//printf("for2: %d - %d\n", cmdp->curval, cmdp->end);
+//printf("%p for2: %d - %d step %d\n", cmdp, cmdp->curval, cmdp->end, cmdp->step);
 		cmdp->curval += cmdp->step;
 //printf("FOR2: %s %d\n", cmdp->var, cmdp->curval);
 		set_var(cmdp->var, cmdp->curval);
@@ -863,11 +895,27 @@ static int line = 0;
 		if (*cp == '\0' || *cp == '#' || *cp == '\n' || strncmp(cp, "//", 2) == 0)
 			continue;
 
+		/***********************************************/
+		/*   See if it looks like an assignment.       */
+		/***********************************************/
+		char *cp1;
+		for (cp1 = cp; isalpha(*cp1) || isdigit(*cp1) || *cp1 == '_'; cp1++)
+			;
+		while (isspace(*cp1))
+			cp1++;
+
 		rand_idx = 0;
 		cmdp = alloc_cmd(C_NONE);
+		cmdp->line_num = line;
 		token_init(cp);
+
+		if (*cp1 == '=') {
+			cmdp->raw_args[0] = strdup(cp);
+			cmdp->type = C_ASSIGN;
+			return 1;
+		}
 		while ((cp = token_next()) != NULL) {
-			cmdp->raw_args[cmdp->argc] = cp ;
+			cmdp->raw_args[cmdp->argc] = cp;
 			if (cmdp->argc < MAX_ARGS) {
 				char	*cp1;
 				cp = map_rand(cp);
@@ -958,7 +1006,7 @@ static int line = 0;
 			cmd_t *cmdp1;
 
 			// for var in 0..100 step n
-			if (cmdp->argc < 5) {
+			if (cmdp->argc < 3) {
 				cmd_usage(cmdp, "for");
 			}
 			cmdp->type = C_FOR;
@@ -970,8 +1018,12 @@ static int line = 0;
 				cmd_usage(cmdp, "for (range): usage: for <var> in N..M [step SS]");
 */
 			cmdp->step = 1;
-			if (strcmp(cmdp->raw_args[4], "step") == 0)
+			if (cmdp->argc > 4 && strcmp(cmdp->raw_args[4], "step") == 0)
 				cmdp->step = atoi(cmdp->raw_args[5]);
+			if (cmdp->step == 0) {
+				cmd_usage(cmdp, "for step range is zero");
+				exit(1);
+			}
 			cmdp1 = alloc_cmd(C_FOR2);
 			cmdp1->start = cmdp->start;
 			cmdp1->end = cmdp->end;
@@ -1054,7 +1106,7 @@ static int line = 0;
 		if (strcmp(cname, "time_limit") == 0) {
 			cmdp->type = C_TIME_LIMIT;
 			if (cmdp->argc > 1)
-				cmdp->x = time(NULL) + atoi(cmdp->raw_args[1]);
+				cmdp->x = atoi(cmdp->raw_args[1]);
 			else
 				cmdp->x = 0;
 			return 1;
@@ -1073,14 +1125,19 @@ set_var(char *name, int val)
 	ENTRY	e, *ep;
 
 	if (first_time) {
-		hcreate(30);
+		hcreate_r(30, &htab);
 		first_time = 0;
 	}
 
+printf("set_var %s=%ld\n", name, val);
 	e.key = name;
 	e.data = (void *) (long) val;
-	ep = hsearch(e, ENTER);
-	if (ep)
+	if (hsearch_r(e, FIND, &ep, &htab)) {
+		ep->data = (void *) (long) val;
+		return;
+	}
+	e.key = strdup(name);
+	if (hsearch_r(e, ENTER, &ep, &htab))
 		ep->data = (void *) (long) val;
 }
 

@@ -47,6 +47,7 @@ struct imgRawImage* read_png_file(char *lpFilename);
 
 enum ctypes { 
 	C_NONE, 
+	C_ASSIGN,
 	C_BREAK,
 	C_CIRCLE, 
 	C_CLEAR,
@@ -96,6 +97,7 @@ typedef struct cmd_t {
 	int	end;
 	int	step;
 	int	curval;
+	int	line_num;
 	} cmd_t;
 
 int	draw_circle(cmd_t *);
@@ -131,6 +133,7 @@ long eval(char *str);
 int time_limit_exceeded();
 int	compute_montage(screen_t *, int seq_flag);
 int parse_value(char *str);
+long	lookup(char *, int quiet);
 
 extern screen_t *scrp;
 extern int v_flag;

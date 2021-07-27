@@ -1,104 +1,12 @@
-screensize 1920 1080
+#screensize 1920 1080
 delay 0
 clear
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
-filled_circle rand_x rand_y rand_x rand_rgb
+
+for i in 0..100
+	x=x+325
+	y=y+25
+	rad=rad+50
+	filled_circle x y rad rand_rgb
+	#filled_circle rand_x rand_y rand_x rand_rgb
+end
 sleep 10

@@ -312,7 +312,14 @@ sub get
 	my %data;
 	my $r = 0;
 	my $c = 0;
+
+	my $need_icon = 1;
+
 	foreach my $dt (@{$info->{list}}) {
+		if ($need_icon) {
+			$need_icon = 0;
+			print join("\n", get_icon2($dt->{weather}[0]{description})), "\n";
+		}
 		my $s = sprintf("%s %2dC/%-3s %-16s %s\n",
 			strftime("%a %d", localtime($dt->{dt})),
 			$dt->{temp}{min},
@@ -354,6 +361,18 @@ sub get_icon
 	return "Unknown";
 }
 
+sub get_icon2
+{	my $d = shift;
+
+	$d =~ s/ //g;
+	$d =~ s/moderate/light/g;
+	foreach my $i (keys(%icons)) {
+		my $i1 = lc($i);
+		return @{$icons{$i}} if $i1 eq $d;
+	}
+	return "no icon:$d";
+}
+
 sub show_temp
 {	my $t = shift;
 
@@ -366,6 +385,16 @@ sub show_temp
 	$t1 = .5 * $n if $t < 15;
 	$t1 = .3 * $n if $t < 10;
 	$t1 = .2 * $n if $t < 0;
+
+	my $one_color = 1;
+
+	if ($one_color) {
+		return sprintf("\033[48;2;%d;%d;%dm       \033[0m", 
+				$grad[$t1][0],
+				$grad[$t1][1],
+				$grad[$t1][2],
+				);
+	}
 
 	my $s = '';
 	for (my $i = 0; $i < @grad && $i < $t1; $i += 4) {

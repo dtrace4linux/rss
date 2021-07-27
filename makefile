@@ -5,7 +5,7 @@ all:
 	rm -f bin
 	ln -s $(BIN) bin
 	cd framebuffer ; make
-	scripts/gendraw.pl
+	#scripts/gendraw.pl
 
 hello:
 	toilet --gay rss news - no adverts > rss-hello.txt
