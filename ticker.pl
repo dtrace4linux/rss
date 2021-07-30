@@ -11,6 +11,7 @@ use Getopt::Long;
 use IO::File;
 use POSIX;
 use FindBin;
+use MIME::Base64;
 
 use IO::Socket;
 
@@ -247,6 +248,9 @@ sub do_admin
 	}
 
 	return if !$req;
+
+	return if $req !~ /^GET /;
+	$req =~ s/^GET //;
 
 	print time_string() . "Admin: $req\n";
 
@@ -656,6 +660,8 @@ sub main
 #exit;
 
 	$ENV{TZ} = "/etc/localtime";
+
+	$SIG{PIPE} = 'IGNORE';
 
 	usage(0) if $opts{help};
 
@@ -1327,7 +1333,7 @@ sub do_page11_ascii_art
 		"pi.pl",
 		"tetris.pl",
 		"scrabble.sh", 
-		"sierpinksi.pl",
+		"sierpinski.pl",
 		);
 	my $n = get_rand("ascii_art", scalar(@lst));
 	spawn("$FindBin::RealBin/scripts/$lst[$n]");

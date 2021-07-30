@@ -181,7 +181,7 @@ sub get
 			my $ln = $_;
 			my $q = $ln;
 			$q = (split("<div class", $q))[3];
-			$q = (split(/[<>]/, $q))[1];
+			$q = (split(/[<>]/, $q))[1] || '';
 			$q =~ s/\xc2\xa0/ /;
 			$q =~ s/,//;
 
