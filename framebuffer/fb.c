@@ -470,7 +470,7 @@ get_rand(int n)
 }
 
 void
-init_fbinfo(fb_info_t *f)
+init_fbinfo(screen_t *scrp, fb_info_t *f)
 {
 	memset(f, 0, sizeof *f);
 	strcpy(f->f_magic, FB_MAGIC);
@@ -735,7 +735,7 @@ open_framebuffer()
 		if (create_mode || sbuf.st_size != sizeof(fb_info_t)) {
 			fb_info_t f;
 
-			init_fbinfo(&f);
+			init_fbinfo(scrp, &f);
 
 
 			if ((ret = write(fd, &f, sizeof f)) != sizeof f) {
@@ -805,8 +805,7 @@ open_framebuffer()
 			sbuf.st_size != sizeof(fb_info_t)) {
 			fb_info_t f;
 
-			init_fbinfo(&f);
-
+			init_fbinfo(scrp, &f);
 
 			if ((ret = write(fd, &f, sizeof f)) != sizeof f) {
 				fprintf(stderr, "write error (info) - wrote %ld, returned %d\n", sizeof f, ret);
