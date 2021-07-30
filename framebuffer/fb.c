@@ -468,6 +468,18 @@ get_rand(int n)
 {
 	return (rand() / (float) RAND_MAX) * n;
 }
+
+void
+init_fbinfo(fb_info_t *f)
+{
+	memset(f, 0, sizeof *f);
+	strcpy(f->f_magic, FB_MAGIC);
+	f->f_version = FB_VERSION;
+	f->f_width = scrp->s_width;
+	f->f_height = scrp->s_height;
+	f->f_bpp = scrp->s_bpp;
+}
+
 int main(int argc, char **argv)
 {
 	int	x0, y0;
@@ -664,11 +676,11 @@ open_framebuffer()
 	struct fb_fix_screeninfo finfo;
 	char	buf[BUFSIZ];
 	int	fd;
+	int	ret;
+	struct stat sbuf;
 
 	if (framebuffer_name) {
-		struct stat sbuf;
 		char	*cp;
-		int	ret;
 		int	create_mode = 0;
 
 		if ((fd = open(framebuffer_name, O_RDWR | O_CREAT, 0644)) < 0) {
@@ -718,12 +730,8 @@ open_framebuffer()
 		if (create_mode || sbuf.st_size != sizeof(fb_info_t)) {
 			fb_info_t f;
 
-			memset(&f, 0, sizeof f);
-			strcpy(f.f_magic, FB_MAGIC);
-			f.f_version = FB_VERSION;
-			f.f_width = scrp->s_width;
-			f.f_height = scrp->s_height;
-			f.f_bpp = scrp->s_bpp;
+			init_fbinfo(&f);
+
 
 			if ((ret = write(fd, &f, sizeof f)) != sizeof f) {
 				fprintf(stderr, "write error (info) - wrote %ld, returned %d\n", sizeof f, ret);
@@ -778,6 +786,33 @@ open_framebuffer()
 	}
 	close(fd);
 
+	/***********************************************/
+	/*   Create  a  virtual  info  struct for the  */
+	/*   real  display,  so  we  can  tell  if it  */
+	/*   changed or not.			       */
+	/***********************************************/
+	char *cp = strrchr(fbname, '/') + 1;
+	snprintf(buf, sizeof buf, "/tmp/%s/%s_info",
+		getenv("USER") ? getenv("USER") : "",
+		cp);
+	if ((fd = open(buf, O_RDWR | O_CREAT, 0644)) >= 0) {
+		if (fstat(fd, &sbuf) == 0 &&
+			sbuf.st_size != sizeof(fb_info_t)) {
+			fb_info_t f;
+
+			init_fbinfo(&f);
+
+
+			if ((ret = write(fd, &f, sizeof f)) != sizeof f) {
+				fprintf(stderr, "write error (info) - wrote %ld, returned %d\n", sizeof f, ret);
+				exit(1);
+			}
+		}
+		scrp->s_info = (fb_info_t *) mmap(0, sizeof(fb_info_t), 
+			PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	}
+	if (fd >= 0)
+		close(fd);
 	return scrp;
 }
 /**********************************************************************/

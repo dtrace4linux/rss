@@ -119,7 +119,7 @@ sub display_image
 		save_screendump();
 
 		if ($iopts{do_scroll}) {
-			spawn("$fb_prog -delay 50 -scroll -scroll_y_incr 3 -q -x $opts{x} -y $opts{y} \"$fn2\"");
+			spawn("$fb_prog -delay 50 -scroll -scroll_y_incr 3 -q -x $iopts{x} -y $iopts{y} \"$fn2\"");
 		} elsif ($iopts{multimage}) {
 			spawn("$fb_prog -q -x $iopts{x} -y $iopts{y} \"$fn2\"");
 		} else {
