@@ -26,6 +26,8 @@ my $fb_prog = "$FindBin::RealBin/bin/fb";
 ######################################################################
 #   Remote http request to dump the console screen buffer.	     #
 ######################################################################
+my $seq_num = 0;
+
 sub do_screen
 {	my $client = shift;
 	my $req = shift;
@@ -65,7 +67,11 @@ EOF
 
 	$client->autoflush();
 
-	spawn("$fb_prog -o /tmp/screen.jpg");
+	my $seq = `$fb_prog -updnum`;
+	if ($seq ne $seq_num) {
+		spawn("$fb_prog -o /tmp/screen.jpg");
+		$seq_num = $seq;
+	}
 
 	print $client "Content-Type: image/jpeg\r\n";
 	print $client "\r\n";

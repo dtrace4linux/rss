@@ -58,6 +58,7 @@ int	framebuffer_w = 1920;
 int	framebuffer_h = 1080;
 char	*text_str;
 int	clear_flag;
+int	updnum_flag;
 
 screen_t	*scrp;
 
@@ -341,6 +342,10 @@ do_switches(int argc, char **argv)
 				text_str = argv[i];
 				break;
 			}
+			if (strcmp(cp, "updnum") == 0) {
+				updnum_flag = 1;
+				break;
+			}
 			if (strcmp(cp, "x") == 0) {
 				if (++i >= argc)
 					usage();
@@ -507,6 +512,11 @@ int main(int argc, char **argv)
 		printf("%dx%d, %dbpp\n", scrp->s_width, scrp->s_height, scrp->s_bpp );
 //		printf("xres_virtual=%d yres_virtual=%d\n",
 //			scrp->s_width_virtual, scrp->s_height_virtual);
+	}
+
+	if (updnum_flag) {
+		printf("%lu\n", scrp->s_info->f_seq);
+		exit(0);
 	}
 
 	if (text_str) {

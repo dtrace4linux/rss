@@ -58,6 +58,8 @@ Switches:
    -text <msg>        Display a text string in the frame buffer.
    -xfrac N.NN        Shrink image on the x-axis
    -yfrac N.NN        Shrink image on the y-axis
+   -updnum            Print framebuffer update sequence number
+                      (used for detecting changes).
    -x NN              Set co-ordinate
    -y NN              Set co-ordinate
    -w NN              Set co-ordinate
