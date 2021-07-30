@@ -40,7 +40,7 @@ sub do_screen
 		print $client "Content-Type: text/html\r\n";
 		print $client "\r\n";
 		print $client <<EOF;
-<meta http-equiv="refresh" content="5" >
+<NO-meta http-equiv="refresh" content="5" >
 <bodyonload="updateImage();">
 <script language="javascript">
 
