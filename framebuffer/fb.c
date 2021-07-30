@@ -488,9 +488,14 @@ int main(int argc, char **argv)
 	int	fd;
 	int	i;
 	char	*cp;
+	char	buf[BUFSIZ];
 
 	if ((cp = getenv("FBVIEW_FRAMEBUFFER")) != NULL)
 		framebuffer_name = cp;
+
+	snprintf(buf, sizeof buf, "/tmp/%s",
+		getenv("USER") ? getenv("USER") : "");
+	mkdir(buf, 0700);
 
 	arg_index = do_switches(argc, argv);
 
