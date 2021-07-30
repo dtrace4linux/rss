@@ -128,6 +128,8 @@ sub main
 
 	usage(0) if $opts{help};
 
+	$SIG{CHLD} = 'IGNORE';
+
 	$sock = IO::Socket::INET->new (
 	   LocalPort => $opts{port},
 	   Type      => SOCK_STREAM,
