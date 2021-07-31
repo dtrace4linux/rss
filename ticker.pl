@@ -670,6 +670,8 @@ sub main
 #print clean_text($a->{body});
 #exit;
 
+	mkdir("/tmp/$ENV{USER}", 0700);
+
 	$ENV{TZ} = "/etc/localtime";
 
 	$SIG{PIPE} = 'IGNORE';
