@@ -67,16 +67,20 @@ EOF
 
 	$client->autoflush();
 
+	my $fn = "/tmp/screen.jpg";
+
 	my $seq = `$fb_prog -updnum`;
 	if ($seq ne $seq_num) {
-		spawn("$fb_prog -o /tmp/screen.jpg");
+		spawn("$fb_prog -o $fn");
 		$seq_num = $seq;
 	}
 
 	print $client "Content-Type: image/jpeg\r\n";
+	my $size = (stat("$fn"))[7];
+	print $client "Content-Size: $size\r\n";
 	print $client "\r\n";
 
-	my $fh = new FileHandle("/tmp/screen.jpg");
+	my $fh = new FileHandle("$fn");
 	my $s;
 	while (sysread($fh, $s, 32 * 1024)) {
 		syswrite($client, $s);
@@ -124,6 +128,7 @@ sub main
 	usage() unless GetOptions(\%opts,
 		'help',
 		'port=s',
+		'ppid=s',
 		);
 
 	usage(0) if $opts{help};
@@ -137,7 +142,17 @@ sub main
 	   Listen    => 10);
 	die "screen.pl: Cannot create listening port $opts{port} - $!" if !$sock;
 
-	while (my $client = $sock->accept()) {
+	while (1) {
+		my $bits = '';
+		my $rbits;
+
+		vec($bits, $sock->fileno(), 1) = 1;
+		my $n = select($rbits = $bits, undef, undef, 1.0);
+		exit(0) if $opts{ppid} && ! -d "/proc/$opts{ppid}";
+
+		next if !vec($rbits, $sock->fileno(), 1);
+
+		my $client = $sock->accept();
 		if (fork() == 0) {
 			do_client($client);
 			exit(0);
@@ -170,7 +185,8 @@ Usage: screen.pl [switches]
 
 Switches:
 
-  -port NN    Port to listen on (default: $opts{port})
+  -port NN        Port to listen on (default: $opts{port})
+  -ppid <pid>     Terminate if parent process dies.
 
 EOF
 

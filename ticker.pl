@@ -309,6 +309,17 @@ sub do_glob
 	return sort(@lst);
 }
 
+sub do_screen
+{
+	my $ppid = $$;
+
+	my $pid = fork();
+	return if $pid;
+
+	exec "$FindBin::RealBin/screen.pl -ppid $ppid > /tmp/$ENV{USER}/screen.log" ||
+	exit(0);
+}
+
 ######################################################################
 #   Wait for a period, but get out quick if user tapping on screen.  #
 ######################################################################
@@ -695,6 +706,7 @@ sub main
 
 	read_rss_config();
 
+	do_screen();
 	do_status();
 
 	do_ticker();

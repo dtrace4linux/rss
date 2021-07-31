@@ -189,6 +189,8 @@ sub get_tty_size
 	chomp($s);
 	$s =~ m/rows (\d+); columns (\d+)/;
 	($rows, $columns) = ($1, $2);
+
+	exit(0) if !$rows || !$columns;
 }
 
 sub main
