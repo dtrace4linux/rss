@@ -331,7 +331,7 @@ eval(char *str)
 		  	break;
 
 		  case PLUS:
-printf("  %ld + %ld -> %ld\n", value, value2, value + value2);
+//printf("  %ld + %ld -> %ld\n", value, value2, value + value2);
 			value += value2;
 			break;
 		  case MINUS:
@@ -1129,7 +1129,7 @@ set_var(char *name, int val)
 		first_time = 0;
 	}
 
-printf("set_var %s=%ld\n", name, val);
+//printf("set_var %s=%ld\n", name, val);
 	e.key = name;
 	e.data = (void *) (long) val;
 	if (hsearch_r(e, FIND, &ep, &htab)) {
