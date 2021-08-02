@@ -589,7 +589,7 @@ draw_text(cmd_t *cp)
 		ch = str[j];
 		str[j] = '\0';
 
-printf("cairo: '%s' start=%d j=%d x=%d y=%d\n", str + start, start, j, x, y);
+//printf("cairo: '%s' start=%d j=%d x=%d y=%d\n", str + start, start, j, x, y);
 		cairo_text_extents(cr, str + start, &te);
 		if (x + te.width > x_arg + w_arg && start) {
 			x = x0;

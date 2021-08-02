@@ -18,6 +18,7 @@ use FindBin;
 #######################################################################
 my %opts = (
 	port => 22223,
+	dir => "/tmp/$ENV{USER}/screenshots",
 	);
 
 my $sock;
@@ -67,13 +68,7 @@ EOF
 
 	$client->autoflush();
 
-	my $fn = "/tmp/screen.jpg";
-
-	my $seq = `$fb_prog -updnum`;
-	if ($seq ne $seq_num) {
-		spawn("$fb_prog -o $fn");
-		$seq_num = $seq;
-	}
+	my $fn = do_screenshot();
 
 	print $client "Content-Type: image/jpeg\r\n";
 	my $size = (stat("$fn"))[7];
@@ -121,17 +116,33 @@ sub do_client
 	exit(0);
 }
 
+sub do_screenshot
+{
+	my $fn = "$opts{dir}/screen.jpg";
+
+	my $seq = `$fb_prog -updnum`;
+	if ($seq ne $seq_num) {
+		spawn("$fb_prog -o $fn");
+		$seq_num = $seq;
+	}
+
+	return $fn;
+}
+
 sub main
 {
 	Getopt::Long::Configure('require_order');
 	Getopt::Long::Configure('no_ignore_case');
 	usage() unless GetOptions(\%opts,
+		'dir=s',
 		'help',
 		'port=s',
 		'ppid=s',
 		);
 
 	usage(0) if $opts{help};
+
+	mkdir($opts{dir}, 0755);
 
 	$SIG{CHLD} = 'IGNORE';
 
@@ -185,6 +196,7 @@ Usage: screen.pl [switches]
 
 Switches:
 
+  -dir <dir>      Directory to write screenshots.
   -port NN        Port to listen on (default: $opts{port})
   -ppid <pid>     Terminate if parent process dies.
 
