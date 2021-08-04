@@ -39,7 +39,10 @@ sub do_screen
 #print STDERR "sending screen dump\n";
 	print $client "HTTP/1.0 200 ok\r\n";
 
-	if ($req eq 'screen') {
+	if ($req eq 'screen' || $req eq '') {
+		my $t = strftime("%H:%M", localtime());
+		my $s = (split(":", $t))[0] * 3600 + (split(":", $t))[1] * 60;
+
 		print $client "Content-Type: text/html\r\n";
 		print $client "\r\n";
 		print $client <<EOF;
@@ -50,6 +53,9 @@ sub do_screen
 <script type="text/javascript">
 
 	var i = 0;
+	var t = 0;
+	var dir = 0;
+
 	var downloadingImage = new Image();
 	downloadingImage.onload = function(){
 	    var image = document.images[0];
@@ -57,20 +63,56 @@ sub do_screen
 	};
 	function updateImage() { 
 		obj = document.img1;
-		document.getElementById("myelement1") = "Hello world!" + i++;
+		e = document.getElementById("myelement1");
+
 		//document.write("Text to display." + i++);
-		downloadingImage.src = obj.src;
+
+		now = new Date();
+		hh = now.getHours();
+		mm = now.getMinutes();
+		t++;
+		mm = mm - t;
+		while (mm < 0) {
+			hh--;
+			mm += 60;
+		}
+
+		img = "/screen-" + hh + mm + ".jpg";
+		e.innerHTML = "Zojo! (" + i++ + ") " + hh + ":" + mm + " " + img;
+
+		downloadingImage.src = img;
 		setTimeout(updateImage, 1000);
+
+		update_canvas();
 	}
-	setTimeout(updateImage, 1000);
+
+	function update_canvas()
+	{
+		const canvas = document.getElementById('canvas');
+		var ctx = canvas.getContext('2d');
+		ctx.fillStyle = '#F0DB4F';
+		ctx.strokeStyle = 'red';
+		ctx.fillRect(50, 50, 1000, 10);
+		ctx.strokeRect(50, 50, 1000, 10);
+	}
+	setTimeout("updateImage()", 1000);
 </script>
 
 <div style="position:relative">
+<p>
 <p id="myelement1">
-hello world
+hello world some stuff......................
 </p>
 
 <img name='img1' class='pic' src='/screen2.jpg' width=1000 height=600 />
+<br>
+<button id="back" onclick="goBack()">BACK</button>
+<button id="forward" onclick="goForward()">FORWARD</button>
+<p>
+<meter max=86400 min=0 value=$s width=1000>$t</meter> <p>
+<canvas width="1000" height="100" id="canvas">this is a canvas</canvas>
+ome text
+
 <!--
 <img name='img2' class='pic' src='/screen2.jpg' width=1000 height=600 
 	style="visibility:hidden"
@@ -86,13 +128,14 @@ EOF
 
 #print "req=$req\n";
 
-	if ($req ne 'screen2.jpg') {
-		return;
-	}
+	$req =~ s/^\/+//;
+	return if $req =~ /\//;
+	return if ! -f "$opts{dir}/$req";
 
 	$client->autoflush();
 
 	my $fn = do_screenshot();
+	$fn = "$opts{dir}/$req";
 
 	print $client "Content-Type: image/jpeg\r\n";
 	my $size = (stat("$fn"))[7];
@@ -175,7 +218,15 @@ sub main
 	   Listen    => 10);
 	die "screen.pl: Cannot create listening port $opts{port} - $!" if !$sock;
 
+	print time_string() . "screen.pl: Listening on $opts{port}\n";
+	my $mtime = (stat($FindBin::Bin))[9];
+
 	while (1) {
+		my $mtime1 = (stat($FindBin::Bin))[9];
+		if ($mtime1 && $mtime != $mtime1) {
+			print time_string() . "Restarting...\n";
+			exec $0;
+		}
 		my $bits = '';
 		my $rbits;
 
