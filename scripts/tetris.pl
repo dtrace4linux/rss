@@ -3,7 +3,21 @@
 # https://www.colinfahey.com/tetris/tetris.html
 # http://www.seanadams.com/perltris
 
-$_='A=15; B=30; 
+
+sub get_tty_size
+{
+	my $s = `stty -a | grep columns`;
+	chomp($s);
+	$s =~ m/rows (\d+); columns (\d+)/;
+	$rows = $1 || 24;
+	$columns = $2 || 80;
+}
+
+get_tty_size();
+my $A = 15;
+my $B = $rows - 5;
+
+$_='
 select(stdin); 
 $|=1; 
 select(stdout);
@@ -13,13 +27,26 @@ system "stty -echo -icanon eol \001";
 
 for C(split(/\s/,"010.010.010.010
 77.77 022.020.020 330.030.030 440.044.000 055.550.000 666.060.".
-"000")){D=0;for E(split(/\./,C)){F=0;for G(split("",E)){C[P][F++
-][D]=G} D++}J[P]=F; I[P++] =D}%L=split(/ /,"m _".chr(72)." c 2".
-chr(74)." a _m");
+"000")){
+	D=0;
+	for E(split(/\./,C)){
+		F=0;
+		for G(split("",E)){
+			C[P][F++][D]=G
+		} 
+		D++
+	}
+	J[P]=F; I[P++] =D
+	}
+%L=split(/ /,"m _".chr(72)." c 2". chr(74)." a _m");
 
 sub a{
-for K(split(/ /,shift)){(K,L)=split(/=/,K
-);K=L{K};K=~s/_/L/; printf "%c[K",27}
+	for K(split(/ /,shift)){
+		(K,L)=split(/=/,K);
+		K=L{K};
+		K=~s/_/L/; 
+		printf "%c[K",27
+	}
 }
 
 sub u{a("a=40");for D(0..B
@@ -39,7 +66,12 @@ F][D]&& ((G[X+F][Y+D])|| (X+F<0)||(X+F>=A)|| (Y+D>=B)))&& return
 }
 
 sub p {
-for F(0..W-1){for D(0..H-1){(K[F][D]>0)&&(G[X+F][Y+D] =K[F][D]) }}1
+	for F(0..W-1){
+		for D(0..H-1){
+			(K[F][D]>0)&&(G[X+F][Y+D] =K[F][D]) 
+		}
+	}
+	1
 }
 
 sub o{for F(0..W-1){for D(0..H-1){(K[F][D]>0)&&(G[

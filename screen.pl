@@ -43,18 +43,42 @@ sub do_screen
 		print $client "Content-Type: text/html\r\n";
 		print $client "\r\n";
 		print $client <<EOF;
-<NO-meta http-equiv="refresh" content="5" >
-<bodyonload="updateImage();">
-<script language="javascript">
+<!DOCTYPE html>
+<html lang="en-US">
+<meta charset="UTF-8">
 
-function updateImage() { 
-	obj = document.img;
-	obj.src = obj.src;
-//	setTimeout("updateImage", 1000);
-}
+<script type="text/javascript">
+
+	var i = 0;
+	var downloadingImage = new Image();
+	downloadingImage.onload = function(){
+	    var image = document.images[0];
+	    image.src = this.src;   
+	};
+	function updateImage() { 
+		obj = document.img1;
+		document.getElementById("myelement1") = "Hello world!" + i++;
+		//document.write("Text to display." + i++);
+		downloadingImage.src = obj.src;
+		setTimeout(updateImage, 1000);
+	}
+	setTimeout(updateImage, 1000);
 </script>
 
-<img name='img' src='/screen2.jpg' width=1000 height=600 />
+<div style="position:relative">
+<p id="myelement1">
+hello world
+</p>
+
+<img name='img1' class='pic' src='/screen2.jpg' width=1000 height=600 />
+<!--
+<img name='img2' class='pic' src='/screen2.jpg' width=1000 height=600 
+	style="visibility:hidden"
+        onload="this.style.visibility='visible'"
+	/>
+-->
+
+</div>
 </body>
 EOF
      	return;
@@ -109,21 +133,19 @@ sub do_client
 
 	print time_string() . "Admin: $req\n";
 
-#print STDERR "req=$req\n";
-	return if fork();
-
 	do_screen($client, $req);
 	exit(0);
 }
 
+my $ss_time = 0;
+
 sub do_screenshot
 {
-	my $fn = "$opts{dir}/screen.jpg";
-
-	my $seq = `$fb_prog -updnum`;
-	if ($seq ne $seq_num) {
+	my $t = strftime("%H%M", localtime());
+	my $fn = "$opts{dir}/screen-$t.jpg";
+	if ($ss_time != $t || ! -f $fn) {
+		$ss_time = $t;
 		spawn("$fb_prog -o $fn");
-		$seq_num = $seq;
 	}
 
 	return $fn;
@@ -161,7 +183,10 @@ sub main
 		my $n = select($rbits = $bits, undef, undef, 1.0);
 		exit(0) if $opts{ppid} && ! -d "/proc/$opts{ppid}";
 
-		next if !vec($rbits, $sock->fileno(), 1);
+		if (!vec($rbits, $sock->fileno(), 1)) {
+			do_screenshot();
+			next;
+		}
 
 		my $client = $sock->accept();
 		if (fork() == 0) {

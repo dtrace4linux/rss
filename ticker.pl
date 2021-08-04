@@ -923,6 +923,8 @@ sub do_ticker
 			$t_copy = time();
 		}
 
+		update_console_seq();
+
 		for (my $i = 0; $i < $t; $i++) {
 			do_status_line();
 
@@ -1670,6 +1672,13 @@ sub time_string
 	return strftime("%Y%m%d %H:%M:%S ", localtime);
 }
 
+my $cons_seq = 0;
+sub update_console_seq
+{
+	my $fn = "/tmp/$ENV{USER}/console.seq";
+	my $fh = new FileHandle(">$fn");
+	print $fh $cons_seq++, "\n";
+}
 #######################################################################
 #   Print out command line usage.				      #
 #######################################################################

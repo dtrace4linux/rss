@@ -35,6 +35,7 @@ static char *cmds[] = {
 	"C_CIRCLE", 
 	"C_CLEAR", 
 	"C_CONTINUE",
+	"C_DEBUG",
 	"C_DELAY", 
 	"C_DOT", 
 	"C_DRAW",
@@ -364,7 +365,8 @@ eval_assignment(char *cp)
 	char	*orig_cp = cp;
 	char	*sym;
 
-	printf("assign %s\n", cp);
+	if (debug)
+		printf("assign %s\n", cp);
 
 	type = get_token(cp, &cp, &value);
 	if (type != SYMBOL) {
@@ -949,6 +951,10 @@ static int line = 0;
 			cmdp->type = C_CLEAR;
 			return 1;
 		}
+		if (strcmp(cname, "debug") == 0) {
+			cmdp->type = C_DEBUG;
+			return 1;
+		}
 		if (strcmp(cname, "exit") == 0) {
 			cmdp->type = C_EXIT;
 			return 1;
@@ -1129,7 +1135,9 @@ set_var(char *name, int val)
 		first_time = 0;
 	}
 
-//printf("set_var %s=%ld\n", name, val);
+	if (debug)
+		printf("set_var %s=%ld\n", name, val);
+
 	e.key = name;
 	e.data = (void *) (long) val;
 	if (hsearch_r(e, FIND, &ep, &htab)) {

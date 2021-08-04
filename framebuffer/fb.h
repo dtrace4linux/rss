@@ -52,6 +52,7 @@ enum ctypes {
 	C_CIRCLE, 
 	C_CLEAR,
 	C_CONTINUE, 
+	C_DEBUG,
 	C_DELAY, 
 	C_DOT, 
 	C_DRAW,
